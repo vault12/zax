@@ -19,16 +19,15 @@ class SessionController < ApplicationController
   public
   def new_session_token
     return unless rid = _get_request_id  # Enforce request_id header or fail 412
-    token = RbNaCl::Random.random_bytes 32
+    token = Rails.cache.fetch(rid,
+      expires_in: Rails.configuration.x.relay.new_session_token_timeout) do
+        logger.info "Established our token for r_id #{rid.bytes[0..4]}..."
+        RbNaCl::Random.random_bytes 32
+    end
     if not token or token.length != 32
       logger.error "RbNaCl::Random.random_bytes(32) fail: length #{token ? token.length : 'nil'}"
       head :internal_server_error, error_details: "Failed to generate local entropy, try again?"
       return
-    end
-    Rails.cache.fetch(rid,
-      expires_in: Rails.configuration.x.relay.new_session_token_timeout) do
-        logger.info "Established our token for r_id #{rid.bytes[0..4]}..."
-        token
     end
     render text: Base64.strict_encode64(token)
   end
