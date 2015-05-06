@@ -39,4 +39,9 @@ Rails.application.configure do
 
   # Raises error for missing translations
   # config.action_view.raise_on_missing_translations = true
+
+  config.log_level = :debug
+
+  # --- Relay configuration ---
+  config.x.relay.new_session_token_timeout = 3
 end

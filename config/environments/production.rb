@@ -76,9 +76,4 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
-
-  # --- Relay configuration ---
-  config.relay = {
-    new_session_token_timeout: 1.minutes
-  }
 end
