@@ -23,4 +23,12 @@ class ActiveSupport::TestCase
     assert_not_includes(response.headers,"Error-Details")
     assert_not_empty response.body
   end
+
+  def _raw_post(action, headers, body)
+    @request.env['RAW_POST_DATA'] = body
+    headers.map { |k,v| @request.headers[k]=v } if headers
+    response = post(action, nil)
+    @request.env.delete('RAW_POST_DATA')
+    response
+  end
 end
