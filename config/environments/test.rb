@@ -44,4 +44,5 @@ Rails.application.configure do
 
   # --- Relay configuration ---
   config.x.relay.new_session_token_timeout = 0.05
+  config.x.relay.session_timeout           = 5
 end
