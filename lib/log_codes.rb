@@ -1,0 +1,8 @@
+module LogCodes
+  # log file prefix codes
+  INFO      = "\xF0\x9F\x94\xA9 "
+  INFO_GOOD = "\xF0\x9F\x94\x91 "
+  INFO_NEG  = "\xE2\x80\xA0"
+  WARN      = "\xF0\x9F\x94\xBB"
+  ERROR     = "\xE2\x9D\x97\xEF\xB8\x8F \xE2\x98\xA2"
+end

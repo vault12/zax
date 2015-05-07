@@ -28,6 +28,6 @@ class VerifySessionTest < ActionDispatch::IntegrationTest
     post "/session", Base64.strict_encode64(real_handshake),
       'CONTENT_TYPE':'application/text',
       'HTTP_REQUEST_TOKEN': requst_token
-    _success_response 
+    _success_response
   end
 end

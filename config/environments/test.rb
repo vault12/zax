@@ -32,7 +32,7 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :test
 
   # Randomize the order test cases are executed.
-  config.active_support.test_order = :random
+  config.active_support.test_order = :sorted # ":random"
 
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr

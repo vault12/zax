@@ -34,6 +34,7 @@ module Zax
     #### config.active_record.raise_in_transactional_callbacks = true
 
     # --- Relay configuration ---
-    config.x.relay.new_session_token_timeout = 1.minutes
+    config.x.relay.new_session_token_timeout  = 1.minutes
+    config.x.relay.session_timeout            = 10.minutes
   end
 end
