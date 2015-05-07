@@ -35,6 +35,6 @@ module Zax
 
     # --- Relay configuration ---
     config.x.relay.new_session_token_timeout  = 1.minutes
-    config.x.relay.session_timeout            = 10.minutes
+    config.x.relay.session_timeout            = 5.minutes
   end
 end

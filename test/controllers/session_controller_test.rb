@@ -1,5 +1,4 @@
 require 'test_helper'
-require 'base64'
 
 class SessionControllerTest < ActionController::TestCase
   public
@@ -16,7 +15,7 @@ class SessionControllerTest < ActionController::TestCase
     _success_response
   end
 
-  test "verify_session_token w/o context" do
+  test "verify_session_token guards" do
     head :verify_session_token
     _fail_response :precondition_failed # missing header
 

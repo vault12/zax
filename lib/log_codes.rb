@@ -11,7 +11,7 @@ module LogCodes
   INFO_NEG  = "\xF0\x9F\x94\xBB "
 
   # a noteworthy event, a non-breaking deviation from the protocol path
-  WARN      = "\xE2\x80\xA0"
+  WARN      = "\xF0\x9F\x9A\xA9 " #"\xE2\x80\xA0"
 
   # important, breaking event, must be investigated.
   ERROR     = "\xE2\x9D\x97\xEF\xB8\x8F \xE2\x98\xA2"

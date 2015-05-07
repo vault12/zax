@@ -1,17 +1,14 @@
 require 'test_helper'
 
 class VerifySessionTest < ActionDispatch::IntegrationTest
-  test "verify_session_token in context" do
+  test "verify session token flow" do
     requst_token = Base64.strict_encode64 RbNaCl::Random.random_bytes 32
     get "/session", nil, HTTP_REQUEST_TOKEN: requst_token
     _success_response
     random_token = Base64.strict_decode64 response.body
   
-    # post "/session", nil, HTTP_REQUEST_TOKEN: (Base64.strict_encode64 RbNaCl::Random.random_bytes 32)
-    # _fail_response :precondition_failed # wrong token
-
-    # post "/session", nil, HTTP_REQUEST_TOKEN: requst_token
-    # _success_response
+    post "/session", nil, HTTP_REQUEST_TOKEN: (Base64.strict_encode64 RbNaCl::Random.random_bytes 32)
+    _fail_response :precondition_failed # wrong token
 
     post "/session", "hello"*100,
       'CONTENT_TYPE':'application/text',
@@ -29,5 +26,9 @@ class VerifySessionTest < ActionDispatch::IntegrationTest
       'CONTENT_TYPE':'application/text',
       'HTTP_REQUEST_TOKEN': requst_token
     _success_response
+    pkey = Base64.strict_decode64 response.body
+    assert_not_empty pkey
   end
+
+  
 end

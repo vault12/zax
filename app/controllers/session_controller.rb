@@ -1,34 +1,12 @@
 require "base64"
-require "log_codes"
+require "response_helper"
 
 class SessionController < ApplicationController
-  private
-  include LogCodes
-  TOKEN   = "REQUEST_TOKEN"
+  include ResponseHelper
 
-  def _get_request_id
-    # Let's make sure everything is correct with request_token
-    begin
-      rth = request.headers["HTTP_#{TOKEN}"]
-      raise "Missing #{TOKEN} header" unless rth
-      rid = Base64.strict_decode64 rth
-      raise "#{TOKEN} is not 32 bytes" unless rid.length == 32
-      return rid
-
-    # Can not get request token: report to log and to client
-    rescue => e
-      logger.warn "#{WARN} HTTP_#{TOKEN} (base64): "\
-      "#{ rth ? rth.dump : ''} => #{e}"
-      expires_now
-      head :precondition_failed,
-        error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
-    end
-    return nil
-  end
-
+  public
   # GET /session - start handshake
   # Responds with 412, 500 or 200 OK
-  public
   def new_session_token
 
     # Let's see if we got correct request_token
@@ -67,7 +45,7 @@ class SessionController < ApplicationController
     # Client have to conclude the handshike while our token is cached
     # Report expiration to log and user
     unless (token = Rails.cache.fetch rid)
-      logger.info "#{INFO_NEG} request for expired req #{rid.bytes[0..4]}"
+      logger.info "#{INFO_NEG} 'verify' for expired req #{rid.bytes[0..4]}"
       to = Rails.configuration.x.relay.new_session_token_timeout
       head :precondition_failed,
            error_details: "Your #{TOKEN} expired after #{to} seconds"
@@ -92,7 +70,7 @@ class SessionController < ApplicationController
 
     logger.info "#{INFO} Succesful handshake for req #{rid.bytes[0..4]}"
     # establish session keys
-    session_key = Rails.cache.fetch("#key_{rid}",
+    session_key = Rails.cache.fetch("key_#{rid}",
       expires_in: Rails.configuration.x.relay.session_timeout) do
         logger.info "#{INFO_GOOD} Generated new key for req #{rid.bytes[0..4]}..."
         RbNaCl::PrivateKey.generate
