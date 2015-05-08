@@ -27,7 +27,7 @@ Rails.application.configure do
   config.action_controller.allow_forgery_protection = false
 
   # Tell Action Mailer not to deliver emails to the real world.
-  # The :test delivery method accumulates sent emails in the
+  # The :test delivery methoda accumulates sent emails in the
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
 
@@ -43,6 +43,7 @@ Rails.application.configure do
   config.log_level = :debug
 
   # --- Relay configuration ---
-  config.x.relay.new_session_token_timeout = 0.05
-  config.x.relay.session_timeout           = 5
+  config.x.relay.token_timeout             = 0.05
+  config.x.relay.session_timeout           = 0.05
+  config.x.relay.max_nonce_diff            = 30
 end

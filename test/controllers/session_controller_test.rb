@@ -40,9 +40,10 @@ class SessionControllerTest < ActionController::TestCase
     _success_response
     assert_equal(Base64.decode64(response.body), counter_token)
 
-    sleep 0.05
+    sleep Rails.configuration.x.relay.token_timeout
     @request.headers["HTTP_REQUEST_TOKEN"] = token
     post :verify_session_token
+    logger.info "h:"+@response.headers["Error-Details"]
     _fail_response :precondition_failed # timed out
   end
 end

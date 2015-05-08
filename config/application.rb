@@ -4,13 +4,10 @@ require File.expand_path('../boot', __FILE__)
 # removed active record until we need DB (if ever)
 # uncomment #### lines when putting active_record back (or 'rails/all')
 
-# active_record
-%w(action_controller action_view action_mailer rails/test_unit sprockets).each do |framework|
-  begin
-    require "#{framework}/railtie"
-  rescue LoadError
-  end
-end
+require "action_controller/railtie"
+require "action_mailer/railtie"
+require "sprockets/railtie"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -33,8 +30,9 @@ module Zax
     # Do not swallow errors in after_commit/after_rollback callbacks.
     #### config.active_record.raise_in_transactional_callbacks = true
 
-    # --- Relay configuration ---
-    config.x.relay.new_session_token_timeout  = 1.minutes
+    # --- Relay default configuration ---
+    config.x.relay.token_timeout              = 1.minutes
     config.x.relay.session_timeout            = 5.minutes
+    config.x.relay.max_nonce_diff             = 3.minutes
   end
 end
