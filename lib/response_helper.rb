@@ -14,11 +14,6 @@ module ResponseHelper
     str1.bytes.zip(str2.bytes).map { |a,b| a^b }.pack("C*")
   end
 
-  def get_nonce_time(n)
-    nb = n.unpack("C*")[0,8]
-    nb.each_index.reduce { |s,i| s + nb[i]*255**(7-i) }
-  end
-
   def dump(obj)
     return 'nil' unless obj
     obj.to_s.dump
@@ -36,7 +31,7 @@ module ResponseHelper
 
     # Can not get request token: report to log and to client
     rescue => e
-      logger.warn "#{WARN} HTTP_#{TOKEN} (base64): "\
+      logger.warn "#{INFO_NEG} HTTP_#{TOKEN} (base64): "\
       "#{ rth ? rth.dump : ''} => #{e}"
       expires_now
       head :precondition_failed,

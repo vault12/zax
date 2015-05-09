@@ -15,7 +15,7 @@ class SessionController < ApplicationController
 
     # Establish and cache our token for timeout duration
     token = Rails.cache.fetch(rid, expires_in: to) do
-        logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}..."
+        logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
         expires_in to, :public => false
         RbNaCl::Random.random_bytes 32
     end

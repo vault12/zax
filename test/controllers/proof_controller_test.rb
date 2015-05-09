@@ -27,32 +27,43 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # no request data
 
     @request.env['RAW_POST_DATA'] =
-    "#{Base64.strict_encode64 RbNaCl::Random.random_bytes 32}\n"\
-    "123"
-    head :prove_hpk
+    "#{Base64.strict_encode64 RbNaCl::Random.random_bytes 32}\r\n"\
+    "123\r\n"
+    post :prove_hpk
     _fail_response :precondition_failed # not a nonce on second line
 
-    # expired nonce
+    # make nonce too old
     nonce1 = _client_nonce (Time.now - 35).to_i
     @request.env['RAW_POST_DATA'] =
     "#{Base64.strict_encode64 RbNaCl::Random.random_bytes 32}\n"\
-    "#{Base64.strict_encode64 nonce1}"
-    head :prove_hpk
-    _fail_response :precondition_failed
+    "#{Base64.strict_encode64 nonce1}\n"+
+    "x"*192
+    post :prove_hpk
+    _fail_response :precondition_failed  # expired nonce
 
     # Build virtual client from here
+
     client_sign = xor_str h2(rid), h2(token)
-    client_sess_key = RbNaCl::PrivateKey.generate
+    # Node communication key - identity and first key in rachet
     client_comm_key = RbNaCl::PrivateKey.generate
-    box = RbNaCl::Box.new(sessio_key.public_key,client_sess_key)
+    # Session temp key for current exchange with relay 
+    client_sess_key = RbNaCl::PrivateKey.generate
+    box_inner = RbNaCl::Box.new(sessio_key.public_key,client_comm_key)
 
+    # create inner packet with sign proving comm_key (idenitity)
     nonce_inner = _client_nonce
-    ctext = box.encrypt(nonce_inner, client_sign)
-
-    inner = { nonce: nonce_inner, pub_key: client_sess_key.public_key.to_s,
+    ctext = box_inner.encrypt(nonce_inner, client_sign)
+    inner = Hash[ {
+      nonce: nonce_inner,
+      pub_key: client_comm_key.public_key.to_s,
       ctext: ctext }
-    inner = inner.each_value { |v| Base64.strict_encode64 v }
-    logger.info inner
+      .map { |k,v| [k,Base64.strict_encode64(v)] } ]
+
+    # create outter packet
+    box_outter = RbNaCl::Box.new(sessio_key.public_key,client_sess_key)
+    nonce_outter = _client_nonce
+    logger.info inner.to_json.length
+    logger.info box_outter.encrypt(nonce_outter,inner.to_json).length
 
   end
 end
