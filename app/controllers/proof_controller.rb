@@ -88,6 +88,13 @@ class ProofController < ApplicationController
       # --- get outter ciphertext
       outer_box = RbNaCl::Box.new(client_key,@session_key)
       inner = JSON.parse outer_box.decrypt(nonce,b64dec(lines[2]))
+      inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
+
+      # inner box with node permanent comm_key (identity)
+      inner_box = RbNaCl::Box.new(inner[:pub_key],@session_key)
+      sign      = inner_box.decrypt(inner[:nonce],inner[:ctext])
+      sign2     = xor_str h2(@rid), h2(@token)
+      raise "Signature mis-match" unless sign and sign2 and sign == sign2
 
     rescue RbNaCl::CryptoError => e
       Rails.cache.delete "client_key_#{@rid}"
