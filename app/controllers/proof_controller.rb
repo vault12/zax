@@ -1,15 +1,17 @@
-require "base64"
+require "utils"
 require "response_helper"
+
 
 class ProofController < ApplicationController
   private
+  include Utils
   include ResponseHelper
 
   KEY_LEN   = 32
   NONCE_LEN = 24
   NONCE_B64 = 32
   KEY_B64   = 44
-  CT_B64    = 256
+  CIPHER_B64= 256
 
   private
   def _get_nonce_time(n)
@@ -18,7 +20,7 @@ class ProofController < ApplicationController
   end
 
   def _check_nonce(nonce_str)
-    nonce = Base64.strict_decode64 nonce_str
+    nonce = b64dec nonce_str
     raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
     nt = _get_nonce_time nonce
     raise "Nonce timestamp #{nt} expired by #{Time.now.to_i-nt}" if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
@@ -43,12 +45,12 @@ class ProofController < ApplicationController
     nl = body.include?("\r\n") ? "\r\n" : "\n"
     lines = body.split nl
     raise "Malformated body" unless lines.count==3 and
-    lines[0].length==KEY_B64 and lines[1].length==NONCE_B64 and lines[2].length==CT_B64
+    lines[0].length==KEY_B64 and lines[1].length==NONCE_B64 and lines[2].length==CIPHER_B64
     return lines
   end
 
   def _check_client_key(key_line)
-    xor_key = Base64.strict_decode64 key_line
+    xor_key = b64dec key_line
     return Rails.cache.fetch("client_key_#{@rid}", expires_in: @timeout) do
       key = xor_str xor_key, h2(@token)
       raise "Bad client key: #{dump key}" unless key and key.bytes.length==KEY_LEN
@@ -74,7 +76,7 @@ class ProofController < ApplicationController
       # ciphertext 192b = 256b base64
 
       # --- process request body
-      body = request.body.read KEY_B64+2+NONCE_B64+2+CT_B64
+      body = request.body.read KEY_B64+2+NONCE_B64+2+CIPHER_B64
       lines = _check_body body
       
       # --- first line is client XORed key
@@ -85,7 +87,7 @@ class ProofController < ApplicationController
 
       # --- get outter ciphertext
       outer_box = RbNaCl::Box.new(client_key,@session_key)
-      inner = JSON.parse outer_box.decrypt(nonce,Base64.strict_decode64(lines[2]))
+      inner = JSON.parse outer_box.decrypt(nonce,b64dec(lines[2]))
 
     rescue RbNaCl::CryptoError => e
       Rails.cache.delete "client_key_#{@rid}"

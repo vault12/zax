@@ -5,15 +5,6 @@ module ResponseHelper
 
   TOKEN   = "REQUEST_TOKEN"
 
-  # Double hash function
-  def h2(msg)
-    RbNaCl::Hash.sha256 "#{RbNaCl::Hash.sha256 msg}#{msg}"
-  end
-
-  def xor_str(str1,str2)
-    str1.bytes.zip(str2.bytes).map { |a,b| a^b }.pack("C*")
-  end
-
   def dump(obj)
     return 'nil' unless obj
     obj.to_s.dump
@@ -25,7 +16,7 @@ module ResponseHelper
     begin
       rth = request.headers["HTTP_#{TOKEN}"]
       raise "Missing #{TOKEN} header" unless rth
-      rid = Base64.strict_decode64 rth
+      rid = b64dec rth
       raise "#{TOKEN} is not 32 bytes" unless rid.length == 32
       return rid
 

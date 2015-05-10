@@ -1,7 +1,9 @@
-require "base64"
+require "utils"
 require "response_helper"
 
 class SessionController < ApplicationController
+  private
+  include Utils
   include ResponseHelper
 
   public
@@ -30,7 +32,7 @@ class SessionController < ApplicationController
     end
 
     # Send back our token as base64 response body
-    render text: Base64.strict_encode64(token)
+    render text: b64enc(token)
   end
 
   # POST /session - end handshake
@@ -54,7 +56,7 @@ class SessionController < ApplicationController
     # Verify handshake: user request token XOR our token
     begin
       body = request.body.read 44 # exact base64 of 32 bytes
-      handshake = Base64.strict_decode64 body
+      handshake = b64dec body
       raise "Handshake mismatch" unless handshake.eql? (xor_str token, rid)
 
     # Report handshake errors
@@ -87,6 +89,6 @@ class SessionController < ApplicationController
     end
 
     # Send session pub_key back to user as base64 body
-    render text: "#{Base64.strict_encode64 session_key.public_key.to_bytes}"
+    render text: "#{b64enc session_key.public_key.to_bytes}"
   end
 end

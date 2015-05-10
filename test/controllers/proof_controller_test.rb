@@ -1,8 +1,8 @@
 require 'test_helper'
-require 'response_helper'
+require "utils"
 
 class ProofControllerTest < ActionController::TestCase
-  include ResponseHelper
+  include Utils
 
   test "prove_hpk guard conditions" do
     Rails.cache.clear
@@ -11,7 +11,7 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # no header
 
     rid = RbNaCl::Random.random_bytes 32
-    @request.headers["HTTP_REQUEST_TOKEN"] = Base64.strict_encode64 rid
+    @request.headers["HTTP_REQUEST_TOKEN"] = b64enc rid
     head :prove_hpk
     _fail_response :precondition_failed # unconfirmed token
 
@@ -29,7 +29,7 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # no request data
 
     @request.env['RAW_POST_DATA'] =
-    "#{Base64.strict_encode64 RbNaCl::Random.random_bytes 32}\r\n"\
+    "#{b64enc RbNaCl::Random.random_bytes 32}\r\n"\
     "123\r\n"
     post :prove_hpk
     _fail_response :precondition_failed # not a nonce on second line
@@ -37,8 +37,8 @@ class ProofControllerTest < ActionController::TestCase
     # make nonce too old
     nonce1 = _client_nonce (Time.now - 35).to_i
     @request.env['RAW_POST_DATA'] =
-    "#{Base64.strict_encode64 RbNaCl::Random.random_bytes 32}\n"\
-    "#{Base64.strict_encode64 nonce1}\n"+
+    "#{b64enc RbNaCl::Random.random_bytes 32}\n"\
+    "#{b64enc nonce1}\n"+
     "x"*192
     post :prove_hpk
     _fail_response :precondition_failed  # expired nonce
@@ -60,7 +60,7 @@ class ProofControllerTest < ActionController::TestCase
       nonce: nonce_inner,
       pub_key: client_comm_key.public_key.to_s,
       ctext: ctext }
-      .map { |k,v| [k,Base64.strict_encode64(v)] }
+      .map { |k,v| [k,b64enc(v)] }
     ]
 
     # create outter packet over mutual temp session keys
@@ -73,17 +73,17 @@ class ProofControllerTest < ActionController::TestCase
     corrupt = outer.clone
     corrupt[0] = [corrupt[0].ord+1].pack("C")
     @request.env['RAW_POST_DATA'] =
-    "#{Base64.strict_encode64 xor_key}\n"\
-    "#{Base64.strict_encode64 nonce_outer}\n"\
-    "#{Base64.strict_encode64 corrupt}"
+    "#{b64enc xor_key}\n"\
+    "#{b64enc nonce_outer}\n"\
+    "#{b64enc corrupt}"
     post :prove_hpk
     _fail_response :bad_request 
 
     # correct ciphertext
      @request.env['RAW_POST_DATA'] =
-    "#{Base64.strict_encode64 xor_key}\n"\
-    "#{Base64.strict_encode64 nonce_outer}\n"\
-    "#{Base64.strict_encode64 outer}"
+    "#{b64enc xor_key}\n"\
+    "#{b64enc nonce_outer}\n"\
+    "#{b64enc outer}"
     post :prove_hpk
     _success_response
   end
