@@ -95,7 +95,6 @@ class ProofController < ApplicationController
       head :bad_request, error_details: "Decryption error"
       return
     rescue => e
-      logger.info "--- #{e.class}"
       Rails.cache.delete "client_key_#{@rid}"
       logger.warn "#{WARN} Aborted prove_hpk key exchange:\n'#{body}'\n#{EXPT} #{e}"
       head :precondition_failed,

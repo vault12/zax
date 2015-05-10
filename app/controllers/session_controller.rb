@@ -61,7 +61,7 @@ class SessionController < ApplicationController
 
     # Report handshake errors
     rescue => e
-      logger.warn "#{WARN} handshake '#{body}' => #{e}"
+      logger.warn "#{WARN} handshake:\n#{body}\n#{EXPT}#{e}"
       head :conflict,
         error_details: "Provide session handshake "\
         "(your token XOR our token) as base64 body"
@@ -74,7 +74,6 @@ class SessionController < ApplicationController
     session_key = Rails.cache.fetch("key_#{rid}",expires_in: to) do
         logger.info "#{INFO_GOOD} Generated new session key "\
                     "for req #{rid.bytes[0..3]}..."
-
         # refresh token for same expiration timeout
         Rails.cache.write(rid, token, :expires_in => to)
         RbNaCl::PrivateKey.generate
@@ -82,7 +81,7 @@ class SessionController < ApplicationController
 
     # report errors with keys if any
     if session_key.nil? or session_key.public_key.to_bytes.length!=32
-      logger.error "#{ERROR} NaCl error - generate keys: #{dump session_key}"
+      logger.error "#{ERROR} NaCl error - generate keys\n#{EXPT} #{dump session_key}"
       head :internal_server_error,
         error_details: "Can't generate new keys; try again?"
       return
