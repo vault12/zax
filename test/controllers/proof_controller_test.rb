@@ -4,7 +4,9 @@ require 'response_helper'
 class ProofControllerTest < ActionController::TestCase
   include ResponseHelper
 
-  test "prove :hpk guard" do
+  test "prove_hpk guard conditions" do
+    Rails.cache.clear
+
     head :prove_hpk
     _fail_response :precondition_failed # no header
 
@@ -14,14 +16,14 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # unconfirmed token
 
     # with token 
-    Rails.cache.write(rid, token = RbNaCl::Random.random_bytes(32),
-      expires_in: 0.05)
+    token = RbNaCl::Random.random_bytes(32)
+    Rails.cache.write(rid, token ,expires_in: 0.05)
     head :prove_hpk
     _fail_response :precondition_failed # token alone not enough
 
-    # with session key
-    Rails.cache.write("key_#{rid}", sessio_key = RbNaCl::PrivateKey.generate(),
-      expires_in: 0.05)
+    # with a session key
+    session_key = RbNaCl::PrivateKey.generate()
+    Rails.cache.write("key_#{rid}", session_key ,expires_in: 0.1)
     @request.env['RAW_POST_DATA'] = "hello world"
     head :prove_hpk
     _fail_response :precondition_failed # no request data
@@ -41,29 +43,48 @@ class ProofControllerTest < ActionController::TestCase
     post :prove_hpk
     _fail_response :precondition_failed  # expired nonce
 
-    # Build virtual client from here
+    # --- Build virtual client from here
 
-    client_sign = xor_str h2(rid), h2(token)
     # Node communication key - identity and first key in rachet
     client_comm_key = RbNaCl::PrivateKey.generate
+    
     # Session temp key for current exchange with relay 
     client_sess_key = RbNaCl::PrivateKey.generate
-    box_inner = RbNaCl::Box.new(sessio_key.public_key,client_comm_key)
 
     # create inner packet with sign proving comm_key (idenitity)
+    box_inner = RbNaCl::Box.new(session_key.public_key,client_comm_key)
     nonce_inner = _client_nonce
+    client_sign = xor_str h2(rid), h2(token)
     ctext = box_inner.encrypt(nonce_inner, client_sign)
     inner = Hash[ {
       nonce: nonce_inner,
       pub_key: client_comm_key.public_key.to_s,
       ctext: ctext }
-      .map { |k,v| [k,Base64.strict_encode64(v)] } ]
+      .map { |k,v| [k,Base64.strict_encode64(v)] }
+    ]
 
-    # create outter packet
-    box_outter = RbNaCl::Box.new(sessio_key.public_key,client_sess_key)
-    nonce_outter = _client_nonce
-    logger.info inner.to_json.length
-    logger.info box_outter.encrypt(nonce_outter,inner.to_json).length
+    # create outter packet over mutual temp session keys
+    box_outer = RbNaCl::Box.new(session_key.public_key,client_sess_key)
+    nonce_outer = _client_nonce
+    outer = box_outer.encrypt(nonce_outer,inner.to_json)
+    xor_key = xor_str client_sess_key.public_key.to_s, h2(token)
 
+    # corrupt ciphertext
+    corrupt = outer.clone
+    corrupt[0] = [corrupt[0].ord+1].pack("C")
+    @request.env['RAW_POST_DATA'] =
+    "#{Base64.strict_encode64 xor_key}\n"\
+    "#{Base64.strict_encode64 nonce_outer}\n"\
+    "#{Base64.strict_encode64 corrupt}"
+    post :prove_hpk
+    _fail_response :bad_request 
+
+    # correct ciphertext
+     @request.env['RAW_POST_DATA'] =
+    "#{Base64.strict_encode64 xor_key}\n"\
+    "#{Base64.strict_encode64 nonce_outer}\n"\
+    "#{Base64.strict_encode64 outer}"
+    post :prove_hpk
+    _success_response
   end
 end

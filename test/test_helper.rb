@@ -39,12 +39,12 @@ class ActiveSupport::TestCase
     end
     blank = Array.new(8) { 0 } # zero as 8 byte integer
 
-    # insert timestamp, MSB first
+    # 64 bit timestamp, MSB first
     blank[-timestamp.length,timestamp.length] = timestamp
 
     # Nonce first 8 bytes are timestamp
     nonce[0,blank.length] = blank
-    nonce.pack("C*")
+    return nonce.pack("C*")
   end
 
 end
