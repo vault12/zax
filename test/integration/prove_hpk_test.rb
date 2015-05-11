@@ -2,6 +2,8 @@ require 'test_helper'
 
 class ProveHpkTest < ActionDispatch::IntegrationTest
   test "prove :hpk" do
+    Rails.cache.clear
+
     # establish handshake
     requst_token = b64enc RbNaCl::Random.random_bytes 32
     get "/session", nil, HTTP_REQUEST_TOKEN: requst_token
@@ -21,8 +23,5 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
       'CONTENT_TYPE':'application/text',
       'HTTP_REQUEST_TOKEN': requst_token
     _success_response
-
-    n = _client_nonce
-    
   end
 end

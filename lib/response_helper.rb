@@ -4,6 +4,8 @@ module ResponseHelper
   include LogCodes
 
   TOKEN   = "REQUEST_TOKEN"
+  NONCE_LEN = 24
+  NONCE_B64 = 32
 
   def dump(obj)
     return 'nil' unless obj
@@ -47,6 +49,19 @@ module ResponseHelper
         error_details: "Provide address to prove ownership as h2 hash in prove/:hpk"
     end
     return nil
+  end
+
+   def _get_nonce_time(n)
+    nb = n.unpack("C*")[0,8]
+    nb.each_index.reduce { |s,i| s + nb[i]*255**(7-i) }
+  end
+
+  def _check_nonce(nonce_str)
+    nonce = b64dec nonce_str
+    raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
+    nt = _get_nonce_time nonce
+    raise "Nonce timestamp #{nt} delta #{Time.now.to_i-nt}" if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
+    return nonce
   end
 
 end

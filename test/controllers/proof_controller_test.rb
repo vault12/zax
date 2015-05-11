@@ -7,6 +7,7 @@ class ProofControllerTest < ActionController::TestCase
   test "prove_hpk guard conditions" do
     Rails.cache.clear
 
+    # random hpk for first basic tests
     hpk = b64enc h2(RbNaCl::Random.random_bytes 32)
     head :prove_hpk, hpk: hpk
     _fail_response :precondition_failed # no header
