@@ -7,49 +7,53 @@ class ProofControllerTest < ActionController::TestCase
   test "prove_hpk guard conditions" do
     Rails.cache.clear
 
-    head :prove_hpk
+    hpk = b64enc h2(RbNaCl::Random.random_bytes 32)
+    head :prove_hpk, hpk: hpk
     _fail_response :precondition_failed # no header
 
+    # --- unconfirmed token
     rid = RbNaCl::Random.random_bytes 32
     @request.headers["HTTP_REQUEST_TOKEN"] = b64enc rid
-    head :prove_hpk
-    _fail_response :precondition_failed # unconfirmed token
+    head :prove_hpk, hpk: hpk
+    _fail_response :precondition_failed 
 
-    # with token 
+    # --- with token 
     token = RbNaCl::Random.random_bytes(32)
     Rails.cache.write(rid, token ,expires_in: 0.05)
-    head :prove_hpk
+    head :prove_hpk, hpk: hpk
     _fail_response :precondition_failed # token alone not enough
+
+    # --- missing hpk
+    head :prove_hpk, hpk: ""
+    _fail_response :bad_request # need hpk
+
+    # --- short hpk
+    head :prove_hpk, hpk: hpk[0..30]
+    _fail_response :bad_request # need hpk
 
     # with a session key
     session_key = RbNaCl::PrivateKey.generate()
     Rails.cache.write("key_#{rid}", session_key ,expires_in: 0.1)
     @request.env['RAW_POST_DATA'] = "hello world"
-    head :prove_hpk
+    head :prove_hpk, { hpk: hpk}
     _fail_response :precondition_failed # no request data
 
-    @request.env['RAW_POST_DATA'] =
-    "#{b64enc RbNaCl::Random.random_bytes 32}\r\n"\
-    "123\r\n"
-    post :prove_hpk
+    # --- missing nonce, ciphertext
+    _raw_post :prove_hpk, { hpk: hpk}, RbNaCl::Random.random_bytes(32), "123"
     _fail_response :precondition_failed # not a nonce on second line
 
-    # make nonce too old
+    # --- make nonce too old
     nonce1 = _client_nonce (Time.now - 35).to_i
-    @request.env['RAW_POST_DATA'] =
-    "#{b64enc RbNaCl::Random.random_bytes 32}\n"\
-    "#{b64enc nonce1}\n"+
-    "x"*192
-    post :prove_hpk
+    _raw_post :prove_hpk, { hpk: hpk}, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
     _fail_response :precondition_failed  # expired nonce
 
-    # --- Build virtual client from here
+    # Build virtual client from here
 
     # Node communication key - identity and first key in rachet
     client_comm_key = RbNaCl::PrivateKey.generate
-    
     # Session temp key for current exchange with relay 
     client_sess_key = RbNaCl::PrivateKey.generate
+    hpk = b64enc h2(client_comm_key.public_key)
 
     # create inner packet with sign proving comm_key (idenitity)
     box_inner = RbNaCl::Box.new(session_key.public_key,client_comm_key)
@@ -69,22 +73,34 @@ class ProofControllerTest < ActionController::TestCase
     outer = box_outer.encrypt(nonce_outer,inner.to_json)
     xor_key = xor_str client_sess_key.public_key.to_s, h2(token)
 
-    # corrupt ciphertext
-    corrupt = outer.clone
-    corrupt[0] = [corrupt[0].ord+1].pack("C")
-    @request.env['RAW_POST_DATA'] =
-    "#{b64enc xor_key}\n"\
-    "#{b64enc nonce_outer}\n"\
-    "#{b64enc corrupt}"
-    post :prove_hpk
-    _fail_response :bad_request 
+    # --- corrupt ciphertext
+    _raw_post :prove_hpk, { hpk: hpk }, xor_key, nonce_outer, _corrupt_str(outer)
+    _fail_response :bad_request
+
+    # --- corrupt signature
+    corrupt_sign = xor_str h2(rid), h2(_corrupt_str token)
+    corrupt = Hash[ {
+      nonce: nonce_inner,
+      pub_key: client_comm_key.public_key.to_s,
+      ctext: box_inner.encrypt(nonce_inner, corrupt_sign) }
+      .map { |k,v| [k,b64enc(v)] }
+    ]
+    _raw_post :prove_hpk, { hpk: hpk }, xor_key, nonce_outer, box_outer.encrypt(nonce_outer,corrupt.to_json)
+    _fail_response :precondition_failed # signature mis-match
+
+    # --- corrupt hpk
+    _raw_post :prove_hpk, { hpk: _corrupt_str(hpk) },
+      xor_key, nonce_outer, outer
+    _fail_response :precondition_failed # :hpk mismatch with inner :pub_key
+
+    # --- wrong hpk
+    _raw_post :prove_hpk, { hpk: b64enc(h2(client_sess_key.public_key))},
+      xor_key, nonce_outer, outer
+    _fail_response :precondition_failed # :hpk mismatch with inner :pub_key
 
     # correct ciphertext
-     @request.env['RAW_POST_DATA'] =
-    "#{b64enc xor_key}\n"\
-    "#{b64enc nonce_outer}\n"\
-    "#{b64enc outer}"
-    post :prove_hpk
+    _raw_post :prove_hpk, { hpk: hpk },
+      xor_key, nonce_outer, outer
     _success_response
   end
 end

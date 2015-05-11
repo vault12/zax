@@ -25,12 +25,15 @@ class ActiveSupport::TestCase
     assert_not_empty response.body
   end
 
-  def _raw_post(action, headers, body)
-    @request.env['RAW_POST_DATA'] = body
-    headers.map { |k,v| @request.headers[k]=v } if headers
-    response = post(action, nil)
-    @request.env.delete('RAW_POST_DATA')
-    response
+  def _raw_post(action, params, *lines)
+    @request.env['RAW_POST_DATA'] = lines.reduce("") { |s,v| s+="#{b64enc v}\n" }
+    post action,params
+  end
+
+  def _corrupt_str(str)
+    corrupt = str.clone
+    corrupt[0] = [corrupt[0].ord+1].pack("C")
+    corrupt
   end
 
   def _client_nonce(tnow = Time.now.to_i)

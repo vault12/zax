@@ -51,18 +51,17 @@ class ProofController < ApplicationController
 
   def _check_client_key(key_line)
     xor_key = b64dec key_line
-    return Rails.cache.fetch("client_key_#{@rid}", expires_in: @timeout) do
-      key = xor_str xor_key, h2(@token)
-      raise "Bad client key: #{dump key}" unless key and key.bytes.length==KEY_LEN
-      logger.info "#{INFO_GOOD} Saved client key for req #{@rid.bytes[0..3]}"
-      return key
-    end
+    key = xor_str xor_key, h2(@token)
+    return key
+    raise "Bad client key: #{dump key}" unless key and key.bytes.length==KEY_LEN
   end
 
   public
+  # --- "/prove/:hpk" ---
   def prove_hpk
     # Let's see if we got correct request_token
     return unless @rid = _get_request_id
+    return unless @hpk = _get_hpk(params[:hpk])
 
     # Get cached session state
     @timeout = Rails.configuration.x.relay.session_timeout
@@ -95,22 +94,26 @@ class ProofController < ApplicationController
       sign      = inner_box.decrypt(inner[:nonce],inner[:ctext])
       sign2     = xor_str h2(@rid), h2(@token)
       raise "Signature mis-match" unless sign and sign2 and sign == sign2
+      raise "HPK mismatch" unless @hpk == h2(inner[:pub_key])
 
     rescue RbNaCl::CryptoError => e
-      Rails.cache.delete "client_key_#{@rid}"
-      logger.error "#{ERROR} Decryption error for packet\n'#{body}'\n#{EXPT} #{e}"
+      logger.error "#{ERROR} Decryption error for packet:\n'"\
+        "#{body}'\n#{EXPT} #{e}"
       head :bad_request, error_details: "Decryption error"
       return
+
     rescue => e
-      Rails.cache.delete "client_key_#{@rid}"
-      logger.warn "#{WARN} Aborted prove_hpk key exchange:\n'#{body}'\n#{EXPT} #{e}"
+      logger.warn "#{WARN} Aborted prove_hpk key exchange:\n"\
+        "#{body}\n#{EXPT} #{e}"
       head :precondition_failed,
         error_details: "Provide masked pub_key, timestamped nonce and signature as 3 lines in base64"
       return
     else
       # Increase timeout on dependents
-      Rails.cache.write(@rid, @token, :expires_in => @timeout)
-      Rails.cache.write("key_#{@rid}", @session_key, :expires_in => @timeout)
+      Rails.cache.write(@rid, @token, expires_in: @timeout)
+      Rails.cache.write("key_#{@rid}", @session_key, expires_in: @timeout)
+      Rails.cache.write("client_key_#{@hpk}", client_key, expires_in: @timeout)
+      logger.info "#{INFO_GOOD} Saved client session keyfor req #{@rid.bytes[0..3]}"
     end
 
     # PLACEHOLDER
