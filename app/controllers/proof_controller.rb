@@ -11,7 +11,6 @@ class ProofController < ApplicationController
   KEY_B64   = 44
   CIPHER_B64= 256
 
-  private
   def _check_session_state
     # report errors with session state
     if @session_key.nil? or @session_key.to_bytes.length!=KEY_LEN or

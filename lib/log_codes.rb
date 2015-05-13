@@ -1,5 +1,8 @@
 module LogCodes
-  # log file prefix codes
+  # Log file prefix codes.
+  # 
+  # First char of log lines show visual icon of
+  # that line importance. 
 
   # low level info, can be ignored
   INFO      = "\xF0\x9F\x94\xA9 "

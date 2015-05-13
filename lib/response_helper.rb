@@ -1,6 +1,7 @@
 require "log_codes"
 
 module ResponseHelper
+  protected
   include LogCodes
 
   TOKEN   = "REQUEST_TOKEN"
@@ -12,7 +13,6 @@ module ResponseHelper
     obj.to_s.dump
   end
 
-  protected
   def _get_request_id
     # Let's make sure everything is correct with request_token
     begin
