@@ -1,9 +1,7 @@
-require "utils"
 require "response_helper"
 
 class SessionController < ApplicationController
   private
-  include Utils
   include ResponseHelper
 
   public

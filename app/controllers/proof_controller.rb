@@ -1,10 +1,7 @@
-require "utils"
 require "response_helper"
-
 
 class ProofController < ApplicationController
   private
-  include Utils
   include ResponseHelper
 
   CIPHER_B64 = 256
@@ -28,8 +25,8 @@ class ProofController < ApplicationController
     nl = body.include?("\r\n") ? "\r\n" : "\n"
     lines = body.split nl
     raise "Malformated body" unless lines.count==3 and
-      lines[0].length==KEY_B64 and 
-      lines[1].length==NONCE_B64 and 
+      lines[0].length==KEY_B64 and
+      lines[1].length==NONCE_B64 and
       lines[2].length==CIPHER_B64
     return lines
   end
