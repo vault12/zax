@@ -1,5 +1,8 @@
+require "key_params"
+
 class ApplicationController < ActionController::API
   before_filter :allow_origin
+  include KeyParams
 
   public
   def allow_crossdomain

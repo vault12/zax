@@ -10,15 +10,14 @@ class SessionController < ApplicationController
   # GET /session - start handshake
   # Responds with 412, 500 or 200 OK
   def new_session_token
+    expires_in 0, :public => false  # never cache
 
     # Let's see if we got correct request_token
     return unless rid = _get_request_id  # Enforce token header or fail 412
     to = Rails.configuration.x.relay.token_timeout
-
     # Establish and cache our token for timeout duration
     token = Rails.cache.fetch(rid, expires_in: to) do
         logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
-        expires_in to, :public => false
         RbNaCl::Random.random_bytes 32
     end
 
@@ -27,7 +26,6 @@ class SessionController < ApplicationController
       logger.error "#{ERROR} NaCl error - random(32): #{dump token}"
       head :internal_server_error,
         x_error_details: "Local entropy fail; try again?"
-      expires_now
       return
     end
 

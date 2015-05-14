@@ -1,6 +1,6 @@
 module KeyParams
 
-  TOKEN   = "X-REQUEST-TOKEN"
+  TOKEN   = "X_REQUEST_TOKEN"
 
   NONCE_LEN = 24
   NONCE_B64 = 32
