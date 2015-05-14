@@ -3,10 +3,7 @@ require "log_codes"
 module ResponseHelper
   protected
   include LogCodes
-
-  TOKEN   = "REQUEST_TOKEN"
-  NONCE_LEN = 24
-  NONCE_B64 = 32
+  include Utils
 
   def dump(obj)
     return 'nil' unless obj
@@ -28,7 +25,7 @@ module ResponseHelper
       "#{dump rth}:\n#{EXPT} #{e}"
       expires_now
       head :precondition_failed,
-        error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
+        x_error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
     end
     return nil
   end
@@ -46,7 +43,7 @@ module ResponseHelper
       logger.warn "#{INFO_NEG} bad :hpk: #{dump h}\n#{EXPT} #{e}"
       expires_now
       head :bad_request,
-        error_details: "Provide address to prove ownership as h2 hash in prove/:hpk"
+        x_error_details: "Provide address to prove ownership as h2 hash in prove/:hpk"
     end
     return nil
   end

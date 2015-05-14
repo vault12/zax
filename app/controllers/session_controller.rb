@@ -26,7 +26,7 @@ class SessionController < ApplicationController
     if not token or token.length != 32
       logger.error "#{ERROR} NaCl error - random(32): #{dump token}"
       head :internal_server_error,
-        error_details: "Local entropy fail; try again?"
+        x_error_details: "Local entropy fail; try again?"
       expires_now
       return
     end
@@ -49,7 +49,7 @@ class SessionController < ApplicationController
       logger.info "#{INFO_NEG} 'verify' for expired req #{rid.bytes[0..3]}"
       to = Rails.configuration.x.relay.token_timeout
       head :precondition_failed,
-           error_details: "Your #{TOKEN} expired after #{to} seconds"
+           x_error_details: "Your #{TOKEN} expired after #{to} seconds"
       return
     end
 
@@ -63,7 +63,7 @@ class SessionController < ApplicationController
     rescue => e
       logger.warn "#{WARN} handshake:\n#{body}\n#{EXPT}#{e}"
       head :conflict,
-        error_details: "Provide session handshake "\
+        x_error_details: "Provide session handshake "\
         "(your token XOR our token) as base64 body"
       return
     end
@@ -83,7 +83,7 @@ class SessionController < ApplicationController
     if session_key.nil? or session_key.public_key.to_bytes.length!=32
       logger.error "#{ERROR} NaCl error - generate keys\n#{EXPT} #{dump session_key}"
       head :internal_server_error,
-        error_details: "Can't generate new keys; try again?"
+        x_error_details: "Can't generate new keys; try again?"
       return
     end
 

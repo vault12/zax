@@ -6,11 +6,11 @@ class SessionControllerTest < ActionController::TestCase
     head :new_session_token
     _fail_response :precondition_failed # missing header
     
-    @request.headers["HTTP_REQUEST_TOKEN"] = RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = RbNaCl::Random.random_bytes 32
     head :new_session_token
     _fail_response :precondition_failed # wrong encoding
 
-    @request.headers["HTTP_REQUEST_TOKEN"] = b64enc RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = b64enc RbNaCl::Random.random_bytes 32
     head :new_session_token
     _success_response
   end
@@ -19,31 +19,31 @@ class SessionControllerTest < ActionController::TestCase
     head :verify_session_token
     _fail_response :precondition_failed # missing header
 
-    @request.headers["HTTP_REQUEST_TOKEN"] = RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = RbNaCl::Random.random_bytes 32
     head :verify_session_token
     _fail_response :precondition_failed # wrong encoding
 
-    @request.headers["HTTP_REQUEST_TOKEN"] = b64enc RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = b64enc RbNaCl::Random.random_bytes 32
     head :verify_session_token
     _fail_response :precondition_failed # wrong token
   end
 
   test "token is consitent until timeout" do
     token = b64enc RbNaCl::Random.random_bytes 32
-    @request.headers["HTTP_REQUEST_TOKEN"] = token
+    @request.headers["HTTP_#{TOKEN}"] = token
     get :new_session_token
     _success_response
     counter_token = Base64.decode64(response.body)
 
-    @request.headers["HTTP_REQUEST_TOKEN"] = token
+    @request.headers["HTTP_#{TOKEN}"] = token
     get :new_session_token
     _success_response
     assert_equal(Base64.decode64(response.body), counter_token)
 
     sleep Rails.configuration.x.relay.token_timeout
-    @request.headers["HTTP_REQUEST_TOKEN"] = token
+    @request.headers["HTTP_#{TOKEN}"] = token
     post :verify_session_token
-    logger.info "h:"+@response.headers["Error-Details"]
+    logger.info "h:"+@response.headers["X-Error-Details"]
     _fail_response :precondition_failed # timed out
   end
 end

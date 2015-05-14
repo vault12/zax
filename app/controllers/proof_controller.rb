@@ -7,9 +7,7 @@ class ProofController < ApplicationController
   include Utils
   include ResponseHelper
 
-  KEY_LEN   = 32
-  KEY_B64   = 44
-  CIPHER_B64= 256
+  CIPHER_B64 = 256
 
   def _check_session_state
     # report errors with session state
@@ -19,7 +17,7 @@ class ProofController < ApplicationController
       "sk #{dump @session_key}, "\
       "tkn #{dump @token}, rid #{@rid.bytes[0..4]}"
       head :precondition_failed,
-        error_details: "No session_key/token: establish session first"
+        x_error_details: "No session_key/token: establish session first"
       return nil
     end
     return true # check success
@@ -92,14 +90,14 @@ class ProofController < ApplicationController
         "#{ e.is_a?(RbNaCl::BadAuthenticatorError) ? 'The authenticator was forged or otherwise corrupt' : ''}"\
         "#{ e.is_a?(RbNaCl::BadSignatureError) ? 'The signature was forged or otherwise corrupt' : ''}"\
         "\n#{body}\n#{EXPT} #{e}"
-      head :bad_request, error_details: "Decryption error"
+      head :bad_request, x_error_details: "Decryption error"
       return
 
     rescue => e
       logger.warn "#{WARN} Aborted prove_hpk key exchange:\n"\
         "#{body}\n#{EXPT} #{e}"
       head :precondition_failed,
-        error_details: "Provide masked pub_key, timestamped nonce and signature as 3 lines in base64"
+        x_error_details: "Provide masked pub_key, timestamped nonce and signature as 3 lines in base64"
       return
     else
       # Increase timeout on dependents

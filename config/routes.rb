@@ -1,9 +1,10 @@
 Rails.application.routes.draw do
 
-  get   'session'   => 'session#new_session_token'
-  post  'session'  => 'session#verify_session_token'
+  match   'session'   => 'session#allow_crossdomain', via: [:options]
+  get     'session'   => 'session#new_session_token'
+  post    'session'   => 'session#verify_session_token'
 
-  post  'prove/:hpk'    => 'proof#prove_hpk'
+  post    'prove/:hpk'    => 'proof#prove_hpk'
 
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".

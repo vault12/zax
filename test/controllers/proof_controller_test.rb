@@ -14,7 +14,7 @@ class ProofControllerTest < ActionController::TestCase
 
     # --- unconfirmed token
     rid = RbNaCl::Random.random_bytes 32
-    @request.headers["HTTP_REQUEST_TOKEN"] = b64enc rid
+    @request.headers["HTTP_#{TOKEN}"] = b64enc rid
     head :prove_hpk, hpk: hpk
     _fail_response :precondition_failed 
 

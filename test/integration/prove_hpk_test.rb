@@ -6,7 +6,7 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
 
     # establish handshake
     requst_token = b64enc RbNaCl::Random.random_bytes 32
-    get "/session", nil, HTTP_REQUEST_TOKEN: requst_token
+    get "/session", nil, "HTTP_#{TOKEN}": requst_token
     _success_response
     random_token = b64dec response.body
 
@@ -14,14 +14,14 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
 
     post "/session", b64enc(real_handshake),
       'CONTENT_TYPE':'application/text',
-      'HTTP_REQUEST_TOKEN': requst_token
+      "HTTP_#{TOKEN}": requst_token
     _success_response
     pub_key = b64dec response.body
     assert_not_empty pub_key
 
     post "/session", b64enc(real_handshake),
       'CONTENT_TYPE':'application/text',
-      'HTTP_REQUEST_TOKEN': requst_token
+      "HTTP_#{TOKEN}": requst_token
     _success_response
   end
 end
