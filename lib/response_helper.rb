@@ -1,4 +1,5 @@
 require "log_codes"
+require "utils"
 
 module ResponseHelper
   protected
@@ -48,9 +49,9 @@ module ResponseHelper
     return nil
   end
 
-   def _get_nonce_time(n)
+  def _get_nonce_time(n)
     nb = n.unpack("C*")[0,8]
-    nb.each_index.reduce { |s,i| s + nb[i]*255**(7-i) }
+    nb.each_index.reduce { |s,i| s + nb[i]*256**(7-i) }
   end
 
   def _check_nonce(nonce_str)

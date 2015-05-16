@@ -39,8 +39,8 @@ class ActiveSupport::TestCase
   def _client_nonce(tnow = Time.now.to_i)
     nonce = (RbNaCl::Random.random_bytes 24).unpack "C24"
 
-    timestamp = (Math.log(tnow)/Math.log(255)).floor.downto(0).map do
-      |i| (tnow / 255**i) % 255
+    timestamp = (Math.log(tnow)/Math.log(256)).floor.downto(0).map do
+      |i| (tnow / 256**i) % 256
     end
     blank = Array.new(8) { 0 } # zero as 8 byte integer
 
