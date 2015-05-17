@@ -73,7 +73,8 @@ class SessionController < ApplicationController
     to = Rails.configuration.x.relay.session_timeout
     session_key = Rails.cache.fetch("key_#{rid}",expires_in: to) do
         logger.info "#{INFO_GOOD} Generated new session key "\
-                    "for req #{rid.bytes[0..3]}..."
+        "for req #{rid.bytes[0..3]}..."
+        
         # refresh token for same expiration timeout
         Rails.cache.write(rid, token, :expires_in => to)
         RbNaCl::PrivateKey.generate

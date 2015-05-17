@@ -12,12 +12,14 @@ module ResponseHelper
   end
 
   def _get_request_id
-    # Let's make sure everything is correct with request_token
     begin
+      # Let's make sure everything is correct with request_token
       rth = request.headers["HTTP_#{TOKEN}"]
       raise "Missing #{TOKEN} header" unless rth
+
       rid = b64dec rth
       raise "#{TOKEN} is not 32 bytes" unless rid.length == 32
+
       return rid
 
     # Can not get request token: report to log and to client
@@ -28,25 +30,26 @@ module ResponseHelper
       head :precondition_failed,
         x_error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
     end
-    return nil
   end
 
-  def _get_hpk(h)
-    # Let's make sure everything is correct with :hpk
+  def _get_hpk
     begin
-      raise "Missing :hpk" unless h
+      # Let's make sure everything is correct with :hpk
+      h = request.headers["HTTP_#{HPK}"]
+      raise "Missing #{HPK} header" unless h
+
       hpk = b64dec h
-      raise ":hpk '#{hpk}' is not 32 bytes" unless hpk.length == 32
+      raise "#{HPK} '#{hpk}' is not 32 bytes" unless hpk.length == 32
+      
       return hpk
 
     # Can not get request token: report to log and to client
     rescue => e
-      logger.warn "#{INFO_NEG} bad :hpk: #{dump h}\n#{EXPT} #{e}"
+      logger.warn "#{INFO_NEG} bad #{HPK}: #{dump h}\n#{EXPT} #{e}"
       expires_now
       head :bad_request,
-        x_error_details: "Provide address to prove ownership as h2 hash in prove/:hpk"
+        x_error_details: "Provide #{HPK} address to prove ownership as h2 hash in /prove header."
     end
-    return nil
   end
 
   # 8 byte timestamp, MSB first. First 4 bytes will be 0 for a while.

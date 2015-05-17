@@ -40,11 +40,17 @@ class ProofController < ApplicationController
   end
 
   public
-  # --- "/prove/:hpk" ---
+  # --- "/prove [X_HPK]" ---
   def prove_hpk
-    # Let's see if we got correct request_token
+    # Get basic request data
     return unless @rid = _get_request_id
-    return unless @hpk = _get_hpk(params[:hpk])
+    return unless @hpk = _get_hpk
+
+    # If we already have session key, we keep it
+    # for timeout duration, no overwrites
+    if Rails.cache.fetch("client_key_#{@hpk}") then
+      return render text:"202 OK", status: :accepted
+    end
 
     # Get cached session state
     @timeout = Rails.configuration.x.relay.session_timeout
@@ -61,7 +67,7 @@ class ProofController < ApplicationController
       body = request.body.read KEY_B64+2+NONCE_B64+2+CIPHER_B64
       lines = _check_body body
       
-      # --- first line is client XORed key
+      # --- first line is masked client session key
       client_key = _check_client_key lines[0]
 
       # --- get outter nonce
@@ -80,7 +86,6 @@ class ProofController < ApplicationController
       sign2 = xor_str h2(@rid), h2(@token)
       raise "Signature mis-match" unless sign and sign2 and sign == sign2
       raise "HPK mismatch" unless @hpk == h2(inner[:pub_key])
-
 
     rescue RbNaCl::CryptoError => e
       logger.error "#{ERROR} Decryption error for packet:\n"\
@@ -101,10 +106,9 @@ class ProofController < ApplicationController
       Rails.cache.write(@rid, @token, expires_in: @timeout)
       Rails.cache.write("key_#{@rid}", @session_key, expires_in: @timeout)
       Rails.cache.write("client_key_#{@hpk}", client_key, expires_in: @timeout)
-      logger.info "#{INFO_GOOD} Saved client session key for req #{@rid.bytes[0..3]}"
+      logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
+      
+      render text:"200 OK", status: :ok
     end
-
-    # PLACEHOLDER
-    render text: "#{inner}"
   end
 end

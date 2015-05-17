@@ -8,7 +8,7 @@ class ApplicationController < ActionController::API
   def allow_crossdomain
     headers['Access-Control-Allow-Methods']   = 'POST, PUT, DELETE, GET, OPTIONS'
     headers['Access-Control-Request-Method']  = '*'
-    headers['Access-Control-Allow-Headers']   = "#{TOKEN}"
+    headers['Access-Control-Allow-Headers']   = "#{TOKEN},#{HPK}"
 
     # Eliminate CORS pre-flight requests as much as possible
     expires_in 1.week, :public => true
