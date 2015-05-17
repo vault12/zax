@@ -9,6 +9,9 @@ class ApplicationController < ActionController::API
     headers['Access-Control-Allow-Methods']   = 'POST, PUT, DELETE, GET, OPTIONS'
     headers['Access-Control-Request-Method']  = '*'
     headers['Access-Control-Allow-Headers']   = "#{TOKEN}"
+
+    # Eliminate CORS pre-flight requests as much as possible
+    expires_in 1.week, :public => true
   end
 
   def allow_origin

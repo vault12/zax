@@ -6,7 +6,7 @@ module Utils
 
   # Double hash function
   def h2(msg)
-    RbNaCl::Hash.sha256 "#{RbNaCl::Hash.sha256 msg}#{msg}"
+    RbNaCl::Hash.sha256 RbNaCl::Hash.sha256(msg)+msg
   end
 
   def xor_str(str1,str2)

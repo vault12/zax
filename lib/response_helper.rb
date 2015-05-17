@@ -49,6 +49,7 @@ module ResponseHelper
     return nil
   end
 
+  # 8 byte timestamp, MSB first. First 4 bytes will be 0 for a while.
   def _get_nonce_time(n)
     nb = n.unpack("C*")[0,8]
     nb.each_index.reduce { |s,i| s + nb[i]*256**(7-i) }

@@ -8,18 +8,22 @@ class SessionController < ApplicationController
   # GET /session - start handshake
   # Responds with 412, 500 or 200 OK
   def new_session_token
-    expires_in 0, :public => false  # never cache
+    # never cache
+    expires_in 0, :public => false
 
     # Let's see if we got correct request_token
-    return unless rid = _get_request_id  # Enforce token header or fail 412
+    # Enforce token header or fail 412
+    return unless rid = _get_request_id
+
     to = Rails.configuration.x.relay.token_timeout
+
     # Establish and cache our token for timeout duration
     token = Rails.cache.fetch(rid, expires_in: to) do
         logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
         RbNaCl::Random.random_bytes 32
     end
 
-    # Make sure our RNG is working
+    # Make sure server-side RNG is working
     if not token or token.length != 32
       logger.error "#{ERROR} NaCl error - random(32): #{dump token}"
       head :internal_server_error,
