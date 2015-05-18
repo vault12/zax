@@ -104,7 +104,7 @@ class ProofController < ApplicationController
     else
       # Increase timeout on dependents
       Rails.cache.write(@rid, @token, expires_in: @timeout)
-      Rails.cache.write("key_#{@rid}", @session_key, expires_in: @timeout)
+      Rails.cache.write("key_#{@hpk}", @session_key, expires_in: @timeout)
       Rails.cache.write("client_key_#{@hpk}", client_key, expires_in: @timeout)
       logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
       
