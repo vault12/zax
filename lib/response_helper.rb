@@ -30,6 +30,7 @@ module ResponseHelper
       head :precondition_failed,
         x_error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
     end
+    return nil
   end
 
   def _get_hpk
@@ -39,8 +40,8 @@ module ResponseHelper
       raise "Missing #{HPK} header" unless h
 
       hpk = b64dec h
-      raise "#{HPK} '#{hpk}' is not 32 bytes" unless hpk.length == 32
-      
+      raise "#{HPK} is not 32 bytes" unless hpk.length == 32
+
       return hpk
 
     # Can not get request token: report to log and to client
@@ -50,6 +51,7 @@ module ResponseHelper
       head :bad_request,
         x_error_details: "Provide #{HPK} address to prove ownership as h2 hash in /prove header."
     end
+    return nil
   end
 
   # 8 byte timestamp, MSB first. First 4 bytes will be 0 for a while.

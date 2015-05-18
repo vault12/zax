@@ -7,36 +7,43 @@ class ProofControllerTest < ActionController::TestCase
   test "prove_hpk guard conditions" do
     Rails.cache.clear
 
-    # random hpk for first basic tests
-    hpk = b64enc h2(RbNaCl::Random.random_bytes 32)
-    head :prove_hpk, hpk: hpk
-    _fail_response :precondition_failed # no header
+    rid = RbNaCl::Random.random_bytes 32
+    hpk = h2(RbNaCl::Random.random_bytes 32)
+
+    # --- missing hpk
+    @request.headers["HTTP_#{TOKEN}"] = b64enc rid
+    head :prove_hpk
+    _fail_response :bad_request # need hpk
+
+    # random hpk for first tests
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk
+    head :prove_hpk
+    _fail_response :precondition_failed # no token header
 
     # --- unconfirmed token
-    rid = RbNaCl::Random.random_bytes 32
     @request.headers["HTTP_#{TOKEN}"] = b64enc rid
-    head :prove_hpk, hpk: hpk
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk
+    head :prove_hpk
     _fail_response :precondition_failed 
 
     # --- with token 
     token = RbNaCl::Random.random_bytes(32)
     Rails.cache.write(rid, token ,expires_in: 0.05)
-    head :prove_hpk, hpk: hpk
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk
+    head :prove_hpk
     _fail_response :precondition_failed # token alone not enough
 
-    # --- missing hpk
-    head :prove_hpk, hpk: ""
-    _fail_response :bad_request # need hpk
-
     # --- short hpk
-    head :prove_hpk, hpk: hpk[0..30]
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk[0..30]
+    head :prove_hpk
     _fail_response :bad_request # need hpk
 
     # with a session key
     session_key = RbNaCl::PrivateKey.generate()
     Rails.cache.write("key_#{rid}", session_key ,expires_in: 0.1)
     @request.env['RAW_POST_DATA'] = "hello world"
-    head :prove_hpk, { hpk: hpk}
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk
+    head :prove_hpk
     _fail_response :precondition_failed # no request data
 
     # --- missing nonce, ciphertext
@@ -44,9 +51,11 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # not a nonce on second line
 
     # --- make nonce too old
+    @request.headers["HTTP_#{HPK}"] = b64enc hpk
     nonce1 = _client_nonce (Time.now - 35).to_i
-    _raw_post :prove_hpk, { hpk: hpk}, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
+    _raw_post :prove_hpk, { }, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
     _fail_response :precondition_failed  # expired nonce
+
 
     # Build virtual client from here
 
@@ -75,7 +84,8 @@ class ProofControllerTest < ActionController::TestCase
     xor_key = xor_str client_sess_key.public_key.to_s, h2(token)
 
     # --- corrupt ciphertext
-    _raw_post :prove_hpk, { hpk: hpk }, xor_key, nonce_outer, _corrupt_str(outer)
+    @request.headers["HTTP_#{HPK}"] = hpk
+    _raw_post :prove_hpk, { }, xor_key, nonce_outer, _corrupt_str(outer)
     _fail_response :bad_request
 
     # --- corrupt signature
@@ -86,21 +96,28 @@ class ProofControllerTest < ActionController::TestCase
       ctext: box_inner.encrypt(nonce_inner, corrupt_sign) }
       .map { |k,v| [k,b64enc(v)] }
     ]
-    _raw_post :prove_hpk, { hpk: hpk }, xor_key, nonce_outer, box_outer.encrypt(nonce_outer,corrupt.to_json)
+    @request.headers["HTTP_#{HPK}"] = hpk
+    _raw_post :prove_hpk, { },
+      xor_key, nonce_outer,
+      box_outer.encrypt(nonce_outer,corrupt.to_json)
     _fail_response :precondition_failed # signature mis-match
+    return
 
     # --- corrupt hpk
-    _raw_post :prove_hpk, { hpk: _corrupt_str(hpk) },
+    @request.headers["HTTP_#{HPK}"] = _corrupt_str(hpk)
+    _raw_post :prove_hpk, { },
       xor_key, nonce_outer, outer
     _fail_response :precondition_failed # :hpk mismatch with inner :pub_key
 
     # --- wrong hpk
-    _raw_post :prove_hpk, { hpk: b64enc(h2(client_sess_key.public_key))},
+    @request.headers["HTTP_#{HPK}"] = b64enc(h2(client_sess_key.public_key))
+    _raw_post :prove_hpk, { },
       xor_key, nonce_outer, outer
     _fail_response :precondition_failed # :hpk mismatch with inner :pub_key
 
     # correct ciphertext
-    _raw_post :prove_hpk, { hpk: hpk },
+    @request.headers["HTTP_#{HPK}"] = hpk
+    _raw_post :prove_hpk, { },
       xor_key, nonce_outer, outer
     _success_response
   end
