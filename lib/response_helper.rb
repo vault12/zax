@@ -2,25 +2,18 @@ require "log_codes"
 require "utils"
 
 module ResponseHelper
-  protected
   include LogCodes
   include Utils
 
-  def dump(obj)
-    return 'nil' unless obj
-    obj.to_s.dump
-  end
-
+  protected
   def _get_request_id
-    begin
-      # Let's make sure everything is correct with request_token
-      rth = request.headers["HTTP_#{TOKEN}"]
-      raise "Missing #{TOKEN} header" unless rth
+    # make sure everything is correct with request_token
+    rth = request.headers["HTTP_#{TOKEN}"]
+    raise "Missing #{TOKEN} header" unless rth
 
-      rid = b64dec rth
-      raise "#{TOKEN} is not 32 bytes" unless rid.length == 32
-
-      return rid
+    rid = b64dec rth
+    raise "#{TOKEN} is not 32 bytes" unless rid.length == TOKEN_LEN
+    return rid
 
     # Can not get request token: report to log and to client
     rescue => e
@@ -29,20 +22,18 @@ module ResponseHelper
       expires_now
       head :precondition_failed,
         x_error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
-    end
-    return nil
+      return nil
   end
 
   def _get_hpk
-    begin
-      # Let's make sure everything is correct with :hpk
-      h = request.headers["HTTP_#{HPK}"]
-      raise "Missing #{HPK} header" unless h
+    # make sure everything is correct with hpk (hashed public key)
+    h = request.headers["HTTP_#{HPK}"]
+    raise "Missing #{HPK} header" unless h
 
-      hpk = b64dec h
-      raise "#{HPK} is not 32 bytes" unless hpk.length == 32
+    hpk = b64dec h
+    raise "#{HPK} is not 32 bytes" unless hpk.length == 32
 
-      return hpk
+    return hpk
 
     # Can not get request token: report to log and to client
     rescue => e
@@ -50,8 +41,7 @@ module ResponseHelper
       expires_now
       head :bad_request,
         x_error_details: "Provide #{HPK} address to prove ownership as h2 hash in /prove header."
-    end
-    return nil
+      return nil
   end
 
   # 8 byte timestamp, MSB first. First 4 bytes will be 0 for a while.
@@ -60,11 +50,14 @@ module ResponseHelper
     nb.each_index.reduce { |s,i| s + nb[i]*256**(7-i) }
   end
 
+  # check nonce to be withing valid expiration window
   def _check_nonce(nonce_str)
     nonce = b64dec nonce_str
     raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
     nt = _get_nonce_time nonce
-    raise "Nonce timestamp #{nt} delta #{Time.now.to_i-nt}" if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
+    if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
+      raise "Nonce timestamp #{nt} delta #{Time.now.to_i-nt}"
+    end
     return nonce
   end
 

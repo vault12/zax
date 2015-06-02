@@ -4,7 +4,6 @@ require "key_params"
 module Utils
   include KeyParams
 
-  # Double hash function
   def h2(msg)
     RbNaCl::Hash.sha256 RbNaCl::Hash.sha256(msg)+msg
   end
@@ -19,5 +18,10 @@ module Utils
 
   def b64dec(str)
     Base64.strict_decode64 str
+  end
+
+  def dump(obj)
+    return 'nil' unless obj
+    obj.to_s.dump
   end
 end

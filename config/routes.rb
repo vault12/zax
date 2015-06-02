@@ -1,15 +1,17 @@
 Rails.application.routes.draw do
 
+  # CORS pre-flight will arrive first via OPTIONS
   match   'session'   => 'session#allow_crossdomain', via: [:options]
+
+  # Establish token session
   get     'session'   => 'session#new_session_token'
   post    'session'   => 'session#verify_session_token'
 
+  # CORS pre-flight will arrive first via OPTIONS
   match   'prove'  => 'proof#allow_crossdomain', via: [:options]
+  # Prove ownership of hashed public key (hpk)
   post    'prove'  => 'proof#prove_hpk'
 
-
-  # The priority is based upon order of creation: first created -> highest priority.
-  # See how all your routes lay out with "rake routes".
 
   # You can have the root of your site routed with "root"
   # root 'welcome#index'

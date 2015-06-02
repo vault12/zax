@@ -36,5 +36,6 @@ module Zax
     config.x.relay.token_timeout              = 1.minutes
     config.x.relay.session_timeout            = 5.minutes
     config.x.relay.max_nonce_diff             = 1.minutes
+    config.x.relay.mailbox_timeout            = 3.days
   end
 end

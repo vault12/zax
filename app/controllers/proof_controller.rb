@@ -48,7 +48,8 @@ class ProofController < ApplicationController
 
     # If we already have session key, we keep it
     # for timeout duration, no overwrites
-    if Rails.cache.fetch("client_key_#{@hpk}") then
+    if Rails.cache.read("client_key_#{@hpk}") then
+      #TODO: return # of messages
       return render text:"202 OK", status: :accepted
     end
 
@@ -102,12 +103,13 @@ class ProofController < ApplicationController
         x_error_details: "Provide masked pub_key, timestamped nonce and signature as 3 lines in base64"
       return
     else
-      # Increase timeout on dependents
+      # Increase timeouts and save session data on HPK key
       Rails.cache.write(@rid, @token, expires_in: @timeout)
       Rails.cache.write("key_#{@hpk}", @session_key, expires_in: @timeout)
       Rails.cache.write("client_key_#{@hpk}", client_key, expires_in: @timeout)
       logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
       
+      # TODO: render # of messages in mailbox instead
       render text:"200 OK", status: :ok
     end
   end

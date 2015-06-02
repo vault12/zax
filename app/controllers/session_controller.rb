@@ -1,12 +1,9 @@
 require "response_helper"
 
 class SessionController < ApplicationController
-  private
   include ResponseHelper
 
-  public
   # GET /session - start handshake
-  # Responds with 412, 500 or 200 OK
   def new_session_token
     # never cache
     expires_in 0, :public => false
@@ -17,17 +14,16 @@ class SessionController < ApplicationController
 
     to = Rails.configuration.x.relay.token_timeout
 
-    # Establish and cache our token for timeout duration
+    # Establish and cache server token for timeout duration
     token = Rails.cache.fetch(rid, expires_in: to) do
-        logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
-        RbNaCl::Random.random_bytes 32
+      logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
+      RbNaCl::Random.random_bytes 32
     end
 
-    # Make sure server-side RNG is working
+    # Sanity check server-side RNG
     if not token or token.length != 32
       logger.error "#{ERROR} NaCl error - random(32): #{dump token}"
-      head :internal_server_error,
-        x_error_details: "Local entropy fail; try again?"
+      head :internal_server_error, x_error_details: "Local RNG fail; try again?"
       return
     end
 
@@ -36,9 +32,8 @@ class SessionController < ApplicationController
   end
 
   # POST /session - end handshake
-  # Responds with 412, 409 or 200 OK
   def verify_session_token
-    expires_now # never cache this response until it succeeds
+    expires_now # never cache this response until success
 
     # Let's see if we got correct request_token
     return unless rid = _get_request_id
@@ -49,7 +44,7 @@ class SessionController < ApplicationController
       logger.info "#{INFO_NEG} 'verify' for expired req #{rid.bytes[0..3]}"
       to = Rails.configuration.x.relay.token_timeout
       head :precondition_failed,
-           x_error_details: "Your #{TOKEN} expired after #{to} seconds"
+        x_error_details: "Your #{TOKEN} expired after #{to} seconds"
       return
     end
 
