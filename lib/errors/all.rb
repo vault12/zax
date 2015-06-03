@@ -1,0 +1,5 @@
+require 'errors/request_id'
+require 'errors/hpk'
+require 'errors/random'
+require 'errors/expired'
+require 'errors/key'

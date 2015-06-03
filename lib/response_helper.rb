@@ -1,50 +1,53 @@
-require "log_codes"
 require "utils"
+require "errors/all"
 
 module ResponseHelper
-  include LogCodes
   include Utils
+  include Errors
 
   protected
+
+  # make sure everything is correct with request token header
   def _get_request_id
-    # make sure everything is correct with request_token
     rth = request.headers["HTTP_#{TOKEN}"]
-    raise "Missing #{TOKEN} header" unless rth
-
+    # do we have the token header?
+    unless rth
+      raise RequestIDError.new(self,rth),
+        "Missing #{TOKEN} header"
+    end
+    # is it correct base64?
     rid = b64dec rth
-    raise "#{TOKEN} is not 32 bytes" unless rid.length == TOKEN_LEN
-    return rid
-
-    # Can not get request token: report to log and to client
-    rescue => e
-      logger.warn "#{INFO_NEG} HTTP_#{TOKEN} (base64):\n"\
-      "#{dump rth}:\n#{EXPT} #{e}"
-      expires_now
-      head :precondition_failed,
-        x_error_details: "Provide #{TOKEN} header: 32 bytes (base64)"
-      return nil
+    # is it correct length?
+    unless rid.length == TOKEN_LEN
+      raise RequestIDError.new(self,rth),
+        "#{TOKEN} is not #{TOKEN_LEN} bytes"
+    end
+    return rid # good request id
+    rescue => e # wrap errors of b64 decode
+      raise RequestIDError.new(self,rth), e.message
   end
 
+  # make sure everything is correct with hpk 
   def _get_hpk
-    # make sure everything is correct with hpk (hashed public key)
     h = request.headers["HTTP_#{HPK}"]
-    raise "Missing #{HPK} header" unless h
-
+    # do we have hpk header?
+    unless h
+      raise HPKError.new(self,h),
+        "Missing #{HPK} header"
+    end
+    # correct base64?
     hpk = b64dec h
-    raise "#{HPK} is not 32 bytes" unless hpk.length == 32
-
-    return hpk
-
-    # Can not get request token: report to log and to client
-    rescue => e
-      logger.warn "#{INFO_NEG} bad #{HPK}: #{dump h}\n#{EXPT} #{e}"
-      expires_now
-      head :bad_request,
-        x_error_details: "Provide #{HPK} address to prove ownership as h2 hash in /prove header."
-      return nil
+    unless hpk.length == HPK_LEN
+      raise HPKError.new(self,h),
+        "#{HPK} is not #{HPK_LEN} bytes"
+    end
+    return hpk # good hpk (hashed public key)
+    rescue => e # wrap errors of b64 decode
+      raise HPKError.new(self,h), e.message
   end
 
-  # 8 byte timestamp, MSB first. First 4 bytes will be 0 for a while.
+  # 8 byte timestamp in 24 byte nonce
+  # MSB first; first 4 bytes will be 0 for a while.
   def _get_nonce_time(n)
     nb = n.unpack("C*")[0,8]
     nb.each_index.reduce { |s,i| s + nb[i]*256**(7-i) }
@@ -52,6 +55,8 @@ module ResponseHelper
 
   # check nonce to be withing valid expiration window
   def _check_nonce(nonce_str)
+    # TODO: keep nonces in 5 min memcached to prevent
+    # replay attack
     nonce = b64dec nonce_str
     raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
     nt = _get_nonce_time nonce
