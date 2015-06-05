@@ -20,8 +20,17 @@ module Utils
     Base64.strict_decode64 str
   end
 
+  def toHex(s)
+    s.bytes.map {|x| x.to_s(16)}.join
+  end
+
   def dump(obj)
     return 'nil' unless obj
     obj.to_s.dump
+  end
+
+  def dumpHex(obj)
+    return 'nil' unless obj
+    toHex obj.to_s
   end
 end

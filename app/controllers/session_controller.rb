@@ -14,7 +14,7 @@ class SessionController < ApplicationController
     # Establish and cache server token for timeout duration
     to = Rails.configuration.x.relay.token_timeout
     token = Rails.cache.fetch(rid, expires_in: to) do
-      logger.info "#{INFO} Established token for req #{rid.bytes[0..3]}"
+      logger.info "#{INFO} Established token for req #{dumpHex rid[0..7]}"
       RbNaCl::Random.random_bytes 32
     end
 
@@ -29,7 +29,7 @@ class SessionController < ApplicationController
 
     rescue => e
       return e.http_fail if e.respond_to? :http_fail
-      logger.error "#{ERROR}: new_session_token error:\n#{dump rid}\n#{EXPT} #{e}"
+      logger.error "#{ERROR} new_session_token error | rid: #{dumpHex rid[0..7]}\n#{EXPT} #{e}"
       head :internal_server_error, x_error_details: "Server-side error: try again later"
   end
 
@@ -51,12 +51,12 @@ class SessionController < ApplicationController
     body = request.body.read TOKEN_B64 # exact base64 of 32 bytes
     handshake = b64dec body
     raise "Handshake mismatch" unless handshake.eql? (xor_str token, rid)
-    logger.info "#{INFO} Succesful handshake for req #{rid.bytes[0..3]}"
+    logger.info "#{INFO} Succesful handshake for req #{dumpHex rid[0..7]}"
 
     # establish session keys
     to = Rails.configuration.x.relay.session_timeout
     session_key = Rails.cache.fetch("key_#{rid}",expires_in: to) do
-        logger.info "#{INFO_GOOD} Generated new session key for req #{rid.bytes[0..7]}"
+        logger.info "#{INFO_GOOD} Generated new session key for req #{dumpHex rid[0..7]}"
         # refresh token for same expiration timeout
         Rails.cache.write(rid, token, :expires_in => to)
         RbNaCl::PrivateKey.generate
@@ -76,7 +76,7 @@ class SessionController < ApplicationController
     rescue => e
       return e.http_fail if e.respond_to? :http_fail
 
-      logger.warn "#{WARN} handshake:\n#{body}\n#{EXPT}#{e}"
+      logger.warn "#{WARN} handshake problem | rid: #{dumpHex rid[0..7]}\n#{EXPT} #{e}"
       head :conflict, x_error_details: "Provide session handshake (your token XOR our token) as base64 body"
   end
 end

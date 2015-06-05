@@ -11,7 +11,7 @@ class ProofController < ApplicationController
        @token.nil? or @token.length!=KEY_LEN
       logger.warn "#{INFO_NEG} No session_key/token :prove_hpk\n"\
       "sk #{dump @session_key}, "\
-      "tkn #{dump @token}, rid #{@rid.bytes[0..4]}"
+      "tkn #{dump @token}, rid #{dumpHex @rid[0..7]}"
       head :precondition_failed,
         x_error_details: "No session_key/token: establish session first"
       return nil
