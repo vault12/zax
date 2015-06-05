@@ -7,8 +7,8 @@ class ProofControllerTest < ActionController::TestCase
   test "prove_hpk guard conditions" do
     Rails.cache.clear
 
-    rid = RbNaCl::Random.random_bytes 32
-    hpk = h2(RbNaCl::Random.random_bytes 32)
+    rid = rand_bytes 32
+    hpk = h2(rand_bytes 32)
 
     # --- missing hpk
     @request.headers["HTTP_#{TOKEN}"] = b64enc rid
@@ -47,7 +47,7 @@ class ProofControllerTest < ActionController::TestCase
     _fail_response :precondition_failed # no request data
 
     # --- missing nonce, ciphertext
-    _raw_post :prove_hpk, { hpk: hpk}, RbNaCl::Random.random_bytes(32), "123"
+    _raw_post :prove_hpk, { hpk: hpk}, rand_bytes(32), "123"
     _fail_response :precondition_failed # not a nonce on second line
 
     # --- make nonce too old

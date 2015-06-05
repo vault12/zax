@@ -8,11 +8,6 @@ class ActiveSupport::TestCase
   #### fixtures :all
   include Utils
 
-  # Add more helper methods to be used by all tests here...
-  def logger
-    Rails.logger
-  end
-
   def _fail_response(status)
     assert_response status 
     assert_includes(response.headers,"X-Error-Details")
@@ -37,7 +32,7 @@ class ActiveSupport::TestCase
   end
 
   def _client_nonce(tnow = Time.now.to_i)
-    nonce = (RbNaCl::Random.random_bytes 24).unpack "C24"
+    nonce = (rand_bytes 24).unpack "C24"
 
     timestamp = (Math.log(tnow)/Math.log(256)).floor.downto(0).map do
       |i| (tnow / 256**i) % 256

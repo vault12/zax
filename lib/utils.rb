@@ -8,6 +8,10 @@ module Utils
     RbNaCl::Hash.sha256 RbNaCl::Hash.sha256(msg)+msg
   end
 
+  def rand_bytes(count)
+    RbNaCl::Random.random_bytes(count)
+  end
+
   def xor_str(str1,str2)
     str1.bytes.zip(str2.bytes).map { |a,b| a^b }.pack("C*")
   end
@@ -33,4 +37,9 @@ module Utils
     return 'nil' unless obj
     toHex obj.to_s
   end
+
+  def logger
+    Rails.logger
+  end
+
 end

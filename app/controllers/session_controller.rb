@@ -52,7 +52,7 @@ class SessionController < ApplicationController
     # Establish and cache server token for timeout duration
     @token = Rails.cache.fetch(@rid, expires_in: @tmout) do
       logger.info "#{INFO} Established token for req #{dumpHex @rid[0..7]}"
-      RbNaCl::Random.random_bytes 32
+      rand_bytes 32
     end
     # Sanity check server-side RNG
     if not @token or @token.length != 32

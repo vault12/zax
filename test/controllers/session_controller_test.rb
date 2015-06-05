@@ -6,11 +6,11 @@ class SessionControllerTest < ActionController::TestCase
     head :new_session_token
     _fail_response :precondition_failed # missing header
     
-    @request.headers["HTTP_#{TOKEN}"] = RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = rand_bytes 32
     head :new_session_token
     _fail_response :precondition_failed # wrong encoding
 
-    @request.headers["HTTP_#{TOKEN}"] = b64enc RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = b64enc rand_bytes 32
     head :new_session_token
     _success_response
   end
@@ -19,17 +19,17 @@ class SessionControllerTest < ActionController::TestCase
     head :verify_session_token
     _fail_response :precondition_failed # missing header
 
-    @request.headers["HTTP_#{TOKEN}"] = RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = rand_bytes 32
     head :verify_session_token
     _fail_response :precondition_failed # wrong encoding
 
-    @request.headers["HTTP_#{TOKEN}"] = b64enc RbNaCl::Random.random_bytes 32
+    @request.headers["HTTP_#{TOKEN}"] = b64enc rand_bytes 32
     head :verify_session_token
     _fail_response :precondition_failed # wrong token
   end
 
   test "token is consitent until timeout" do
-    token = b64enc RbNaCl::Random.random_bytes 32
+    token = b64enc rand_bytes 32
     @request.headers["HTTP_#{TOKEN}"] = token
     get :new_session_token
     _success_response
