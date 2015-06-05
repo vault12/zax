@@ -14,8 +14,9 @@ module Errors
       @controller.expires_now
     end
 
+    # Exception loging functions
     def log_message(m)
-      "#{m}:\n#{dump @data}:\n#{EXPT} #{self}"
+      "#{m}:\n#{dumpHex @data}:\n#{EXPT} #{self}\n---"
     end
 
     def info(m)

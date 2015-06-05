@@ -1,6 +1,5 @@
 require "errors/zax_error"
 module Errors
-  # Can not get HPK: report to log and to client
   class KeyError < ZAXError
     def http_fail
       super
