@@ -6,49 +6,42 @@ class ProofController < ApplicationController
 
   # POST /prove - prove client ownership of dual key for HPK
   def prove_hpk
+    @tmout = Rails.configuration.x.relay.session_timeout
     # Get basic request data
     @rid = _get_request_id
     @hpk = _get_hpk
-
     return if _existing_client_key?
-
     # Get cached session state
-    @timeout = Rails.configuration.x.relay.session_timeout
     _good_session_state?
 
+    # --- process request body ---
     # POST lines:
     #  masked client session key 32b = 44b base64
     #  nonce 24b = 32b base64
     #  ciphertext 192b = 256b base64
-
-    # --- process request body
     @body = request.body.read KEY_B64+2+NONCE_B64+2+CIPHER_B64
     lines = _check_body @body
-    
-    # --- first line is masked client session key
+    # - first line is masked client session key
     @client_key = _check_client_key lines[0]
-
-    # --- second line is outter nonce
-    nonce = _check_nonce lines[1]
-
-    # --- third line is outter ciphertext
+    # - second line is outter nonce
+    nonce = _check_nonce b64dec lines[1]
+    # - third line is outter ciphertext
     outer_box = RbNaCl::Box.new(@client_key,@session_key)
     inner = JSON.parse outer_box.decrypt(nonce,b64dec(lines[2]))
     # decode all values from b64
     inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
-
     # inner box with node permanent comm_key (identity)
     inner_box = RbNaCl::Box.new(inner[:pub_key],@session_key)
 
     # prove decryption with client comm_key
+    _check_nonce inner[:nonce]
     sign  = inner_box.decrypt(inner[:nonce],inner[:ctext])
     sign2 = xor_str h2(@rid), h2(@token)
     raise "Signature mismatch" unless sign and sign2 and sign.eql? sign2
     raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
 
-    # No exceptions: success path now
+    # --- No exceptions: success path now ---
     _save_hpk_session
-
     # TODO: render # of messages in mailbox instead
     render text:"200 OK", status: :ok
 
@@ -109,9 +102,9 @@ class ProofController < ApplicationController
 
   def _save_hpk_session
     # Increase timeouts and save session data on HPK key
-    Rails.cache.write(@rid, @token, expires_in: @timeout)
-    Rails.cache.write("key_#{@hpk}", @session_key, expires_in: @timeout)
-    Rails.cache.write("client_key_#{@hpk}", @client_key, expires_in: @timeout)
+    Rails.cache.write(@rid, @token, expires_in: @tmout)
+    Rails.cache.write("key_#{@hpk}", @session_key, expires_in: @tmout)
+    Rails.cache.write("client_key_#{@hpk}", @client_key, expires_in: @tmout)
     logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
   end
 

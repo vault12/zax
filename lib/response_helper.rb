@@ -54,10 +54,8 @@ module ResponseHelper
   end
 
   # check nonce to be withing valid expiration window
-  def _check_nonce(nonce_str)
-    # TODO: keep nonces in 5 min memcached to prevent
-    # replay attack
-    nonce = b64dec nonce_str
+  def _check_nonce(nonce)
+    # TODO: keep nonces in 5 min memcached to prevent replay attack
     raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
     nt = _get_nonce_time nonce
     if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
