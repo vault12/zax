@@ -43,8 +43,8 @@ class ProofController < ApplicationController
     # prove decryption with client comm_key
     sign  = inner_box.decrypt(inner[:nonce],inner[:ctext])
     sign2 = xor_str h2(@rid), h2(@token)
-    raise "Signature mis-match" unless sign and sign2 and sign == sign2
-    raise "HPK mismatch" unless @hpk == h2(inner[:pub_key])
+    raise "Signature mismatch" unless sign and sign2 and sign.eql? sign2
+    raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
 
     # No exceptions: success path now
     _save_hpk_session
@@ -90,10 +90,12 @@ class ProofController < ApplicationController
     raise "No request body" if body.nil? or body.empty?
     nl = body.include?("\r\n") ? "\r\n" : "\n"
     lines = body.split nl
-    raise "Malformated body" unless lines.count==3 and
+    unless lines and lines.count==3 and
       lines[0].length==KEY_B64 and
       lines[1].length==NONCE_B64 and
       lines[2].length==CIPHER_B64
+      raise "Malformated body, #{ lines ? lines.count : 0} lines"
+    end
     return lines
   end
 
