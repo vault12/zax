@@ -1,5 +1,4 @@
 require 'utils'
-
 module Errors
   # root class for our internal ZAX errors
   class ZAXError < StandardError

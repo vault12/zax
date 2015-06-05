@@ -1,5 +1,4 @@
 require "errors/zax_error"
-
 module Errors
   # Can not get request token: report to log and to client
   class RequestIDError < ZAXError
