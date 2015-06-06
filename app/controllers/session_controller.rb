@@ -42,7 +42,7 @@ class SessionController < ApplicationController
     rescue ZAXError => e
       e.http_fail
     rescue => e
-      _verify_session_token_error(e)
+      _report_error e
   end
 
   # --- Helper functions ---
@@ -98,7 +98,7 @@ class SessionController < ApplicationController
 
   # --- Error reporting ---
 
-  def _verify_session_token_error(e)
+  def _report_error(e)
     logger.warn "#{WARN} handshake problem:\n"\
       "body: #{@body} rid #{dumpHex @rid[0..7]}\n"\
       "#{EXPT} #{e}"

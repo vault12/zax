@@ -11,8 +11,7 @@ class ProofController < ApplicationController
     @rid = _get_request_id
     @hpk = _get_hpk
     return if _existing_client_key?
-    # Get cached session state
-    _good_session_state?
+    _good_session_state? # Load memcached session state or fail
 
     # --- process request body ---
     # POST lines:
@@ -50,7 +49,7 @@ class ProofController < ApplicationController
     rescue ZAXError => e
       e.http_fail
     rescue => e
-      _prove_hpk_default_error e
+      _report_error e
   end
 
   # --- Helper functions ---
@@ -119,7 +118,7 @@ class ProofController < ApplicationController
     head :bad_request, x_error_details: "Decryption error"
   end
 
-  def _prove_hpk_default_error(e)
+  def _report_error(e)
     logger.warn "#{WARN} Aborted prove_hpk key exchange:\n#{@body}\n#{EXPT} #{e}"
     head :precondition_failed, x_error_details:
       "Provide masked pub_key, timestamped nonce and signature as 3 lines in base64"

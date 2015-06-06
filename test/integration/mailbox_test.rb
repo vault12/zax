@@ -2,7 +2,7 @@ require 'test_helper'
 require 'mailbox'
 
 class MailboxTest < ActionDispatch::IntegrationTest
-  test "Test mailbox" do
+  test "mailbox" do
     hpk = RbNaCl::Random.random_bytes 32
     mbx = Mailbox.new hpk
 
@@ -47,7 +47,7 @@ class MailboxTest < ActionDispatch::IntegrationTest
     assert_nil mbx.read 4
 
     # [1,nil,3,6]
-    id6 = (mbx.store h2("6"), "hello_N6")[:id]
+    id6 = mbx.store(h2('6'),"hello_N6")[:id]
     results = mbx.read_all
     assert_equal 3,results.length
     assert_equal 4,mbx.top

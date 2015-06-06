@@ -3,7 +3,7 @@ class Mailbox
   attr_accessor :hpk,:top
 
   def initialize(hpk)
-    raise "Wrong HPK in mailbox.ctor()" unless hpk and hpk.length==32
+    raise "Wrong HPK in mailbox.ctor()" unless hpk and hpk.length==HPK_LEN
     @tmout = Rails.configuration.x.relay.mailbox_timeout
     @hpk = hpk
     @top = Rails.cache.fetch("top_#{@hpk}", expires_in: @tmout) { 0 }
@@ -11,16 +11,20 @@ class Mailbox
 
   # --- Store crypto records ---
 
-  # Records are always added above the top mark
+  # Records are always added at the top mark
   def store(from, data)
-    raise "No data in mailbox.store()" unless data
+    raise "Bad call mailbox.store()" unless data and
+      from and from.length==HPK_LEN
     item = {
       # Something resonably unique during 3-day expiration window
-      id: RbNaCl::Random.random_bytes(16),
+      id: h2(rand_bytes(16)),
       from: from,
       data: data
     }
-    Rails.cache.write("item_#{@top}_#{@hpk}", item, expires_in: @tmout)
+    Rails.cache.write(
+      "item_#{@top}_#{@hpk}",
+      item,
+      expires_in: @tmout)
     @top+=1
     Rails.cache.write("top_#{@hpk}", @top, expires_in: @tmout)
     return item
