@@ -2,6 +2,10 @@ class Mailbox
   include Utils
   attr_accessor :hpk,:top
 
+  def self.count(hpk)
+    Mailbox.new(hpk).top
+  end
+
   def initialize(hpk)
     raise "Wrong HPK in mailbox.ctor()" unless hpk and hpk.length==HPK_LEN
     @tmout = Rails.configuration.x.relay.mailbox_timeout

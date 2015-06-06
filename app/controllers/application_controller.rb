@@ -1,11 +1,9 @@
 require "key_params"
 
 class ApplicationController < ActionController::API
-  include KeyParams
+  include ResponseHelper
 
   before_filter :allow_origin
-
-  public
 
   def allow_crossdomain
     headers['Access-Control-Allow-Methods']   = 'POST, PUT, DELETE, GET, OPTIONS'

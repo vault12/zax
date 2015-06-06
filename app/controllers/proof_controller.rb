@@ -1,7 +1,7 @@
-require "response_helper"
+require 'response_helper'
+require 'mailbox'
 
 class ProofController < ApplicationController
-  include ResponseHelper
   CIPHER_B64 = 256
 
   # POST /prove - prove client ownership of dual key for HPK
@@ -10,7 +10,6 @@ class ProofController < ApplicationController
     # Get basic request data
     @rid = _get_request_id
     @hpk = _get_hpk
-    return if _existing_client_key?
     _good_session_state? # Load memcached session state or fail
 
     # --- process request body ---
@@ -38,11 +37,11 @@ class ProofController < ApplicationController
     sign2 = xor_str h2(@rid), h2(@token)
     raise "Signature mismatch" unless sign and sign2 and sign.eql? sign2
     raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
+    return if _existing_client_key?
 
     # --- No exceptions: success path now ---
-    _save_hpk_session
-    # TODO: render # of messages in mailbox instead
-    render text:"200 OK", status: :ok
+    _save_hpk_session 
+    render text:"#{Mailbox.count(@hpk)}", status: :ok
 
     rescue RbNaCl::CryptoError => e
       _report_NaCl_error e
@@ -58,9 +57,8 @@ class ProofController < ApplicationController
   def _existing_client_key?
     # If we already have session key, we keep it
     # for timeout duration, no overwrites
-    if Rails.cache.read("client_key_#{@hpk}") then
-      #TODO: return # of messages
-      render text:"202 OK", status: :accepted
+    if Rails.cache.read("client_key_#{@hpk}")
+      render text:"#{Mailbox.count(@hpk)}", status: :accepted
       return true
     end
     return false

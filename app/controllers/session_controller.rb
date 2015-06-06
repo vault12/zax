@@ -1,8 +1,6 @@
 require "response_helper"
 
 class SessionController < ApplicationController
-  include ResponseHelper
-
   # GET /session - start handshake
   def new_session_token
     expires_now # never cache
