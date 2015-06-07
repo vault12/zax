@@ -1,12 +1,11 @@
 ENV['RAILS_ENV'] ||= 'test'
 require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
-require "utils"
+require 'response_helper'
+require 'utils'
 
 class ActiveSupport::TestCase
-  # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
-  #### fixtures :all
-  include Utils
+  include ResponseHelper
 
   def _fail_response(status)
     assert_response status 
@@ -30,21 +29,8 @@ class ActiveSupport::TestCase
     corrupt[0] = [corrupt[0].ord+1].pack("C")
     corrupt
   end
-
-  def _client_nonce(tnow = Time.now.to_i)
-    nonce = (rand_bytes 24).unpack "C24"
-
-    timestamp = (Math.log(tnow)/Math.log(256)).floor.downto(0).map do
-      |i| (tnow / 256**i) % 256
-    end
-    blank = Array.new(8) { 0 } # zero as 8 byte integer
-
-    # 64 bit timestamp, MSB first
-    blank[-timestamp.length,timestamp.length] = timestamp
-
-    # Nonce first 8 bytes are timestamp
-    nonce[0,blank.length] = blank
-    return nonce.pack("C*")
-  end
-
 end
+
+# Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
+#
+# fixtures :all

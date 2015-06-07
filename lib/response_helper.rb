@@ -27,6 +27,13 @@ module ResponseHelper
       raise RequestIDError.new(self,rth), e.message
   end
 
+  def _check_hpk(h)
+    unless h.length == HPK_LEN
+      raise HPKError.new(self,h),
+        "#{HPK} is not #{HPK_LEN} bytes"
+    end
+  end
+
   # make sure everything is correct with hpk 
   def _get_hpk
     h = request.headers["HTTP_#{HPK}"]
@@ -37,10 +44,7 @@ module ResponseHelper
     end
     # correct base64?
     hpk = b64dec h
-    unless hpk.length == HPK_LEN
-      raise HPKError.new(self,h),
-        "#{HPK} is not #{HPK_LEN} bytes"
-    end
+    _check_hpk hpk
     return hpk # good hpk (hashed public key)
     rescue => e # wrap errors of b64 decode
       raise HPKError.new(self,h), e.message
@@ -62,6 +66,33 @@ module ResponseHelper
       raise "Nonce timestamp #{nt} delta #{Time.now.to_i-nt}"
     end
     return nonce
+  end
+
+  def _make_nonce(tnow = Time.now.to_i)
+    nonce = (rand_bytes 24).unpack "C24"
+
+    timestamp = (Math.log(tnow)/Math.log(256)).floor.downto(0).map do
+      |i| (tnow / 256**i) % 256
+    end
+    blank = Array.new(8) { 0 } # zero as 8 byte integer
+
+    # 64 bit timestamp, MSB first
+    blank[-timestamp.length,timestamp.length] = timestamp
+
+    # Nonce first 8 bytes are timestamp
+    nonce[0,blank.length] = blank
+    return nonce.pack("C*")
+  end
+
+  # === Error reporting ===
+
+  def _report_NaCl_error(e)
+    e1 = e.is_a?(RbNaCl::BadAuthenticatorError) ? 'The authenticator was forged or otherwise corrupt' : ''
+    e2 = e.is_a?(RbNaCl::BadSignatureError) ? 'The signature was forged or otherwise corrupt' : ''
+    logger.error "#{ERROR} Decryption error for packet:\n"\
+      "#{e1}#{e2}\n"\
+      "#{@body}\n#{EXPT} #{e}"
+    head :bad_request, x_error_details: "Decryption error"
   end
 
 end

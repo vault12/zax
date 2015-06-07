@@ -2,11 +2,10 @@ require 'response_helper'
 require 'mailbox'
 
 class ProofController < ApplicationController
-  CIPHER_B64 = 256
+  PROVE_CIPHER_B64 = 256
 
   # POST /prove - prove client ownership of dual key for HPK
   def prove_hpk
-    @tmout = Rails.configuration.x.relay.session_timeout
     # Get basic request data
     @rid = _get_request_id
     @hpk = _get_hpk
@@ -17,15 +16,17 @@ class ProofController < ApplicationController
     #  masked client session key 32b = 44b base64
     #  nonce 24b = 32b base64
     #  ciphertext 192b = 256b base64
-    @body = request.body.read KEY_B64+2+NONCE_B64+2+CIPHER_B64
+    @body = request.body.read KEY_B64+2+NONCE_B64+2+PROVE_CIPHER_B64
     lines = _check_body @body
     # - first line is masked client session key
     @client_key = _check_client_key lines[0]
     # - second line is outter nonce
     nonce = _check_nonce b64dec lines[1]
     # - third line is outter ciphertext
+    ctext = b64dec lines[2]
+
     outer_box = RbNaCl::Box.new(@client_key,@session_key)
-    inner = JSON.parse outer_box.decrypt(nonce,b64dec(lines[2]))
+    inner = JSON.parse outer_box.decrypt(nonce,ctext)
     # decode all values from b64
     inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
     # inner box with node permanent comm_key (identity)
@@ -51,8 +52,8 @@ class ProofController < ApplicationController
       _report_error e
   end
 
-  # --- Helper functions ---
-  private 
+  # === Helper functions ===
+  private
 
   def _existing_client_key?
     # If we already have session key, we keep it
@@ -77,14 +78,12 @@ class ProofController < ApplicationController
   end
 
   def _check_body(body)
-    raise "No request body" if body.nil? or body.empty?
-    nl = body.include?("\r\n") ? "\r\n" : "\n"
-    lines = body.split nl
+    lines = super body
     unless lines and lines.count==3 and
       lines[0].length==KEY_B64 and
       lines[1].length==NONCE_B64 and
-      lines[2].length==CIPHER_B64
-      raise "Malformated body, #{ lines ? lines.count : 0} lines"
+      lines[2].length==PROVE_CIPHER_B64
+      raise "prove_hpk malformated body, #{ lines ? lines.count : 0} lines"
     end
     return lines
   end
@@ -99,23 +98,14 @@ class ProofController < ApplicationController
 
   def _save_hpk_session
     # Increase timeouts and save session data on HPK key
+    tmout = Rails.configuration.x.relay.session_timeout
     Rails.cache.write(@rid, @token, expires_in: @tmout)
-    Rails.cache.write("key_#{@hpk}", @session_key, expires_in: @tmout)
-    Rails.cache.write("client_key_#{@hpk}", @client_key, expires_in: @tmout)
+    Rails.cache.write("session_key_#{@hpk}", @session_key, expires_in: tmout)
+    Rails.cache.write("client_key_#{@hpk}", @client_key, expires_in: tmout)
     logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
   end
 
-  # --- Error reporting ---
-
-  def _report_NaCl_error(e)
-    e1 = e.is_a?(RbNaCl::BadAuthenticatorError) ? 'The authenticator was forged or otherwise corrupt' : ''
-    e2 = e.is_a?(RbNaCl::BadSignatureError) ? 'The signature was forged or otherwise corrupt' : ''
-    logger.error "#{ERROR} Decryption error for packet:\n"\
-      "#{e1}#{e2}\n"\
-      "#{@body}\n#{EXPT} #{e}"
-    head :bad_request, x_error_details: "Decryption error"
-  end
-
+  # === Error reporting ===
   def _report_error(e)
     logger.warn "#{WARN} Aborted prove_hpk key exchange:\n#{@body}\n#{EXPT} #{e}"
     head :precondition_failed, x_error_details:
