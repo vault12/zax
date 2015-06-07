@@ -52,7 +52,7 @@ class ProofControllerTest < ActionController::TestCase
 
     # --- make nonce too old
     @request.headers["HTTP_#{HPK}"] = b64enc hpk
-    nonce1 = _client_nonce (Time.now - 35).to_i
+    nonce1 = _make_nonce (Time.now - 35).to_i
     _raw_post :prove_hpk, { }, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
     _fail_response :precondition_failed  # expired nonce
 
@@ -67,7 +67,7 @@ class ProofControllerTest < ActionController::TestCase
 
     # create inner packet with sign proving comm_key (idenitity)
     box_inner = RbNaCl::Box.new(session_key.public_key,client_comm_key)
-    nonce_inner = _client_nonce
+    nonce_inner = _make_nonce
     client_sign = xor_str h2(rid), h2(token)
     ctext = box_inner.encrypt(nonce_inner, client_sign)
     inner = Hash[ {
@@ -79,7 +79,7 @@ class ProofControllerTest < ActionController::TestCase
 
     # create outter packet over mutual temp session keys
     box_outer = RbNaCl::Box.new(session_key.public_key,client_sess_key)
-    nonce_outer = _client_nonce
+    nonce_outer = _make_nonce
     outer = box_outer.encrypt(nonce_outer,inner.to_json)
     xor_key = xor_str client_sess_key.public_key.to_s, h2(token)
 

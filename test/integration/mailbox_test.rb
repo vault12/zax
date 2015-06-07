@@ -22,8 +22,8 @@ class MailboxTest < ActionDispatch::IntegrationTest
     id1 = results[1][:id]
     id3 = results[3][:id]
 
-    assert_equal results[1], mbx.find_by_id(id1).second
-    assert_equal results[3], mbx.find_by_id(id3).second
+    assert_equal results[1], mbx.find_by_id(id1)
+    assert_equal results[3], mbx.find_by_id(id3)
 
     # [1,nil,3,4,5]
     mbx.delete 1
@@ -51,7 +51,7 @@ class MailboxTest < ActionDispatch::IntegrationTest
     results = mbx.read_all
     assert_equal 3,results.length
     assert_equal 4,mbx.top
-    assert_equal 3, mbx.find_by_id(id6).first
+    assert_equal 3, mbx.idx_by_id(id6)
   end
 
 end

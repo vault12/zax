@@ -11,6 +11,7 @@ class Mailbox
     @tmout = Rails.configuration.x.relay.mailbox_timeout
     @hpk = hpk
     @top = Rails.cache.fetch("top_#{@hpk}", expires_in: @tmout) { 0 }
+    @index = {}
   end
 
   # --- Store crypto records ---
@@ -25,12 +26,9 @@ class Mailbox
       from: from,
       data: data
     }
-    Rails.cache.write(
-      "item_#{@top}_#{@hpk}",
-      item,
-      expires_in: @tmout)
+    Rails.cache.write "item_#{@top}_#{@hpk}", item, expires_in: @tmout
     @top+=1
-    Rails.cache.write("top_#{@hpk}", @top, expires_in: @tmout)
+    Rails.cache.write "top_#{@hpk}", @top, expires_in: @tmout
     return item
   end
 
@@ -39,9 +37,9 @@ class Mailbox
     Rails.cache.read "item_#{idx}_#{@hpk}"
   end
 
-  def read_all
+  def read_all(start = 0, count = @top)
     a = []
-    for i in (0..@top-1)
+    for i in (start...start+count)
       item = self.read i
       next unless item
       yield item if block_given?
@@ -50,13 +48,21 @@ class Mailbox
     return a
   end
 
-  # returns [index, item] by id
   def find_by_id(id)
-    for i in (0..@top-1)
+    i = idx_by_id id
+    return i ? read(i) : nil
+  end
+
+  # returns [index, item] by id
+  def idx_by_id(id)
+    return @index[id] if @index[id]
+    for i in (0...@top)
       item = self.read i
       next unless item
-      return i,item if item[:id].eql?(id)
+      @index[item[:id]] = i
+      return i if item[:id].eql?(id)
     end
+    nil
   end
 
   # --- Delete crypto records ---
@@ -66,10 +72,11 @@ class Mailbox
   end
 
   def delete_by_id(id)
-    delete find_by_id(id).first
+    delete idx_by_id(id)
   end
 
   def update_top
+    # Compact empty space on top
     ts = @top
     while @top>0 and not read(@top-1)
       @top-=1

@@ -13,6 +13,9 @@ module KeyParams
   KEY_LEN   = 32
   KEY_B64   = 44
 
+  MAX_COMMAND_BODY = 100*1024 # 100kb
+  MAX_ITEMS        = 100
+
   # Log file prefix codes.
   # 
   # First char of log lines show visual icon of
