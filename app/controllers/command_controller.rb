@@ -93,6 +93,6 @@ class CommandController < ApplicationController
   def _report_error(e)
     logger.warn "#{WARN} Process command aborted:\n#{@body}\n#{EXPT} #{e}"
     head :precondition_failed, x_error_details:
-      "Before sending commands establish your client key and prove HPK ownership"
+      "Can't process command: #{e.message}"
   end
 end
