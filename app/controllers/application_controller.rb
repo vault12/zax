@@ -1,4 +1,4 @@
-require "key_params"
+require 'response_helper'
 
 class ApplicationController < ActionController::API
   include ResponseHelper

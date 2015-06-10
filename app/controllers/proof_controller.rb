@@ -1,4 +1,3 @@
-require 'response_helper'
 require 'mailbox'
 
 class ProofController < ApplicationController
@@ -72,7 +71,7 @@ class ProofController < ApplicationController
     # raise error if bad session state
     if @session_key.nil? or @session_key.to_bytes.length!=KEY_LEN or
        @token.nil? or @token.length!=KEY_LEN
-      e = SessionKeyError.new self, session_key: @session_key, token: @token, rid: @rid[0..7]
+      e = SessionKeyError.new self, session_key: @session_key, token: @token, rid: @rid[0...8]
       raise e, "Bad session state"
     end
   end

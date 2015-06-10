@@ -14,7 +14,7 @@ class SessionController < ApplicationController
       e.http_fail
     rescue => e
       logger.error "#{ERROR} new_session_token error rid:"\
-        "#{dumpHex @rid[0..7]}\n#{EXPT} #{e}"
+        "#{dumpHex @rid[0...8]}\n#{EXPT} #{e}"
       head :internal_server_error, x_error_details:
         "Server-side error: try again later"
   end
@@ -49,7 +49,7 @@ class SessionController < ApplicationController
   def _make_random_token
     # Establish and cache server token for timeout duration
     @token = Rails.cache.fetch(@rid, expires_in: @tmout) do
-      logger.info "#{INFO} Established token for req #{dumpHex @rid[0..7]}"
+      logger.info "#{INFO} Established token for req #{dumpHex @rid[0...8]}"
       rand_bytes 32
     end
     # Sanity check server-side RNG
@@ -74,14 +74,14 @@ class SessionController < ApplicationController
     @body = request.body.read TOKEN_B64 # exact base64 of 32 bytes
     @handshake = b64dec @body
     raise "Handshake mismatch" unless @handshake.eql? (xor_str @token, @rid)
-    logger.info "#{INFO} Succesful handshake for req #{dumpHex @rid[0..7]}"
+    logger.info "#{INFO} Succesful handshake for req #{dumpHex @rid[0...8]}"
     return @body
   end
 
   def _make_session_keys
     # establish session keys
     session_key = Rails.cache.fetch("key_#{@rid}",expires_in: @tmout) do
-      logger.info "#{INFO_GOOD} Generated new session key for req #{dumpHex @rid[0..7]}"
+      logger.info "#{INFO_GOOD} Generated new session key for req #{dumpHex @rid[0...8]}"
       # refresh token for same expiration timeout
       Rails.cache.write(@rid, @token, :expires_in => @tmout)
       RbNaCl::PrivateKey.generate
@@ -98,7 +98,7 @@ class SessionController < ApplicationController
 
   def _report_error(e)
     logger.warn "#{WARN} handshake problem:\n"\
-      "body: #{@body} rid #{dumpHex @rid[0..7]}\n"\
+      "body: #{@body} rid #{dumpHex @rid[0...8]}\n"\
       "#{EXPT} #{e}"
     head :conflict, x_error_details:
       "Provide session handshake: your token XOR our token as base64 body"
