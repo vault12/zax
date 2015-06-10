@@ -13,7 +13,7 @@ module KeyParams
   KEY_LEN   = 32
   KEY_B64   = 44
 
-  MAX_COMMAND_BODY = 100*1024 # 100kb
+  MAX_COMMAND_BODY = 10*1024 # 10kb
   MAX_ITEMS        = 100
 
   # Log file prefix codes.
@@ -21,20 +21,27 @@ module KeyParams
   # First char of log lines show visual icon of
   # that line importance. 
 
-  # low level info, can be ignored
+  # Low level info, can be ignored
+  # 🔩 - Nuts and bolts
   INFO      = "\xF0\x9F\x94\xA9 "
 
-  # low level info, can be ignored, minor positve on the protocol path
+  # Low level info, can be ignored, minor positve on the protocol path
+  # 🔑 - Secure keys, good path
   INFO_GOOD = "\xF0\x9F\x94\x91 "
 
-  # low level info, can be ignored, minor deviation from the protocol path
+  # Low level info, can be ignored, minor deviation from the protocol path
+  # 🔻 - Downward tick
   INFO_NEG  = "\xF0\x9F\x94\xBB "
 
-  # a noteworthy event, a non-breaking deviation from the protocol path
+  # A noteworthy event, a non-breaking deviation from the protocol path
+  # 🚩 - A red flag
   WARN      = "\xF0\x9F\x9A\xA9 " #"\xE2\x80\xA0"
 
   # important, breaking event, must be investigated.
+  # ❗️ - A red error
   ERROR     = "\xE2\x9D\x97\xEF\xB8\x8F"
 
+  # Exception text
+  # ☢ - A toxic trace
   EXPT      = "\xE2\x98\xA2"
 end

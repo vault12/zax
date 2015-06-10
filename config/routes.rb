@@ -14,7 +14,7 @@ Rails.application.routes.draw do
 
   # CORS pre-flight will arrive first via OPTIONS
   match   'command' => 'command#allow_crossdomain', via: [:options]
-  post    'command' => 'command#process'
+  post    'command' => 'command#process_cmd'
 end
 
 # === Routing Examples ===

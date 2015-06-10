@@ -1,6 +1,6 @@
 class Mailbox
   include Utils
-  attr_accessor :hpk,:top
+  attr_reader :hpk, :top
 
   def self.count(hpk)
     Mailbox.new(hpk).top
@@ -37,7 +37,7 @@ class Mailbox
     Rails.cache.read "item_#{idx}_#{@hpk}"
   end
 
-  def read_all(start = 0, count = @top)
+  def read_all(start = 0, count = @top-start)
     a = []
     for i in (start...start+count)
       item = self.read i
