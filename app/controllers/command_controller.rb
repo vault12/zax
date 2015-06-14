@@ -11,10 +11,16 @@ def process_cmd
   data = _decrypt_data nonce, ctext
   mailbox = Mailbox.new @hpk
 
+  r_nonce = _make_nonce
+
   # === Process command ===
   case data[:cmd]
   when 'count'
-    render text:"#{mailbox.top}", status: :ok
+    data = { }
+    data[_rand_str(2,8)] = _rand_str(16,16)
+    data[:count] = mailbox.top
+    data[_rand_str(2,8)] = _rand_str(16,16)
+    render text:"#{b64enc r_nonce}\n#{b64enc _encrypt_data(r_nonce,data)}", status: :ok
 
   when 'upload'
     mbx = Mailbox.new data[:to]
@@ -71,6 +77,15 @@ def _decrypt_data(nonce,ctext)
   box = RbNaCl::Box.new(@client_key,@session_key)
   d = JSON.parse box.decrypt(nonce,ctext)
   _check_command d.reduce({}) { |h,(k,v)| h[k.to_sym]=v; h }
+end
+
+def _encrypt_data(nonce,data)
+  box = RbNaCl::Box.new(@client_key,@session_key)
+  box.encrypt(nonce,data.to_json)
+end
+
+def _rand_str(min,size)
+  (b64enc rand_bytes min+rand(size)).gsub '=',''
 end
 
 def _check_command(data)
