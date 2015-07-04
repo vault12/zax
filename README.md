@@ -10,6 +10,8 @@ To test the code run this command:
 
 ```
 rake test
+rake test:integration
+rake test:controllers
 ```
 
 Zax works with this version of Ruby:
