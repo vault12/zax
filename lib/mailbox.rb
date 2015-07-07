@@ -23,6 +23,8 @@ class Mailbox
     item = {
       # Something resonably unique during 3-day expiration window
       id: h2(rand_bytes(16)),
+      # TODO: forgot Bob's nonce!
+      # recived_at: timestamp
       from: from,
       data: data
     }

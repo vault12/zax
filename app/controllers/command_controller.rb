@@ -11,21 +11,21 @@ def process_cmd
   data = _decrypt_data nonce, ctext
   mailbox = Mailbox.new @hpk
 
-  r_nonce = _make_nonce
+  rsp_nonce = _make_nonce
 
   # === Process command ===
   case data[:cmd]
   when 'count'
     data = { }
-    data[_rand_str(2,8)] = _rand_str(16,16)
+    data[_rand_str(2,8)] = _rand_str(8,8)
     data[:count] = mailbox.top
-    data[_rand_str(2,8)] = _rand_str(16,16)
-    render text:"#{b64enc r_nonce}\n#{b64enc _encrypt_data(r_nonce,data)}", status: :ok
+    data[_rand_str(2,8)] = _rand_str(8,8)
+    render text:"#{b64enc rsp_nonce}\n#{_encrypt_data rsp_nonce,data}", status: :ok
 
   when 'upload'
     mbx = Mailbox.new data[:to]
     mbx.store @hpk,data[:payload]
-    render status: :ok
+    render nothing: true, status: :ok
 
   when 'download'
     count = mailbox.top > MAX_ITEMS ? MAX_ITEMS : mailbox.top
@@ -43,7 +43,8 @@ def process_cmd
     for id in data[:ids]
       mailbox.delete_by_id id
     end
-    render text:"#{mailbox.top}", status: :ok
+    # TODO: respond with encrypted count (same as cmd='count')
+    render nothing: true, status: :ok
   end
 
   # === Error handling ===
@@ -81,7 +82,7 @@ end
 
 def _encrypt_data(nonce,data)
   box = RbNaCl::Box.new(@client_key,@session_key)
-  box.encrypt(nonce,data.to_json)
+  b64enc box.encrypt(nonce,data.to_json)
 end
 
 def _rand_str(min,size)

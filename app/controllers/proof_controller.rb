@@ -54,16 +54,6 @@ class ProofController < ApplicationController
   # === Helper functions ===
   private
 
-  def _existing_client_key?
-    # If we already have session key, we keep it
-    # for timeout duration, no overwrites
-    if Rails.cache.read("client_key_#{@hpk}")
-      render text:"#{Mailbox.count(@hpk)}", status: :accepted
-      return true
-    end
-    return false
-  end
-
   def _good_session_state?
     @token = Rails.cache.fetch(@rid)
     @session_key = Rails.cache.fetch("key_#{@rid}")
@@ -74,6 +64,16 @@ class ProofController < ApplicationController
       e = SessionKeyError.new self, session_key: @session_key, token: @token, rid: @rid[0...8]
       raise e, "Bad session state"
     end
+  end
+
+  def _existing_client_key?
+    # If we already have session key, we keep it
+    # for timeout duration, no overwrites
+    if Rails.cache.read("client_key_#{@hpk}")
+      render text:"#{Mailbox.count(@hpk)}", status: :accepted
+      return true
+    end
+    return false
   end
 
   def _check_body(body)

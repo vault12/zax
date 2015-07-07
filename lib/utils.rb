@@ -5,7 +5,7 @@ module Utils
   include KeyParams
 
   def h2(msg)
-    RbNaCl::Hash.sha256 RbNaCl::Hash.sha256(msg)+msg
+    (RbNaCl::Hash.sha256 RbNaCl::Hash.sha256(msg)+msg)
   end
 
   def rand_bytes(count)

@@ -5,7 +5,7 @@ test 'process command guards' do
   head :process_cmd
   _fail_response :bad_request # need hpk
 
-  hpk = h2(rand_bytes 32)
+  hpk = h2("111")
   @request.headers["HTTP_#{HPK}"] = b64enc hpk
   head :process_cmd
   _fail_response :precondition_failed # no keys
@@ -51,32 +51,60 @@ test 'process command guards' do
   _fail_response :bad_request # corrupt ciphertext 
 end
 
-test 'process command' do
+test 'process command count' do
   Rails.cache.clear
 
-  hpk = h2(rand_bytes 32)
-  @request.headers["HTTP_#{HPK}"] = b64enc hpk
-  
-  # --- create keys ---
-  @session_key = RbNaCl::PrivateKey.generate
-  @client_master = RbNaCl::PrivateKey.generate
-  client_key  = @client_master.public_key
-  Rails.cache.write("session_key_#{hpk}",@session_key)
-  Rails.cache.write("client_key_#{hpk}",client_key)
-
-  n = _make_nonce
-  _raw_post :process_cmd, { }, n , _client_encrypt_data( n, { cmd: 'count' })
+  _setup_hpk
+  _setup_keys
+  _send_command cmd: 'count'
   _success_response
 
   lines = response.body.split "\n"
   assert_equal(2, lines.length)
-
   rn = b64dec lines[0]
   rct = b64dec lines[1]
   data = _client_decrypt_data rn,rct
   assert_not_nil data
   assert_includes data, "count"
-  assert_equal(0, data['count'])
+  assert_equal 0, data['count']
+end
+
+test 'process command upload' do
+  Rails.cache.clear
+
+  _setup_hpk
+  _setup_keys
+  to_hpk = h2("123").force_encoding 'ISO-8859-1'
+  _send_command cmd: 'upload', to: to_hpk, payload: 'hello world'
+  assert_response :success
+  assert_not_includes(response.headers,"X-Error-Details")
+
+  # lines = response.body.split "\n"
+  # assert_equal(2, lines.length)
+  # rn = b64dec lines[0]
+  # rct = b64dec lines[1]
+  # data = _client_decrypt_data rn,rct
+  # assert_not_nil data
+  # assert_includes data, "count"
+  # assert_equal 0, data['count']
+end
+
+
+def _setup_hpk
+  @hpk = h2(rand_bytes 32)
+  @request.headers["HTTP_#{HPK}"] = b64enc @hpk
+end
+
+def _setup_keys
+  @session_key = RbNaCl::PrivateKey.generate
+  @client_master = RbNaCl::PrivateKey.generate
+  Rails.cache.write("session_key_#{@hpk}",@session_key)
+  Rails.cache.write("client_key_#{@hpk}",@client_master.public_key)
+end
+
+def _send_command(data)
+  n = _make_nonce
+  _raw_post :process_cmd, { }, n , _client_encrypt_data( n, data)
 end
 
 def _client_encrypt_data(nonce,data)
