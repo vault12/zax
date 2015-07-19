@@ -12,6 +12,7 @@ To test the code run this command:
 rake test
 rake test:integration
 rake test:controllers
+rake test -v test/integration/mailbox_test.rb
 ```
 
 Zax works with this version of Ruby:
