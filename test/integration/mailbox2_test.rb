@@ -55,6 +55,8 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     assert_equal 3,results.length
     assert_equal 3,mbx.top
 
+    #print_mbx_results(mbx)
+
     assert_equal 2, mbx.idx_by_id(id_3)
     assert_equal 0, mbx.idx_by_id(id_1)
     assert_equal 1, mbx.idx_by_id(id_2)
@@ -88,9 +90,6 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     assert_equal 3, results.length
     assert_equal 5, mbx.top
 
-    results.each_with_index do |item,i|
-      print i,' ',item[:data]; puts
-    end
 
     #[nil,1,2,nil,4,5]
     id_7 = mbx.store(h2('7'),"id_7")[:id]
@@ -98,7 +97,7 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     assert_equal 4, results.length
     assert_equal 6, mbx.top
 
-    print_mbx(mbx)
+    #print_mbx(mbx)
 
     mbx.delete(5)
     mbx.delete(4)
@@ -106,7 +105,7 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     results = mbx.read_all
     assert_equal 2, results.length
 
-    print_mbx(mbx)
+    #print_mbx(mbx)
 
     mbx.delete(1)
     mbx.delete(2)
@@ -122,7 +121,7 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     results = mbx.read_all
     assert_equal 99,results.length
 
-    print_mbx(mbx)
+    #print_mbx(mbx)
     mbx.delete(99)
     assert_equal 99,mbx.top
     mbx.delete(50)
@@ -131,10 +130,17 @@ class Mailbox2Test < ActionDispatch::IntegrationTest
     mbx.delete(49)
     assert_equal 99,mbx.top
 
-    print_mbx(mbx)
+    #print_mbx(mbx)
     mbx.delete(98)
     assert_equal 98,mbx.top
-    print_mbx(mbx)
+    #print_mbx(mbx)
+  end
+
+  def print_mbx_results(mbx)
+    results = mbx.read_all
+    results.each_with_index do |item,i|
+      print i,' ',item[:data]; puts
+    end
   end
 
   def print_mbx(mbx)
