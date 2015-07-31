@@ -51,12 +51,15 @@ test "prove_hpk guard conditions" do
   _raw_post :prove_hpk, { }, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
 
   # somtimes we get back a 412
-  #_fail_response :precondition_failed  # expired nonce
+  _fail_response :precondition_failed  # expired nonce
 
   # but 9 times out of 10 we get back a 400, so we are switching to it
   # more research tbd on making this deterministic
   # unfortunately for now it is still non-deterministic
-  _fail_response :bad_request  # expired nonce
+  # _fail_response :bad_request  # expired nonce
+
+  # MS: Just run this test locally 20x in a loop - its 412 every single time
+  # for ((x=0;x<20;x++)); do rake test TESTOPTS="-n test_prove_hpk_guard_conditions"; done
 
   # Build virtual client from here
 
