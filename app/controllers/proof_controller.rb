@@ -29,7 +29,9 @@ class ProofController < ApplicationController
     # decode all values from b64
     inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
     # inner box with node permanent comm_key (identity)
-    inner_box = RbNaCl::Box.new(inner[:pub_key],@session_key)
+
+    @inner_key = inner[:pub_key]
+    inner_box = RbNaCl::Box.new(@inner_key,@session_key)
 
     # prove decryption with client comm_key
     _check_nonce inner[:nonce]
@@ -40,8 +42,9 @@ class ProofController < ApplicationController
     return if _existing_client_key?
 
     # --- No exceptions: success path now ---
-    _save_hpk_session 
-    render text:"#{Mailbox.count(@hpk)}", status: :ok
+    _save_hpk_session
+    mailbox = Mailbox.new @hpk
+    render text:"#{mailbox.count}", status: :ok
 
     rescue RbNaCl::CryptoError => e
       _report_NaCl_error e
@@ -70,7 +73,8 @@ class ProofController < ApplicationController
     # If we already have session key, we keep it
     # for timeout duration, no overwrites
     if Rails.cache.read("client_key_#{@hpk}")
-      render text:"#{Mailbox.count(@hpk)}", status: :accepted
+      mailbox = Mailbox.new @hpk
+      render text:"#{mailbox.count}", status: :accepted
       return true
     end
     return false
@@ -90,7 +94,7 @@ class ProofController < ApplicationController
   def _check_client_key(key_line)
     xor_key = b64dec key_line
     key = xor_str xor_key, h2(@token)
-    raise "Bad client key: #{dump key}" unless 
+    raise "Bad client key: #{dump key}" unless
       key and key.bytes.length==KEY_LEN
     return key
   end
@@ -101,6 +105,7 @@ class ProofController < ApplicationController
     Rails.cache.write(@rid, @token, expires_in: @tmout)
     Rails.cache.write("session_key_#{@hpk}", @session_key, expires_in: tmout)
     Rails.cache.write("client_key_#{@hpk}", @client_key, expires_in: tmout)
+    Rails.cache.write("inner_key_#{@hpk}", @inner_key, expires_in: tmout)
     logger.info "#{INFO_GOOD} Saved client session key for hpk #{b64enc @hpk}"
   end
 

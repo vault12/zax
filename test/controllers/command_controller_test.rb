@@ -1,31 +1,20 @@
 class CommandControllerTest < ActionController::TestCase
 test 'process command guards' do
-  Rails.cache.clear
 
   head :process_cmd
-  _fail_response :bad_request # need hpk
+  _fail_response :precondition_failed # need hpk
 
-  hpk = h2("111")
-  @request.headers["HTTP_#{HPK}"] = b64enc hpk
+  _setup_hpk
   head :process_cmd
-  _fail_response :precondition_failed # no keys
+  _fail_response :precondition_failed # need token
 
-  # --- create keys ---
-  @session_key = RbNaCl::PrivateKey.generate
-  @client_master = RbNaCl::PrivateKey.generate
-  @client_key  = @client_master.public_key
-  Rails.cache.write("session_key_#{hpk}",@session_key)
-
+  _setup_token
   head :process_cmd
-  _fail_response :precondition_failed # no client keys
+  _fail_response :precondition_failed
 
-  Rails.cache.write("client_key_#{hpk}",@client_key)
-  Rails.cache.delete("session_key_#{hpk}")
+  _setup_keys
   head :process_cmd
-  _fail_response :precondition_failed # no session key
-
-  @session_key = RbNaCl::PrivateKey.generate
-  Rails.cache.write("session_key_#{hpk}",@session_key)
+  _fail_response :precondition_failed
 
   _raw_post :process_cmd, { }
   _fail_response :precondition_failed # no body
@@ -44,51 +33,18 @@ test 'process command guards' do
   _fail_response :precondition_failed # nonce too old
 
    _raw_post :process_cmd, { }, _make_nonce, "123"
-  _fail_response :bad_request # bad ciphertext 
+  _fail_response :bad_request # bad ciphertext
 
   n = _make_nonce
   _raw_post :process_cmd, { }, n , _corrupt_str(_client_encrypt_data( n, { cmd: 'count' }))
-  _fail_response :bad_request # corrupt ciphertext 
+  _fail_response :bad_request # corrupt ciphertext
+
 end
 
-test 'process command count' do
-  Rails.cache.clear
-
-  _setup_hpk
-  _setup_keys
-  _send_command cmd: 'count'
-  _success_response
-
-  lines = response.body.split "\n"
-  assert_equal(2, lines.length)
-  rn = b64dec lines[0]
-  rct = b64dec lines[1]
-  data = _client_decrypt_data rn,rct
-  assert_not_nil data
-  assert_includes data, "count"
-  assert_equal 0, data['count']
+def _setup_token
+  @rid = rand_bytes 32
+  @request.headers["HTTP_#{TOKEN}"] = b64enc @rid
 end
-
-test 'process command upload' do
-  Rails.cache.clear
-
-  _setup_hpk
-  _setup_keys
-  to_hpk = h2("123").force_encoding 'ISO-8859-1'
-  _send_command cmd: 'upload', to: to_hpk, payload: 'hello world'
-  assert_response :success
-  assert_not_includes(response.headers,"X-Error-Details")
-
-  # lines = response.body.split "\n"
-  # assert_equal(2, lines.length)
-  # rn = b64dec lines[0]
-  # rct = b64dec lines[1]
-  # data = _client_decrypt_data rn,rct
-  # assert_not_nil data
-  # assert_includes data, "count"
-  # assert_equal 0, data['count']
-end
-
 
 def _setup_hpk
   @hpk = h2(rand_bytes 32)
@@ -97,23 +53,24 @@ end
 
 def _setup_keys
   @session_key = RbNaCl::PrivateKey.generate
-  @client_master = RbNaCl::PrivateKey.generate
-  Rails.cache.write("session_key_#{@hpk}",@session_key)
-  Rails.cache.write("client_key_#{@hpk}",@client_master.public_key)
+  @client_key = RbNaCl::PrivateKey.generate
+
+  Rails.cache.write("key_#{@rid}",@session_key)
+  Rails.cache.write("inner_key_#{@hpk}",@client_key.public_key)
 end
 
 def _send_command(data)
   n = _make_nonce
-  _raw_post :process_cmd, { }, n , _client_encrypt_data( n, data)
+  _raw_post :process_cmd, { }, n , _client_encrypt_data(n, data)
 end
 
 def _client_encrypt_data(nonce,data)
-  box = RbNaCl::Box.new(@session_key.public_key, @client_master)
+  box = RbNaCl::Box.new(@client_key.public_key, @session_key)
   box.encrypt(nonce,data.to_json)
 end
 
 def _client_decrypt_data(nonce,data)
-  box = RbNaCl::Box.new(@session_key.public_key, @client_master)
+  box = RbNaCl::Box.new(@client_key.public_key, @session_key)
   JSON.parse box.decrypt(nonce,data)
 end
 

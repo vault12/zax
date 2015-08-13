@@ -18,6 +18,11 @@ gem 'kgio'
 gem 'unicorn'
 
 gem 'rbnacl-libsodium'
+gem 'redis'
+gem 'redis-rails'
+
+# To use bundle install
+# gem install bundler
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'

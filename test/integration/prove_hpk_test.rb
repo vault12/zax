@@ -2,7 +2,6 @@ require 'test_helper'
 
 class ProveHpkTest < ActionDispatch::IntegrationTest
   test "prove :hpk" do
-    Rails.cache.clear
 
     # establish handshake
     requst_token = b64enc RbNaCl::Random.random_bytes 32

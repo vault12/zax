@@ -1,7 +1,9 @@
+require 'mailbox'
 class CommandController < ApplicationController
 
 public
 def process_cmd
+  @rid = _get_request_id
   @hpk = _get_hpk
   _load_keys
   @body = request.body.read MAX_COMMAND_BODY # 100kb
@@ -10,43 +12,46 @@ def process_cmd
   ctext = b64dec lines[1]
   data = _decrypt_data nonce, ctext
   mailbox = Mailbox.new @hpk
-
   rsp_nonce = _make_nonce
 
   # === Process command ===
   case data[:cmd]
+  when 'upload'
+    puts 'process_cmd 101 upload'
+    hpkto = b64dec data[:to]
+    mbx = Mailbox.new hpkto
+    mbx.store @hpk,rsp_nonce, data[:payload]
+    render nothing: true, status: :ok
+
   when 'count'
     data = { }
     data[_rand_str(2,8)] = _rand_str(8,8)
-    data[:count] = mailbox.top
+    data[:count] = mailbox.count
+    print 'process_cmd 101 count = ', data[:count]; puts
     data[_rand_str(2,8)] = _rand_str(8,8)
-    render text:"#{b64enc rsp_nonce}\n#{_encrypt_data rsp_nonce,data}", status: :ok
-
-  when 'upload'
-    mbx = Mailbox.new data[:to]
-    mbx.store @hpk,data[:payload]
-    render nothing: true, status: :ok
+    enc_nonce = b64enc rsp_nonce
+    enc_data = _encrypt_data rsp_nonce,data
+    render text:"#{enc_nonce}\n#{enc_data}", status: :ok
 
   when 'download'
-    count = mailbox.top > MAX_ITEMS ? MAX_ITEMS : mailbox.top
+    puts 'process_cmd 101 download'
+    count = mailbox.count > MAX_ITEMS ? MAX_ITEMS : mailbox.count
     start = data[:start] || 0
-    raise "Bad download start position" unless start>=0 or start<mailbox.top
+    raise "Bad download start position" unless start>=0 or start<mailbox.count
     payload = mailbox.read_all start,count
-
-    client_nonce = _make_nonce
-    box = RbNaCl::Box.new(@client_key, @session_key)
-    traffic = box.encrypt(client_nonce, payload.to_json)
-    render text:"#{b64enc client_nonce}\n"\
-      "#{b64enc traffic}"
+    payload = _process_payload(payload)
+    enc_nonce = b64enc rsp_nonce
+    enc_payload = _encrypt_data rsp_nonce,payload
+    render text:"#{enc_nonce}\n#{enc_payload}", status: :ok
 
   when 'delete'
-    for id in data[:ids]
+    puts 'process_cmd 101 delete'
+    for id in data[:payload]
       mailbox.delete_by_id id
     end
     # TODO: respond with encrypted count (same as cmd='count')
     render nothing: true, status: :ok
   end
-
   # === Error handling ===
   rescue RbNaCl::CryptoError => e
     _report_NaCl_error e
@@ -60,14 +65,16 @@ end
 private
 
 def _load_keys
-  @session_key = Rails.cache.read("session_key_#{@hpk}")
-  @client_key = Rails.cache.read("client_key_#{@hpk}")
+  logger.info "#{INFO_GOOD} Reading client session key for hpk #{b64enc @hpk}"
+  @session_key = Rails.cache.read("key_#{@rid}")
+  @client_key = Rails.cache.read("inner_key_#{@hpk}")
   raise HPK_keys.new(self,@hpk), "No cached session key" unless @session_key
   raise HPK_keys.new(self,@hpk), "No cached client key"  unless @client_key
 end
 
 def _check_body(body)
   lines = super body
+  logger.info "#{INFO_GOOD} Nonce length is #{lines[0].length}"
   unless lines and lines.count==2 and lines[0].length==NONCE_B64
     raise "process command malformated body, #{ lines ? lines.count : 0} lines"
   end
@@ -77,7 +84,9 @@ end
 def _decrypt_data(nonce,ctext)
   box = RbNaCl::Box.new(@client_key,@session_key)
   d = JSON.parse box.decrypt(nonce,ctext)
-  _check_command d.reduce({}) { |h,(k,v)| h[k.to_sym]=v; h }
+  d = d.reduce({}) { |h,(k,v)| h[k.to_sym]=v; h }
+  puts d[:payload]
+  _check_command d
 end
 
 def _encrypt_data(nonce,data)
@@ -92,20 +101,35 @@ end
 def _check_command(data)
   all = %w[count upload download delete]
 
-  raise 'process: missing command' unless data[:cmd]
-  raise "process: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
+  raise "command_controller: missing command" unless data[:cmd]
+  raise "command_controller: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
 
   if data[:cmd] == 'upload'
-    raise "process: no destination HPK in upload" unless data[:to]
-    _check_hpk data[:to]
-    raise "process: no payload in upload" unless data[:payload]
+    raise "command_controller: no destination HPK in upload" unless data[:to]
+    hpk_dec = b64dec data[:to]
+    _check_hpk hpk_dec
+    raise "command_controller: no payload in upload" unless data[:payload]
   end
 
   if data[:cmd] == 'delete'
-    raise "process: no ids to delete" unless data[:ids]
+    raise "command_controller: no ids to delete" unless data[:payload]
   end
 
   return data
+end
+
+# all of the messages in the mailbox are read out as an array
+def _process_payload(messages)
+  payload_ary = []
+  messages.each do | message|
+    payload = {}
+    payload[:data] = message[:data]
+    payload[:time] = message[:time]
+    payload[:from] = b64enc message[:from]
+    payload[:nonce] = b64enc message[:nonce]
+    payload_ary.push payload
+  end
+  payload_ary
 end
 
 def _report_error(e)

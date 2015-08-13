@@ -21,7 +21,7 @@ class SessionController < ApplicationController
 
   # POST /session - verify started handshake
   def verify_session_token
-    expires_now 
+    expires_now
     @tmout = Rails.configuration.x.relay.session_timeout
 
     # got correct request_token?
@@ -31,7 +31,7 @@ class SessionController < ApplicationController
     # check handshake or throw error
     _verify_handshake
     @session_key = _make_session_keys
-  
+
     # Send session pub_key back to user as base64 body
     expires_in @tmout, :public => false
     render text: "#{b64enc @session_key.public_key.to_bytes}"
@@ -91,6 +91,7 @@ class SessionController < ApplicationController
       raise KeyError.new(self,session_key),
         "Session key failed or too short"
     end
+    logger.info "#{INFO_GOOD} session_key = #{b64enc session_key.public_key.to_bytes}"
     return session_key
   end
 

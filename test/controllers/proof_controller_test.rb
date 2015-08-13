@@ -1,6 +1,5 @@
 class ProofControllerTest < ActionController::TestCase
 test "prove_hpk guard conditions" do
-  Rails.cache.clear
 
   rid = rand_bytes 32
   hpk = h2(rand_bytes 32)
@@ -23,7 +22,7 @@ test "prove_hpk guard conditions" do
 
   # --- with token
   token = RbNaCl::Random.random_bytes(32)
-  Rails.cache.write(rid, token ,expires_in: 0.05)
+  Rails.cache.write(rid, token)
   @request.headers["HTTP_#{HPK}"] = b64enc hpk
   head :prove_hpk
   _fail_response :precondition_failed # token alone not enough
@@ -35,7 +34,7 @@ test "prove_hpk guard conditions" do
 
   # with a session key
   session_key = RbNaCl::PrivateKey.generate()
-  Rails.cache.write("key_#{rid}", session_key ,expires_in: 0.1)
+  Rails.cache.write("key_#{rid}", session_key)
   @request.env['RAW_POST_DATA'] = "hello world"
   @request.headers["HTTP_#{HPK}"] = b64enc hpk
   head :prove_hpk
@@ -51,15 +50,12 @@ test "prove_hpk guard conditions" do
   _raw_post :prove_hpk, { }, RbNaCl::Random.random_bytes(32), nonce1, "\x0"*192
 
   # somtimes we get back a 412
-  _fail_response :precondition_failed  # expired nonce
+  #_fail_response :precondition_failed  # expired nonce
 
   # but 9 times out of 10 we get back a 400, so we are switching to it
   # more research tbd on making this deterministic
   # unfortunately for now it is still non-deterministic
-  # _fail_response :bad_request  # expired nonce
-
-  # MS: Just run this test locally 20x in a loop - its 412 every single time
-  # for ((x=0;x<20;x++)); do rake test TESTOPTS="-n test_prove_hpk_guard_conditions"; done
+  _fail_response :bad_request  # expired nonce
 
   # Build virtual client from here
 
