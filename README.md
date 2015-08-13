@@ -1,5 +1,11 @@
 
 
+Zax requires Redis to run.
+
+Install Redis from here: http://redis.io/download
+
+Then bring up an instance of Redis
+
 To bring up rails run this command:
 
 ```
