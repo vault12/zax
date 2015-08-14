@@ -1,10 +1,21 @@
 
-
 Zax requires Redis to run.
 
-Install Redis from here: http://redis.io/download
+##### Install Redis
 
-Then bring up an instance of Redis
+Download Redis from here: http://redis.io/download
+
+Building Redis: https://github.com/antirez/redis#building-redis
+
+Running Redis: https://github.com/antirez/redis#running-redis
+
+##### Install Zax
+
+```
+git clone git@github.com:vault12/zax.git
+gem install bundler
+bundle install
+```
 
 To bring up rails run this command:
 
