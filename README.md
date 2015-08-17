@@ -1,7 +1,7 @@
 zax
 =====
 
-[![Build Status](https://magnum.travis-ci.com/vault12/zax.svg?token=g8FwU726sRsZ5HdMFemF&branch=master)](https://magnum.travis-ci.com/vault12/zax)
+[![Build Status](https://magnum.travis-ci.com/vault12/zax.svg?token=dhkpzksoKhpgNnBBBhRY&branch=master)](https://magnum.travis-ci.com/vault12/zax)
 
 Zax requires Redis to run.
 
