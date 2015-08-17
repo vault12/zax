@@ -1,0 +1,17 @@
+language: ruby
+
+rvm:
+  - 2.2.2
+
+gemfile: "Gemfile"
+
+sudo: false
+
+env:
+  global:
+    - VERBOSE=true
+    - TIMEOUT=1
+
+branches:
+  only:
+    - master
