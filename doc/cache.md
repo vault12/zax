@@ -3,6 +3,18 @@ This data is stored in the
 [Rails Cache]
 (http://guides.rubyonrails.org/caching_with_rails.html)
 
+##### Client Token
+
+The client token is sent from the client to the relay during the
+
+*POST /start_session/*
+
+Represented in the code this way:
+```
+h2_client_token = h2(@client_token)
+Rails.cache.write("client_token_#{h2_client_token}", @client_token, expires_in: @tmout)
+```
+
 ##### Client Token maps to Relay Token
 
 The relay token is sent from the relay to a client during the
