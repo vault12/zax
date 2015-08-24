@@ -3,6 +3,23 @@ This data is stored in the
 [Rails Cache]
 (http://guides.rubyonrails.org/caching_with_rails.html)
 
+
+## Data held for command requests
+
+These keys are held during the
+[Relay Command]
+(https://github.com/vault12/docs/blob/master/crypto.v12.md#alice-sends--relay-commands)
+phase of communication.
+
+```
+Rails.cache.write("session_key_#{hpk}",@session_key)
+Rails.cache.write("client_key_#{hpk}",@client_key.public_key)
+```
+
+##### Hpk
+
+## Data held for session and prove requests
+
 ##### Client Token
 
 The client token is sent from the client to the relay during the
