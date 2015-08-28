@@ -1,72 +1,12 @@
 Rails.application.routes.draw do
 
-  # CORS pre-flight will arrive first via OPTIONS
-  match   'session'   => 'session#allow_crossdomain', via: [:options]
-
   # Establish token session
-  get     'session'   => 'session#new_session_token'
-  post    'session'   => 'session#verify_session_token'
+  post    'start_session'   => 'session#start_session_token'
+  post    'verify_session'   => 'session#verify_session_token'
 
-  # CORS pre-flight will arrive first via OPTIONS
-  match   'prove'  => 'proof#allow_crossdomain', via: [:options]
   # Prove ownership of hashed public key (hpk)
   post    'prove'  => 'proof#prove_hpk'
 
-  # CORS pre-flight will arrive first via OPTIONS
-  match   'command' => 'command#allow_crossdomain', via: [:options]
+  # command controller functions
   post    'command' => 'command#process_cmd'
 end
-
-# === Routing Examples ===
-#
-# You can have the root of your site routed with "root"
-# root 'welcome#index'
-
-# Example of regular route:
-#   get 'products/:id' => 'catalog#view'
-
-# Example of named route that can be invoked with purchase_url(id: product.id)
-#   get 'products/:id/purchase' => 'catalog#purchase', as: :purchase
-
-# Example resource route (maps HTTP verbs to controller actions automatically):
-#   resources :products
-
-# Example resource route with options:
-#   resources :products do
-#     member do
-#       get 'short'
-#       post 'toggle'
-#     end
-#
-#     collection do
-#       get 'sold'
-#     end
-#   end
-
-# Example resource route with sub-resources:
-#   resources :products do
-#     resources :comments, :sales
-#     resource :seller
-#   end
-
-# Example resource route with more complex sub-resources:
-#   resources :products do
-#     resources :comments
-#     resources :sales do
-#       get 'recent', on: :collection
-#     end
-#   end
-
-# Example resource route with concerns:
-#   concern :toggleable do
-#     post 'toggle'
-#   end
-#   resources :posts, concerns: :toggleable
-#   resources :photos, concerns: :toggleable
-
-# Example resource route within a namespace:
-#   namespace :admin do
-#     # Directs /admin/products/* to Admin::ProductsController
-#     # (app/controllers/admin/products_controller.rb)
-#     resources :products
-#   end

@@ -1,7 +1,7 @@
 require 'test_helper'
 
-class ProveHpkTest < ActionDispatch::IntegrationTest
-  test "session, prove hpk token flow" do
+class CommandTest < ActionDispatch::IntegrationTest
+  test "session, prove hpk, command token flow" do
     @client_token = RbNaCl::Random.random_bytes 32
     _post "/start_session", @client_token
     _success_response

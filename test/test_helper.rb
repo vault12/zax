@@ -37,6 +37,14 @@ class ActiveSupport::TestCase
     post action,params
   end
 
+  def _post(route, *lines)
+    oneline = ""
+    lines.each do |line|
+      oneline = oneline.concat "#{b64enc line}\n"
+    end
+    post route, oneline
+  end
+
   def _corrupt_str(str)
     corrupt = str.clone
     corrupt[0] = [corrupt[0].ord+1].pack("C")
@@ -62,4 +70,42 @@ class ActiveSupport::TestCase
     values[1]
   end
 
+  def _setup_token
+    @client_token = RbNaCl::Random.random_bytes(32)
+    h2_client_token = h2(@client_token)
+    Rails.cache.write("client_token_#{h2_client_token}", @client_token, expires_in: @tmout)
+  end
+
+  def _check_body(body)
+    raise "No request body" if body.nil? or body.empty?
+    nl = body.include?("\r\n") ? "\r\n" : "\n"
+    return body.split nl
+  end
+
+#--------------------------------------------------
+#      Used for testing the CommandController
+#--------------------------------------------------
+
+  def _setup_keys hpk
+    @session_key = RbNaCl::PrivateKey.generate
+    @client_key = RbNaCl::PrivateKey.generate
+
+    Rails.cache.write("session_key_#{hpk}",@session_key, :expires_in => @tmout)
+    Rails.cache.write("client_key_#{hpk}",@client_key.public_key, :expires_in => @tmout)
+  end
+
+  def _send_command(hpk,data)
+    n = _make_nonce
+    _raw_post :process_cmd, {}, hpk, n , _client_encrypt_data( n, data)
+  end
+
+  def _client_encrypt_data(nonce,data)
+    box = RbNaCl::Box.new(@client_key.public_key, @session_key)
+    box.encrypt(nonce,data.to_json)
+  end
+
+  def _client_decrypt_data(nonce,data)
+    box = RbNaCl::Box.new(@client_key.public_key, @session_key)
+    JSON.parse box.decrypt(nonce,data)
+  end
 end

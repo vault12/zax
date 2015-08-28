@@ -3,17 +3,15 @@ class CommandController < ApplicationController
 
 public
 def process_cmd
-  @rid = _get_request_id
-  @hpk = _get_hpk
-  _load_keys
   @body = request.body.read MAX_COMMAND_BODY # 100kb
-  lines = _check_body @body
-  nonce = _check_nonce b64dec lines[0]
-  ctext = b64dec lines[1]
+  lines = _check_body_lines @body, 3, 'process command'
+  @hpk = _get_hpk lines[0]
+  _load_keys
+  nonce = _check_nonce b64dec lines[1]
+  ctext = b64dec lines[2]
   data = _decrypt_data nonce, ctext
   mailbox = Mailbox.new @hpk
   rsp_nonce = _make_nonce
-
   # === Process command ===
   case data[:cmd]
   when 'upload'
@@ -66,17 +64,18 @@ private
 
 def _load_keys
   logger.info "#{INFO_GOOD} Reading client session key for hpk #{b64enc @hpk}"
-  @session_key = Rails.cache.read("key_#{@rid}")
-  @client_key = Rails.cache.read("inner_key_#{@hpk}")
+  @session_key = Rails.cache.read("session_key_#{@hpk}")
+  @client_key = Rails.cache.read("client_key_#{@hpk}")
   raise HPK_keys.new(self,@hpk), "No cached session key" unless @session_key
   raise HPK_keys.new(self,@hpk), "No cached client key"  unless @client_key
 end
 
 def _check_body(body)
   lines = super body
-  logger.info "#{INFO_GOOD} Nonce length is #{lines[0].length}"
-  unless lines and lines.count==2 and lines[0].length==NONCE_B64
-    raise "process command malformated body, #{ lines ? lines.count : 0} lines"
+  unless lines and lines.count==3 and
+    lines[0].length==TOKEN_B64 and
+    lines[1].length==NONCE_B64
+    raise "process_cmd malformed body, #{ lines ? lines.count : 0} lines"
   end
   return lines
 end

@@ -7,26 +7,6 @@ module ResponseHelper
 
   protected
 
-  # make sure everything is correct with request token header
-  def _get_request_id
-    rth = request.headers["HTTP_#{TOKEN}"]
-    # do we have the token header?
-    unless rth
-      raise RequestIDError.new(self,rth),
-        "Missing #{TOKEN} header"
-    end
-    # is it correct base64?
-    rid = b64dec rth
-    # is it correct length?
-    unless rid.length == TOKEN_LEN
-      raise RequestIDError.new(self,rth),
-        "#{TOKEN} is not #{TOKEN_LEN} bytes"
-    end
-    return rid # good request id
-    rescue => e # wrap errors of b64 decode
-      raise RequestIDError.new(self,rth), e.message
-  end
-
   def _check_hpk(h)
     unless h.length == HPK_LEN
       raise HPKError.new(self,h),
@@ -34,9 +14,9 @@ module ResponseHelper
     end
   end
 
-  # make sure everything is correct with hpk 
-  def _get_hpk
-    h = request.headers["HTTP_#{HPK}"]
+  # make sure everything is correct with hpk
+  def _get_hpk(h)
+    # h = request.headers["HTTP_#{HPK}"]
     # do we have hpk header?
     unless h
       raise HPKError.new(self,h),
@@ -82,6 +62,14 @@ module ResponseHelper
     # Nonce first 8 bytes are timestamp
     nonce[0,blank.length] = blank
     return nonce.pack("C*")
+  end
+
+  def _check_body_lines(body,numoflines,msg)
+    lines = _check_body body
+    unless lines and lines.count == numoflines
+      raise "#{msg} wrong number of lines in body, #{ lines ? lines.count : 0} lines"
+    end
+    return lines
   end
 
   # === Error reporting ===

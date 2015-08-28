@@ -1,7 +1,7 @@
-require 'errors/request_id'
 require 'errors/hpk'
 require 'errors/random'
 require 'errors/expired'
 require 'errors/key'
 require 'errors/session_key'
 require 'errors/hpk_keys'
+require 'errors/client_token'

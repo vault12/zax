@@ -2,32 +2,38 @@ require 'test_helper'
 
 class VerifySessionTest < ActionDispatch::IntegrationTest
   test "verify session token flow" do
-    requst_token = b64enc RbNaCl::Random.random_bytes 32
-    get "/session", nil, "HTTP_#{TOKEN}": requst_token
+    @client_token = RbNaCl::Random.random_bytes 32
+    _post "/start_session", @client_token
     _success_response
-    random_token = b64dec response.body
-  
-    post "/session", nil, "HTTP_#{TOKEN}": (b64enc RbNaCl::Random.random_bytes 32)
-    _fail_response :precondition_failed # wrong token
 
-    post "/session", "hello"*100,
-      'CONTENT_TYPE':'application/text',
-      "HTTP_#{TOKEN}": requst_token
-    _fail_response :conflict # handshake mismatch
+    body = response.body
+    lines = _check_body(body)
+    @relay_token = b64dec lines[0]
+    h2_client_token = h2(@client_token)
 
-    post "/session", requst_token,
-      'CONTENT_TYPE':'application/text',
-      "HTTP_#{TOKEN}": requst_token
-    _fail_response :conflict # still wrong handshake
+    ### debug
+    ph2_client_token = b64enc h2_client_token
+    print 'h2 client token = ', ph2_client_token; puts
+    ### end debug
 
-    real_handshake = random_token.bytes.zip((Base64.decode64 requst_token).bytes).map { |a,b| a^b }.pack("C*")
+    client_relay = concat_str(@client_token,@relay_token)
+    h2_client_relay = h2(client_relay)
 
-    post "/session", b64enc(real_handshake),
-      'CONTENT_TYPE':'application/text',
-      "HTTP_#{TOKEN}": requst_token
+    ### debug
+    ph2_client_relay = b64enc h2_client_relay
+    print 'h2 client relay = ', ph2_client_relay; puts
+    ### end debug
+
+    _post "/verify_session", h2_client_token, h2_client_relay
     _success_response
-    pkey = b64dec response.body
-    assert_not_empty pkey
+
+    body = response.body
+    lines = _check_body(body)
+    skxorct = b64dec lines[0]
+    @session_key = xor_str(skxorct,@client_token)
+    ### debug
+    print 'session key = ', "#{b64enc @session_key}"; puts
+    print 'session key xor client token = ', lines[0]; puts
+    ### end debug
   end
-
 end
