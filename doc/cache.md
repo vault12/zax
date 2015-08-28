@@ -3,7 +3,6 @@ This data is stored in the
 [Rails Cache]
 (http://guides.rubyonrails.org/caching_with_rails.html)
 
-
 ## Data held for command requests
 
 These keys are held during the
@@ -11,12 +10,23 @@ These keys are held during the
 (https://github.com/vault12/docs/blob/master/crypto.v12.md#alice-sends--relay-commands)
 phase of communication.
 
+Keys are written out in the proof controller and read in the command controller
+
+In the
+[crypto_spec]
+(https://github.com/vault12/docs/blob/master/crypto.v12.md#alice-sends--relay-commands)
+
+* *r_sess_sk* is the @session_key secret key
+* *a_temp_pk* is the @client_key client temp public key
+
+This data is saved in the Proof controller after proof has been confirmed.
+
 ```
 Rails.cache.write("session_key_#{hpk}",@session_key)
-Rails.cache.write("client_key_#{hpk}",@client_key.public_key)
+Rails.cache.write("client_key_#{hpk}",@client_key)
 ```
 
-##### Hpk
+And then read back out when a command is sent to the relay.
 
 ## Data held for session and prove requests
 
