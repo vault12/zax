@@ -15,7 +15,6 @@ def process_cmd
   # === Process command ===
   case data[:cmd]
   when 'upload'
-    puts 'process_cmd 101 upload'
     hpkto = b64dec data[:to]
     mbx = Mailbox.new hpkto
     mbx.store @hpk,rsp_nonce, data[:payload]
@@ -23,16 +22,12 @@ def process_cmd
 
   when 'count'
     data = { }
-    data[_rand_str(2,8)] = _rand_str(8,8)
     data[:count] = mailbox.count
-    print 'process_cmd 101 count = ', data[:count]; puts
-    data[_rand_str(2,8)] = _rand_str(8,8)
     enc_nonce = b64enc rsp_nonce
     enc_data = _encrypt_data rsp_nonce,data
     render text:"#{enc_nonce}\n#{enc_data}", status: :ok
 
   when 'download'
-    puts 'process_cmd 101 download'
     count = mailbox.count > MAX_ITEMS ? MAX_ITEMS : mailbox.count
     start = data[:start] || 0
     raise "Bad download start position" unless start>=0 or start<mailbox.count
@@ -43,7 +38,6 @@ def process_cmd
     render text:"#{enc_nonce}\n#{enc_payload}", status: :ok
 
   when 'delete'
-    puts 'process_cmd 101 delete'
     for id in data[:payload]
       mailbox.delete_by_id id
     end
