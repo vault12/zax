@@ -64,7 +64,8 @@ test "prove_hpk guard conditions" do
                         "#{b64enc nonce_outer}",
                         "#{b64enc outer}"
 
-  _post :prove_hpk, lines
+  post :prove_hpk, lines
+  _success_response
 end
 
 def process_lines *lines
