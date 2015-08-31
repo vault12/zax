@@ -34,7 +34,7 @@ test 'process command 02 upload count download delete' do
   assert_not_nil data
   assert_includes data, "count"
   assert_equal 0, data['count']
-  puts data
+  #puts data
 
 #---------------------------------------------------------
 #        download

@@ -78,7 +78,6 @@ def _decrypt_data(nonce,ctext)
   box = RbNaCl::Box.new(@client_key,@session_key)
   d = JSON.parse box.decrypt(nonce,ctext)
   d = d.reduce({}) { |h,(k,v)| h[k.to_sym]=v; h }
-  puts d[:payload]
   _check_command d
 end
 

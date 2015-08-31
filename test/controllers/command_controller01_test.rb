@@ -27,6 +27,6 @@ class CommandControllerTest < ActionController::TestCase
     assert_not_nil data
     assert_includes data, "count"
     assert_equal 0, data['count']
-    puts data
+    #puts data
   end
 end
