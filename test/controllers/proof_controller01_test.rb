@@ -58,6 +58,44 @@ test "prove_hpk guard conditions" do
   #print "pct masked_hpk = #{b64enc masked_hpk}"; puts
   #print "pct masked_client_temp_pk = #{b64enc masked_client_temp_pk}"; puts
 
+  lines = process_lines "#{b64enc masked_hpk}",
+                        "#{b64enc masked_client_temp_pk}",
+                        "#{b64enc nonce_outer}"
+
+  post :prove_hpk, lines
+  _fail_response :precondition_failed # missing outer
+
+  lines = process_lines "#{b64enc h2_client_token}",
+                        "#{b64enc masked_hpk}",
+                        "#{b64enc masked_client_temp_pk}",
+                        "#{b64enc nonce_outer}"
+
+  post :prove_hpk, lines
+  _fail_response :precondition_failed # missing outer
+
+  lines = process_lines "#{b64enc h2_client_token}",
+                        "#{b64enc masked_hpk}",
+                        "#{b64enc nonce_outer}",
+                        "#{b64enc outer}"
+
+  post :prove_hpk, lines
+  _fail_response :precondition_failed # missing outer
+
+  lines = process_lines "#{b64enc h2_client_token}",
+                        "#{b64enc masked_hpk}",
+                        "#{b64enc masked_client_temp_pk}",
+                        "#{b64enc outer}"
+
+  post :prove_hpk, lines
+  _fail_response :precondition_failed # missing outer
+
+  lines = process_lines "#{b64enc h2_client_token}",
+                        "#{b64enc masked_client_temp_pk}",
+                        "#{b64enc nonce_outer}"
+
+  post :prove_hpk, lines
+  _fail_response :precondition_failed # missing outer
+
   lines = process_lines "#{b64enc h2_client_token}",
                         "#{b64enc masked_hpk}",
                         "#{b64enc masked_client_temp_pk}",
