@@ -64,8 +64,8 @@ class SessionController < ApplicationController
     chk_h2_client_relay = b64dec lines[1]
 
     # debug
-    print '_verify_handshake h2_client_token = ', lines[0]; puts
-    print '_verify_handshake h2_client_relay in = ', lines[1]; puts
+    #print '_verify_handshake h2_client_token = ', lines[0]; puts
+    #print '_verify_handshake h2_client_relay in = ', lines[1]; puts
     # end debug
 
     client_token = Rails.cache.read "client_token_#{chk_h2_client_token}"
@@ -77,10 +77,10 @@ class SessionController < ApplicationController
     h2_client_relay = h2(client_relay)
 
     #debug
-    print "_verify_handshake client_token #{b64enc client_token}"; puts
-    print "_verify_handshake relay_token #{b64enc relay_token}"; puts
-    print "_verify_handshake client_relay #{b64enc client_relay}"; puts
-    print "_verify_handshake h2_client_relay calculate #{b64enc h2_client_relay}"; puts
+    #print "_verify_handshake client_token #{b64enc client_token}"; puts
+    #print "_verify_handshake relay_token #{b64enc relay_token}"; puts
+    #print "_verify_handshake client_relay #{b64enc client_relay}"; puts
+    #print "_verify_handshake h2_client_relay calculate #{b64enc h2_client_relay}"; puts
     #end debug
 
     raise "_verify_handshake mismatch h2_client_relay in versus calculate" unless chk_h2_client_relay.eql? h2_client_relay

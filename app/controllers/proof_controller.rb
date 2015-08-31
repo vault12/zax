@@ -23,9 +23,9 @@ class ProofController < ApplicationController
     @h2_client_token = b64dec lines[0]
     _good_session_state?
 
-    print "pc @relay_token = #{b64enc @relay_token}"; puts
-    print "pc masked_hpk = #{lines[1]}"; puts
-    print "pc masked_client_temp_pk = #{lines[2]}"; puts
+    #print "pc @relay_token = #{b64enc @relay_token}"; puts
+    #print "pc masked_hpk = #{lines[1]}"; puts
+    #print "pc masked_client_temp_pk = #{lines[2]}"; puts
 
     h2_relay_token = h2(@relay_token)
 
@@ -34,8 +34,8 @@ class ProofController < ApplicationController
     masked_client_temp_pk = b64dec lines[2]
     @client_temp_pk = xor_str(masked_client_temp_pk,h2_relay_token)
 
-    print "pc @hpk = #{b64enc @hpk}"; puts
-    print "pc @client_temp_pk = #{b64enc @client_temp_pk}"; puts
+    #print "pc @hpk = #{b64enc @hpk}"; puts
+    #print "pc @client_temp_pk = #{b64enc @client_temp_pk}"; puts
 
     nonce_outer = _check_nonce b64dec lines[3]
     ctext = b64dec lines[4]
@@ -57,33 +57,6 @@ class ProofController < ApplicationController
                                       sign.eql? proof_sign and
                                       proof_sign.length == 32
     raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
-
-=begin
-    lines = _check_body @body
-    # - first line is masked client session key
-    @client_key = _check_client_key lines[0]
-    # - second line is outter nonce
-    nonce = _check_nonce b64dec lines[1]
-    # - third line is outter ciphertext
-    ctext = b64dec lines[2]
-
-    outer_box = RbNaCl::Box.new(@client_key,@session_key)
-    inner = JSON.parse outer_box.decrypt(nonce,ctext)
-    # decode all values from b64
-    inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
-    # inner box with node permanent comm_key (identity)
-
-    @inner_key = inner[:pub_key]
-    inner_box = RbNaCl::Box.new(@inner_key,@session_key)
-
-    # prove decryption with client comm_key
-    _check_nonce inner[:nonce]
-    sign  = inner_box.decrypt(inner[:nonce],inner[:ctext])
-    sign2 = xor_str h2(@rid), h2(@token)
-    raise "Signature mismatch" unless sign and sign2 and sign.eql? sign2
-    raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
-    return if _existing_client_key?
-=end
     # --- No exceptions: success path now ---
     _save_hpk_session
     mailbox = Mailbox.new @hpk
