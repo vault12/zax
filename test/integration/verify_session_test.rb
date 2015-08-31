@@ -12,16 +12,16 @@ class VerifySessionTest < ActionDispatch::IntegrationTest
     h2_client_token = h2(@client_token)
 
     ### debug
-    ph2_client_token = b64enc h2_client_token
-    print 'h2 client token = ', ph2_client_token; puts
+    #ph2_client_token = b64enc h2_client_token
+    #print 'h2 client token = ', ph2_client_token; puts
     ### end debug
 
     client_relay = concat_str(@client_token,@relay_token)
     h2_client_relay = h2(client_relay)
 
     ### debug
-    ph2_client_relay = b64enc h2_client_relay
-    print 'h2 client relay = ', ph2_client_relay; puts
+    #ph2_client_relay = b64enc h2_client_relay
+    #print 'h2 client relay = ', ph2_client_relay; puts
     ### end debug
 
     _post "/verify_session", h2_client_token, h2_client_relay
@@ -32,8 +32,8 @@ class VerifySessionTest < ActionDispatch::IntegrationTest
     skxorct = b64dec lines[0]
     @session_key = xor_str(skxorct,@client_token)
     ### debug
-    print 'session key = ', "#{b64enc @session_key}"; puts
-    print 'session key xor client token = ', lines[0]; puts
+    #print 'session key = ', "#{b64enc @session_key}"; puts
+    #print 'session key xor client token = ', lines[0]; puts
     ### end debug
   end
 end
