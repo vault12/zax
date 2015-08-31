@@ -12,16 +12,16 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
     h2_client_token = h2(@client_token)
 
     ### debug
-    ph2_client_token = b64enc h2_client_token
-    print 'h2 client token = ', ph2_client_token; puts
+    #ph2_client_token = b64enc h2_client_token
+    #print 'h2 client token = ', ph2_client_token; puts
     ### end debug
 
     client_relay = concat_str(@client_token,@relay_token)
     h2_client_relay = h2(client_relay)
 
     ### debug
-    ph2_client_relay = b64enc h2_client_relay
-    print 'h2 client relay = ', ph2_client_relay; puts
+    #ph2_client_relay = b64enc h2_client_relay
+    #print 'h2 client relay = ', ph2_client_relay; puts
     ### end debug
 
     _post "/verify_session", h2_client_token, h2_client_relay
@@ -32,8 +32,8 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
     skxorct = b64dec lines[0]
     @session_key = xor_str(skxorct,@client_token)
     ### debug
-    print 'session key = ', "#{b64enc @session_key}"; puts
-    print 'session key xor client token = ', lines[0]; puts
+    #print 'session key = ', "#{b64enc @session_key}"; puts
+    #print 'session key xor client token = ', lines[0]; puts
     ### end debug
 
     ### --------------------------------------------------
@@ -54,8 +54,8 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
 
     hpk = h2(client_comm_sk.public_key)
 
-    print "pct hpk = #{b64enc hpk}"; puts
-    print "pct client_temp_pk = #{b64enc client_temp_pk}"; puts
+    #print "pct hpk = #{b64enc hpk}"; puts
+    #print "pct client_temp_pk = #{b64enc client_temp_pk}"; puts
 
     masked_hpk = xor_str(hpk,h2_relay_token)
     masked_client_temp_pk = xor_str(client_temp_pk,h2_relay_token)
@@ -86,8 +86,8 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
 
     outer = box_outer.encrypt(nonce_outer,inner.to_json)
 
-    print "pct masked_hpk = #{b64enc masked_hpk}"; puts
-    print "pct masked_client_temp_pk = #{b64enc masked_client_temp_pk}"; puts
+    #print "pct masked_hpk = #{b64enc masked_hpk}"; puts
+    #print "pct masked_client_temp_pk = #{b64enc masked_client_temp_pk}"; puts
 
     _post "/prove", h2_client_token,
                     masked_hpk,
