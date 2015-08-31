@@ -61,6 +61,7 @@ test "prove_hpk" do
   _raw_post :prove_hpk, {}, h2_client_token,
                             masked_hpk, masked_client_temp_pk,
                             nonce_outer, outer
+  _success_response
 end
 
 def _make_relay_token
