@@ -29,10 +29,10 @@ class ProofController < ApplicationController
 
     h2_relay_token = h2(@relay_token)
 
-    masked_hpk = b64dec lines[1]
-    @hpk = xor_str(masked_hpk,h2_relay_token)
-    masked_client_temp_pk = b64dec lines[2]
-    @client_temp_pk = xor_str(masked_client_temp_pk,h2_relay_token)
+    # masked_hpk
+    @hpk = _process_xor(lines[1],h2_relay_token)
+    # masked_client_temp_pk
+    @client_temp_pk = _process_xor(lines[2],h2_relay_token)
 
     #print "pc @hpk = #{b64enc @hpk}"; puts
     #print "pc @client_temp_pk = #{b64enc @client_temp_pk}"; puts
@@ -120,6 +120,17 @@ class ProofController < ApplicationController
     raise "Bad client key: #{dump key}" unless
       key and key.bytes.length==KEY_LEN
     return key
+  end
+
+  # this function does this work:
+  #masked_hpk = b64dec lines[1]
+  #@hpk = xor_str(masked_hpk,h2_relay_token)
+  #masked_client_temp_pk = b64dec lines[2]
+  #@client_temp_pk = xor_str(masked_client_temp_pk,h2_relay_token)
+
+  def _process_xor(line,h2_relay_token)
+    result = b64dec line
+    xor_str(result,h2_relay_token)
   end
 
   def _save_hpk_session
