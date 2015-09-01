@@ -28,7 +28,7 @@ def process_cmd
     data[:count] = mailbox.count
     enc_nonce = b64enc rsp_nonce
     enc_data = _encrypt_data rsp_nonce,data
-    render text:"#{enc_nonce}\n#{enc_data}", status: :ok
+    render text:"#{enc_nonce}\r\n#{enc_data}", status: :ok
 
   when 'download'
     count = mailbox.count > MAX_ITEMS ? MAX_ITEMS : mailbox.count
@@ -38,7 +38,7 @@ def process_cmd
     payload = _process_payload(payload)
     enc_nonce = b64enc rsp_nonce
     enc_payload = _encrypt_data rsp_nonce,payload
-    render text:"#{enc_nonce}\n#{enc_payload}", status: :ok
+    render text:"#{enc_nonce}\r\n#{enc_payload}", status: :ok
 
   when 'delete'
     for id in data[:payload]
