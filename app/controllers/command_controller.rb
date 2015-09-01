@@ -3,12 +3,23 @@ class CommandController < ApplicationController
 
 public
 def process_cmd
-  @body = request.body.read COMMAND_BODY # 100k
-  lines = _check_body_lines @body, 3, 'process command'
+  @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
+  puts 'body_preamble'
+  puts @body_preamble
+  puts '100'
+  lines = _check_body_preamble_command_lines @body_preamble
+  puts '200'
   @hpk = _get_hpk lines[0]
-  _load_keys
   nonce = _check_nonce b64dec lines[1]
-  ctext = b64dec lines[2]
+
+  @body = request.body.read COMMAND_BODY
+  puts 'body'
+  puts @body
+  puts '300'
+  lines = _check_body_command_lines @body
+  puts '400'
+  ctext = b64dec lines[0]
+  _load_keys
   data = _decrypt_data nonce, ctext
   mailbox = Mailbox.new @hpk
   rsp_nonce = _make_nonce
@@ -64,14 +75,34 @@ def _load_keys
   raise HPK_keys.new(self,@hpk), "No cached client key"  unless @client_key
 end
 
-def _check_body(body)
-  lines = super body
-  unless lines and lines.count==3 and
+def _check_body_preamble_command_lines(body)
+  lines = _check_body_break_lines body
+  unless lines and lines.count == 2
+    raise "wrong number of lines in preamble command body, #{ lines ? lines.count : 0} lines"
+  end
+  unless lines and lines.count==2 and
     lines[0].length==TOKEN_B64 and
     lines[1].length==NONCE_B64
-    raise "process_cmd malformed body, #{ lines ? lines.count : 0} lines"
+    raise "process_cmd malformed preamble command body, #{ lines ? lines.count : 0} lines"
   end
   return lines
+end
+
+def _check_body_command_lines(body)
+  lines = _check_body_break_lines body
+
+  print 'lines.count = ', lines.count; puts
+
+  unless lines and lines.count == 1
+    raise "wrong number of lines in command body, #{ lines ? lines.count : 0} lines"
+  end
+  return lines
+end
+
+def _check_body_break_lines(body)
+  raise "No request body" if body.nil? or body.empty?
+  nl = body.include?("\r\n") ? "\r\n" : "\n"
+  return body.split nl
 end
 
 def _decrypt_data(nonce,ctext)
