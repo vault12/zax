@@ -4,20 +4,12 @@ class CommandController < ApplicationController
 public
 def process_cmd
   @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
-  puts 'body_preamble'
-  puts @body_preamble
-  puts '100'
   lines = _check_body_preamble_command_lines @body_preamble
-  puts '200'
   @hpk = _get_hpk lines[0]
   nonce = _check_nonce b64dec lines[1]
 
   @body = request.body.read COMMAND_BODY
-  puts 'body'
-  puts @body
-  puts '300'
   lines = _check_body_command_lines @body
-  puts '400'
   ctext = b64dec lines[0]
   _load_keys
   data = _decrypt_data nonce, ctext
@@ -90,9 +82,6 @@ end
 
 def _check_body_command_lines(body)
   lines = _check_body_break_lines body
-
-  print 'lines.count = ', lines.count; puts
-
   unless lines and lines.count == 1
     raise "wrong number of lines in command body, #{ lines ? lines.count : 0} lines"
   end

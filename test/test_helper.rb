@@ -33,7 +33,7 @@ class ActiveSupport::TestCase
   end
 
   def _raw_post(action, params, *lines)
-    @request.env['RAW_POST_DATA'] = lines.reduce("") { |s,v| s+="#{b64enc v}\n" }
+    @request.env['RAW_POST_DATA'] = lines.reduce("") { |s,v| s+="#{b64enc v}\r\n" }
     post action,params
   end
 
