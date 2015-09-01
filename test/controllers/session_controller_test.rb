@@ -10,6 +10,12 @@ test "new session token" do
   _fail_response :internal_server_error # 24 instead of 32 bytes
 
   _setup_token
+
+  p1 = "#{b64enc @client_token}"
+  plength = p1.length
+  #print 'session start parameters length = ', plength; puts
+  assert_equal(plength,44)
+
   _raw_post :start_session_token, { }, @client_token
   _success_response
 end
@@ -42,6 +48,12 @@ test "verify session token" do
   #ph2_client_relay = b64enc h2_client_relay
   #print 'h2 client relay = ', ph2_client_relay; puts
   ### end debug
+
+  p1 = "#{b64enc h2_client_token}"
+  p2 = "#{b64enc h2_client_relay}"
+  plength = p1.length + p2.length
+  #print 'session verify parameters length = ', plength; puts
+  assert_equal(plength,88)
 
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   _success_response
