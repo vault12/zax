@@ -13,9 +13,10 @@ class SessionController < ApplicationController
     end
     client_token = b64dec lines[0]
     _check_client_token client_token
-    _make_relay_token client_token
+    _cache_client_token client_token
+    relay_token = _make_relay_token client_token
     # Send back our token as base64 response body
-    render text: b64enc(@relay_token)
+    render text: b64enc(relay_token)
     rescue ZAXError => e
       e.http_fail
     rescue => e
@@ -87,40 +88,19 @@ class SessionController < ApplicationController
     return client_token, h2_client_token
   end
 
-
-  # Verify handshake: user request token XOR our token
-  def _verify_handshake_old
-    @body = request.body.read TOKEN_B64 # exact base64 of 32 bytes
-    @handshake = b64dec @body
-    raise "Handshake mismatch" unless @handshake.eql? (xor_str @relay_token, @rid)
-    logger.info "#{INFO} Succesful handshake for req #{dumpHex @rid[0...8]}"
-    return @body
-  end
-
   def _make_relay_token client_token
-    @relay_token = RbNaCl::Random.random_bytes(32)
+    relay_token = RbNaCl::Random.random_bytes(32)
     h2_client_token = h2(client_token)
-    Rails.cache.write("relay_token_#{h2_client_token}", @relay_token, expires_in: @tmout)
+    Rails.cache.write("relay_token_#{h2_client_token}", relay_token, expires_in: @tmout)
     logger.info "#{INFO} start_session client_token = #{b64enc client_token}"
-    logger.info "#{INFO} start_session @relay_token #{b64enc @relay_token}"
+    logger.info "#{INFO} start_session relay_token #{b64enc relay_token}"
     logger.info "#{INFO} start_session h2 client_token = #{b64enc h2_client_token}"
     # Sanity check server-side RNG
-    if not @relay_token or @relay_token.length != 32
-      raise RequestIDError.new(self,@relay_token), "Missing #{TOKEN}"
+    if not relay_token or relay_token.length != 32
+      raise RequestIDError.new(self,relay_token), "Missing #{TOKEN}"
     end
-    return @relay_token
+    relay_token
   end
-
-  # Client have to conclude the handshike while our token is cached
-  # Report expiration to log and user
-  def _get_cached_token
-    unless (@relay_token = Rails.cache.fetch @rid)
-      raise ExpiredError.new(self,@rid),
-        "Server handshake token missing or expired"
-    end
-    return @relay_token
-  end
-
 
   def _make_session_keys(h2_client_token)
     # establish session keys
@@ -139,6 +119,9 @@ class SessionController < ApplicationController
       raise ClientTokenError.new(self,client_token),
         "#{CLIENT_TOKEN} is not #{TOKEN_LEN} bytes"
     end
+  end
+
+  def _cache_client_token client_token
     h2_client_token = h2(client_token)
     Rails.cache.write("client_token_#{h2_client_token}", client_token, expires_in: @tmout)
   end
