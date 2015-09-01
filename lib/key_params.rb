@@ -13,12 +13,14 @@ module KeyParams
   KEY_LEN   = 32
   KEY_B64   = 44
 
+  OUTER_BOX = 256
+
   MAX_COMMAND_BODY = 10*1024 # 10kb
   MAX_ITEMS        = 100
 
   SESSION_START_BODY  = TOKEN_B64
   SESSION_VERIFY_BODY = TOKEN_B64 + 2 + TOKEN_B64
-  PROVE_BODY          = MAX_COMMAND_BODY
+  PROVE_BODY          = TOKEN_B64 + 2 + TOKEN_B64 + 2 + TOKEN_B64 + 2 + NONCE_B64 + 2 + OUTER_BOX
   COMMAND_BODY        = MAX_COMMAND_BODY
 
   # Log file prefix codes.

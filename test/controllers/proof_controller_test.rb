@@ -58,6 +58,28 @@ test "prove_hpk" do
   #print "pct masked_hpk = #{b64enc masked_hpk}"; puts
   #print "pct masked_client_temp_pk = #{b64enc masked_client_temp_pk}"; puts
 
+  p1 = "#{b64enc h2_client_token}"
+  p2 = "#{b64enc masked_hpk}"
+  p3 = "#{b64enc masked_client_temp_pk}"
+  p4 = "#{b64enc nonce_outer}"
+  p5 = "#{b64enc outer}"
+
+# print 'p1 = ', p1.length; puts
+# print 'p2 = ', p2.length; puts
+# print 'p3 = ', p3.length; puts
+# print 'p4 = ', p4.length; puts
+# print 'p5 = ', p5.length; puts
+
+  assert_equal(p1.length,44)
+  assert_equal(p2.length,44)
+  assert_equal(p3.length,44)
+  assert_equal(p4.length,32)
+  assert_equal(p5.length,256)
+
+  plength = p1.length + p2.length + p3.length + p4.length + p5.length
+# print 'prove parameters length = ', plength; puts
+  assert_equal(plength,420)
+
   _raw_post :prove_hpk, {}, h2_client_token,
                             masked_hpk, masked_client_temp_pk,
                             nonce_outer, outer
