@@ -6,7 +6,7 @@ class SessionController < ApplicationController
     expires_now # never cache
     @tmout = Rails.configuration.x.relay.token_timeout
 
-    @body = request.body.read MAX_COMMAND_BODY # 100kb
+    @body = request.body.read SESSION_START_BODY
     lines = _check_body_lines @body, 1, 'start session'
     unless lines[0].length==TOKEN_B64
       raise "start_session_token malformed body, #{ lines ? lines.count : 0} lines"
@@ -28,7 +28,7 @@ class SessionController < ApplicationController
   def verify_session_token
     expires_now
     @tmout = Rails.configuration.x.relay.session_timeout
-    @body = request.body.read MAX_COMMAND_BODY # 100kb
+    @body = request.body.read SESSION_VERIFY_BODY
 
     lines = _check_body_lines @body, 2, 'verify session'
     unless lines[0].length==TOKEN_B64 and

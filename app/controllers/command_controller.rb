@@ -3,7 +3,7 @@ class CommandController < ApplicationController
 
 public
 def process_cmd
-  @body = request.body.read MAX_COMMAND_BODY # 100kb
+  @body = request.body.read COMMAND_BODY # 100k
   lines = _check_body_lines @body, 3, 'process command'
   @hpk = _get_hpk lines[0]
   _load_keys

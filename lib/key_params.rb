@@ -3,7 +3,7 @@ module KeyParams
   TOKEN     = "X_REQUEST_TOKEN"
   TOKEN_LEN = 32
   TOKEN_B64 = 44
-  
+
   HPK       = "X_HPK"
   HPK_LEN   = 32
 
@@ -16,10 +16,15 @@ module KeyParams
   MAX_COMMAND_BODY = 10*1024 # 10kb
   MAX_ITEMS        = 100
 
+  SESSION_START_BODY  = TOKEN_B64
+  SESSION_VERIFY_BODY = MAX_COMMAND_BODY
+  PROVE_BODY          = MAX_COMMAND_BODY
+  COMMAND_BODY        = MAX_COMMAND_BODY
+
   # Log file prefix codes.
-  # 
+  #
   # First char of log lines show visual icon of
-  # that line importance. 
+  # that line importance.
 
   # Low level info, can be ignored
   # 🔩 - Nuts and bolts

@@ -17,7 +17,7 @@ class ProofController < ApplicationController
     # TODO Figure out what this number should be...
     # @body = request.body.read KEY_B64+2+NONCE_B64+2+PROVE_CIPHER_B64
 
-    @body = request.body.read MAX_COMMAND_BODY # 100kb
+    @body = request.body.read PROVE_BODY
     lines = _check_body_lines @body, 5, 'prove hpk'
 
     @h2_client_token = b64dec lines[0]
