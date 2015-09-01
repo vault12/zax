@@ -44,12 +44,10 @@ class ProofController < ApplicationController
     inner = JSON.parse outer_box.decrypt(nonce_outer,ctext)
     inner = Hash[ inner.map { |k,v| [k.to_sym,b64dec(v)] } ]
 
+    _check_nonce inner[:nonce]
     client_comm_pk = inner[:pub_key]
     inner_box = RbNaCl::Box.new(client_comm_pk,@session_key)
-
-    _check_nonce inner[:nonce]
     sign  = inner_box.decrypt(inner[:nonce],inner[:ctext])
-
     proof_sign1 = concat_str(@client_temp_pk,@relay_token)
     proof_sign = concat_str(proof_sign1,@client_token)
     proof_sign = h2 proof_sign
