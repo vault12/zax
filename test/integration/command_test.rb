@@ -94,5 +94,17 @@ class CommandTest < ActionDispatch::IntegrationTest
                     masked_client_temp_pk,
                     nonce_outer,
                     outer
+
+    _success_response
+
+    to_hpk = RbNaCl::Random.random_bytes(32)
+    to_hpk = b64enc to_hpk
+
+    #_send_command hpk, cmd: 'upload', to: to_hpk, payload: 'hello world 0'
+    _setup_keys hpk
+    data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data( n, data)
+
   end
 end

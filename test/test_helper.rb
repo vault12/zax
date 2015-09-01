@@ -40,7 +40,7 @@ class ActiveSupport::TestCase
   def _post(route, *lines)
     oneline = ""
     lines.each do |line|
-      oneline = oneline.concat "#{b64enc line}\n"
+      oneline = oneline.concat "#{b64enc line}\r\n"
     end
     post route, oneline
   end
