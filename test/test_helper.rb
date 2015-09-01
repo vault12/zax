@@ -96,7 +96,8 @@ class ActiveSupport::TestCase
 
   def _send_command(hpk,data)
     n = _make_nonce
-    _raw_post :process_cmd, {}, hpk, n , _client_encrypt_data( n, data)
+    params = {"Content-Type" => "text/plain"}
+    _raw_post :process_cmd, params, hpk, n , _client_encrypt_data( n, data)
   end
 
   def _client_encrypt_data(nonce,data)
