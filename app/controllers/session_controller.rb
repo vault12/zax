@@ -59,25 +59,27 @@ class SessionController < ApplicationController
     chk_h2_client_token = b64dec lines[0]
     chk_h2_client_relay = b64dec lines[1]
 
-    # debug
-    #print '_verify_handshake h2_client_token = ', lines[0]; puts
-    #print '_verify_handshake h2_client_relay in = ', lines[1]; puts
-    # end debug
-
     client_token = Rails.cache.read "client_token_#{chk_h2_client_token}"
+    if client_token.nil? or client_token.length!=KEY_LEN
+      e = ClientTokenError.new self,
+      {client_token: client_token[0..3],
+      msg: "session controller: client token not in cache or equal to 32"}
+      raise e
+    end
+
     h2_client_token = h2(client_token)
     raise "_verify_handshake mismatch h2_client_token" unless chk_h2_client_token.eql? h2_client_token
 
     relay_token = Rails.cache.read "relay_token_#{h2_client_token}"
+    if relay_token.nil? or relay_token.length!=KEY_LEN
+      e = RelayTokenError.new self,
+      {relay_token: relay_token[0..3],
+      msg: "session controller: relay token not in cache or equal to 32"}
+      raise e
+    end
+
     client_relay = concat_str(client_token,relay_token)
     h2_client_relay = h2(client_relay)
-
-    #debug
-    #print "_verify_handshake client_token #{b64enc client_token}"; puts
-    #print "_verify_handshake relay_token #{b64enc relay_token}"; puts
-    #print "_verify_handshake client_relay #{b64enc client_relay}"; puts
-    #print "_verify_handshake h2_client_relay calculate #{b64enc h2_client_relay}"; puts
-    #end debug
 
     raise "_verify_handshake mismatch h2_client_relay in versus calculate" unless chk_h2_client_relay.eql? h2_client_relay
     return client_token, h2_client_token
@@ -113,7 +115,7 @@ class SessionController < ApplicationController
   def _check_client_token client_token
     unless client_token.length == TOKEN_LEN
       raise ClientTokenError.new(self,client_token),
-        "#{CLIENT_TOKEN} is not #{TOKEN_LEN} bytes"
+        "client token is not #{TOKEN_LEN} bytes"
     end
   end
 
