@@ -89,17 +89,6 @@ class ProofController < ApplicationController
     end
   end
 
-  def _existing_client_key?
-    # If we already have session key, we keep it
-    # for timeout duration, no overwrites
-    if Rails.cache.read("client_key_#{@hpk}")
-      mailbox = Mailbox.new @hpk
-      render text:"#{mailbox.count}", status: :accepted
-      return true
-    end
-    return false
-  end
-
   def _check_body(body)
     lines = super body
     unless lines and lines.count==5 and
