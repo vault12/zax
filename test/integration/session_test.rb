@@ -12,11 +12,11 @@ class VerifySessionTest < ActionDispatch::IntegrationTest
 
     @client_token = RbNaCl::Random.random_bytes 31
     _post "/start_session", @client_token
-    _fail_response :internal_server_error # wrong token
+    _fail_response :bad_request # wrong token
 
     @client_token = b64enc RbNaCl::Random.random_bytes 32
     _post "/start_session", @client_token
-    _fail_response :internal_server_error
+    _fail_response :bad_request
 
     _post "/start_session", "hello vault12"
     _fail_response :internal_server_error

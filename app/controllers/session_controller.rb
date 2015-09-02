@@ -114,8 +114,10 @@ class SessionController < ApplicationController
 
   def _check_client_token client_token
     unless client_token.length == TOKEN_LEN
-      raise ClientTokenError.new(self,client_token),
-        "client token is not #{TOKEN_LEN} bytes"
+      e = ClientTokenError.new self,
+      {client_token: client_token[0..3],
+      msg: "session controller, _check_client_token is not 32 bytes"}
+      raise e
     end
   end
 
