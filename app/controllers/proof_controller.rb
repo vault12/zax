@@ -57,6 +57,7 @@ class ProofController < ApplicationController
     raise "HPK mismatch" unless @hpk.eql? h2(inner[:pub_key])
     # --- No exceptions: success path now ---
     _save_hpk_session
+    _delete_handshake_keys
     mailbox = Mailbox.new @hpk
     render text:"#{mailbox.count}", status: :ok
 
@@ -139,6 +140,11 @@ class ProofController < ApplicationController
     Rails.cache.write("session_key_#{@hpk}", @session_key, expires_in: tmout)
     Rails.cache.write("client_key_#{@hpk}", @client_temp_pk, expires_in: tmout)
     logger.info "#{INFO_GOOD} Saved client and session key for hpk #{b64enc @hpk}"
+  end
+
+  def _delete_handshake_keys
+    Rails.cache.delete("client_token_#{@h2_client_token}")
+    Rails.cache.delete("relay_token_#{@h2_client_token}")
   end
 
   # === Error reporting ===
