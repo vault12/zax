@@ -24,7 +24,6 @@ class Mailbox01Test < ActionDispatch::IntegrationTest
     end
 
     #print "mailbox size mbx = ", mbx.count; puts
-    #print "mailbox size mbx_cache = ", mbxcache.top; puts
 
     results = mbx.read_all
 
