@@ -36,20 +36,15 @@ class SessionController < ApplicationController
       lines[1].length==TOKEN_B64
       raise "verify_session_token malformed body, #{ lines ? lines.count : 0} lines"
     end
+
     # check handshake or throw error
     client_token, h2_client_token = _verify_handshake(lines)
-    _make_session_keys h2_client_token
+    session_key = _make_session_key h2_client_token
 
-    session_key_xor_client_token = xor_str(@session_key.public_key.to_bytes,client_token)
+    session_key_xor_client_token = xor_str(session_key.public_key.to_bytes,client_token)
     session_key_xor_client_token = b64enc session_key_xor_client_token
-    logger.info "#{INFO} session_key_xor_client_token = #{session_key_xor_client_token}"
-
-    # Send session pub_key back to user as base64 body
-    expires_in @tmout, :public => false
     render text: "#{session_key_xor_client_token}"
-    #render text: "ok"
 
-    # Report handshake errors
     rescue ZAXError => e
       e.http_fail
     rescue => e
@@ -102,16 +97,17 @@ class SessionController < ApplicationController
     relay_token
   end
 
-  def _make_session_keys(h2_client_token)
+  def _make_session_key(h2_client_token)
     # establish session keys
-    @session_key = RbNaCl::PrivateKey.generate
+    session_key = RbNaCl::PrivateKey.generate
     # report errors with keys if any
-    if @session_key.nil? or @session_key.public_key.to_bytes.length!=32
-      raise KeyError.new(self,@session_key),
+    if session_key.nil? or session_key.public_key.to_bytes.length!=32
+      raise KeyError.new(self,session_key),
         "Session key failed or too short"
     end
-    Rails.cache.write("session_key_#{h2_client_token}", @session_key, :expires_in => @tmout)
-    logger.info "#{INFO_GOOD} @session_key = #{b64enc @session_key.public_key.to_bytes}"
+    Rails.cache.write("session_key_#{h2_client_token}", session_key, :expires_in => @tmout)
+    logger.info "#{INFO_GOOD} session_key = #{b64enc session_key.public_key.to_bytes}"
+    session_key
   end
 
   def _check_client_token client_token
