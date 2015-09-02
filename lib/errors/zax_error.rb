@@ -15,7 +15,8 @@ module Errors
 
     # Exception loging functions
     def log_message(m)
-      "#{m}:\n#{dumpHex @data}:\n#{EXPT} #{self}\n---"
+      #  "#{m}:\n#{dumpHex @data}:\n#{EXPT} #{self}\n---"
+      "#{m}\n"
     end
 
     def info(m)

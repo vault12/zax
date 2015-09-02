@@ -81,8 +81,11 @@ class ProofController < ApplicationController
     if @session_key.nil? or @session_key.to_bytes.length!=KEY_LEN or
        @relay_token.nil? or @relay_token.length!=KEY_LEN or
        @client_token.nil? or @client_token.length!=KEY_LEN
-       e = SessionKeyError.new self, session_key: @session_key, relay_token: @relay_token, client_token: @client_token
-       raise e, "Bad session state"
+       e = SessionKeyError.new self,
+        session_key: @session_key.to_bytes[0..3],
+        relay_token: @relay_token[0..3],
+        client_token: @client_token[0..3]
+        raise e, "proof_controller: bad session state"
     end
   end
 
