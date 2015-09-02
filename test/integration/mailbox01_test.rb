@@ -1,13 +1,11 @@
 require 'test_helper'
 require 'mailbox'
-require 'mailbox_cache'
 
 class Mailbox01Test < ActionDispatch::IntegrationTest
 
   test "mailbox" do
     hpk = RbNaCl::Random.random_bytes 32
     mbx = Mailbox.new hpk
-    mbxcache = MailboxCache.new hpk
 
     assert_not_nil mbx.hpk
     hpkey = "mbx_#{mbx.hpk}"
@@ -16,35 +14,19 @@ class Mailbox01Test < ActionDispatch::IntegrationTest
       from = h2("#{i}")
       nonce = h2(rand_bytes(16))
       mbx.store from, nonce, "hello_N#{i - 1}"
-      mbxcache.store from, nonce, "hello_N#{i - 1}"
       assert_equal i,redisc.llen(hpkey)
     end
 
     for i in (0..4)
-      msgcache = mbxcache.read(i)
       msg = mbx.read(i)
-      assert_equal(msg[:from],msgcache[:from])
-      assert_equal(msg[:data],msgcache[:data])
       #puts msg[:from]
       #puts msg[:data]
     end
 
     #print "mailbox size mbx = ", mbx.count; puts
     #print "mailbox size mbx_cache = ", mbxcache.top; puts
-    assert_equal(mbx.count,mbxcache.top)
 
     results = mbx.read_all
-    results_cache = mbxcache.read_all
-
-    assert_equal results.length, results_cache.length
-
-    assert_equal results[0][:from], results_cache[0][:from]
-    assert_equal results[0][:data], results_cache[0][:data]
-
-    results.each_with_index do |item, i|
-      assert_equal results[i][:from], results_cache[i][:from]
-      assert_equal results[i][:data], results_cache[i][:data]
-    end
 
     results.each_with_index do |item, i|
       nonce = results[i][:nonce]
