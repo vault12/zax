@@ -137,6 +137,7 @@ class ProofController < ApplicationController
   def _delete_handshake_keys
     Rails.cache.delete("client_token_#{@h2_client_token}")
     Rails.cache.delete("relay_token_#{@h2_client_token}")
+    Rails.cache.delete("session_key_#{@h2_client_token}")
   end
 
   # === Error reporting ===
