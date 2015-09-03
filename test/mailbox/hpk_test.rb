@@ -11,6 +11,19 @@ class MultipleHpkTest < ProveTestHelper
     }
     ary = getHpks
     setHpks if ary.length == 0
+    for i in 0..1000
+      sendMessage
+    end
+  end
+
+  def sendMessage
+    ary = getHpks
+    pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
+    hpk = b64dec ary[pairary[0]]
+    hpkto = pairary[1]
+    data = {cmd: 'upload', to: hpkto, payload: 'hello world 0'}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
 
   def setHpks

@@ -51,9 +51,9 @@ class ActiveSupport::TestCase
     corrupt
   end
 
-  def _test_random_pair
-    hpk = Random.new.rand(0..2)
-    hpkto = Random.new.rand(0..2)
+  def _test_random_pair(top)
+    hpk = Random.new.rand(0..top)
+    hpkto = Random.new.rand(0..top)
     if hpk == hpkto
       return true, []
     else
@@ -61,11 +61,12 @@ class ActiveSupport::TestCase
     end
   end
 
-  # get an array with 2 different values
-  def _get_random_pair
+  # get an array with 2 different values where
+  # top is the top number in the set starting at zero
+  def _get_random_pair(top)
     values = []
     begin
-      values = _test_random_pair
+      values = _test_random_pair(top)
     end while values[0]
     values[1]
   end
