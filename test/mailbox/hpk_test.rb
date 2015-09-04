@@ -35,7 +35,7 @@ class MultipleHpkTest < ProveTestHelper
     #print 'session key ',skpk; puts
     #print 'client key ',ckpk; puts; puts
 
-    _post "/command", hpk, n, _clientest_encrypt_data(n,data)
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
 
   def setHpks
@@ -63,12 +63,6 @@ class MultipleHpkTest < ProveTestHelper
   end
 
   private
-
-  def _clientest_encrypt_data(nonce,data)
-    box = RbNaCl::Box.new(@client_key, @session_key)
-    box.encrypt(nonce,data.to_json)
-  end
-
   def redisc
     Redis.current
   end

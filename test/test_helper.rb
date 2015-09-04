@@ -89,10 +89,11 @@ class ActiveSupport::TestCase
 
   def _setup_keys hpk
     @session_key = RbNaCl::PrivateKey.generate
-    @client_key = RbNaCl::PrivateKey.generate
+    _client_key = RbNaCl::PrivateKey.generate
+    @client_key = _client_key.public_key
 
     Rails.cache.write("session_key_#{hpk}",@session_key, :expires_in => @tmout)
-    Rails.cache.write("client_key_#{hpk}",@client_key.public_key, :expires_in => @tmout)
+    Rails.cache.write("client_key_#{hpk}",@client_key, :expires_in => @tmout)
   end
 
   def _send_command(hpk,data)
@@ -102,12 +103,12 @@ class ActiveSupport::TestCase
   end
 
   def _client_encrypt_data(nonce,data)
-    box = RbNaCl::Box.new(@client_key.public_key, @session_key)
+    box = RbNaCl::Box.new(@client_key, @session_key)
     box.encrypt(nonce,data.to_json)
   end
 
   def _client_decrypt_data(nonce,data)
-    box = RbNaCl::Box.new(@client_key.public_key, @session_key)
+    box = RbNaCl::Box.new(@client_key, @session_key)
     JSON.parse box.decrypt(nonce,data)
   end
 end
