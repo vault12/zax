@@ -110,7 +110,7 @@ class ProofController < ApplicationController
 
   def _report_error(e)
     logger
-      .warn "#{WARN} Aborted prove_hpk key exchange:\n#{@body}\n#{EXPT} #{e}"
+      .warn "#{WARN} Aborted prove_hpk key exchange:\n#{EXPT} #{e}"
     head :precondition_failed, x_error_details:
       'Provide masked pub_key, timestamped nonce and signature as 3 lines in base64'
   end

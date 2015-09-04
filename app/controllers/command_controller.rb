@@ -145,7 +145,7 @@ class CommandController < ApplicationController
 
   def _report_error(e)
     logger
-      .warn "#{WARN} Process command aborted:\n#{@body}\n#{EXPT} #{e}"
+      .warn "#{WARN} Process command aborted:\n#{EXPT} #{e}"
     head :precondition_failed, x_error_details:
       "Can't process command: #{e.message}"
   end
