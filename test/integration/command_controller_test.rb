@@ -1,4 +1,6 @@
-class CommandControllerTest < ActionController::TestCase
+require 'test_helper'
+
+class CommandControllerTest < ActionDispatch::IntegrationTest
 
   test 'process command 01 count' do
     ### Show that you are simulating hpk correctly
@@ -13,9 +15,18 @@ class CommandControllerTest < ActionController::TestCase
     to_hpk = RbNaCl::Random.random_bytes(32)
     to_hpk = b64enc to_hpk
 
-    _send_command hpk, cmd: 'upload', to: to_hpk, payload: 'hello world 0'
 
-    _send_command hpk, cmd: 'count'
+    data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response_empty
+
+
+
+
+    #_send_command hpk, cmd: 'upload', to: to_hpk, payload: 'hello world 0'
+    #_success_response_empty
+    #_send_command hpk, cmd: 'count'
 =begin
     _success_response
 
