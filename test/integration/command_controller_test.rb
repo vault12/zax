@@ -15,10 +15,14 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     to_hpk = RbNaCl::Random.random_bytes(32)
     to_hpk = b64enc to_hpk
 
+    ### Upload
+
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     _post "/command", hpk, n, _client_encrypt_data(n,data)
     _success_response_empty
+
+    ### Count
 
     data = {cmd: 'count'}
     n = _make_nonce
@@ -35,6 +39,30 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil data
     assert_includes data, "count"
     assert_equal 0, data['count']
+
+    ### Download
+
+    data = {cmd: 'download'}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response
+
+    lines = _check_response(response.body)
+    assert_equal(2, lines.length)
+
+    rn = b64dec lines[0]
+    rct = b64dec lines[1]
+    data = _client_decrypt_data rn,rct
+
+    assert_not_nil data
+    assert_equal data.length,0
+
+    ### Delete
+
+    data = {cmd: 'delete', payload: []}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response_empty
   end
 
   def _check_response(body)
