@@ -10,5 +10,6 @@ class CommandTest < ProveTestHelper
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response_empty
   end
 end
