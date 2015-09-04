@@ -11,7 +11,7 @@ class MultipleHpkTest < ProveTestHelper
     }
     ary = getHpks
     setHpks if ary.length == 0
-    for i in 0..3
+    for i in 0..25
       sendMessage
     end
   end
@@ -20,13 +20,22 @@ class MultipleHpkTest < ProveTestHelper
     ary = getHpks
     pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
     hpk = b64dec ary[pairary[0]]
-    to_hpk = pairary[1]
+    to_hpk = ary[pairary[1]]
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
+
+    #print 'hpk ', ary[pairary[0]]; puts
+    #print 'to_hpk ', to_hpk; puts
+
+    skpk = @session_key.public_key
+    skpk = b64enc skpk
+    ckpk = b64enc @client_key
+    #print 'session key ',skpk; puts
+    #print 'client key ',ckpk; puts; puts
+
     _post "/command", hpk, n, _clientest_encrypt_data(n,data)
-    puts 'post post'
   end
 
   def setHpks
