@@ -65,6 +65,38 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     _success_response_empty
   end
 
+  test 'process command guards' do
+
+    hpk = h2(rand_bytes 32)
+    assert_equal(hpk.length,32)
+    _setup_keys hpk
+
+    _post "/command", hpk
+    _fail_response :precondition_failed # no body
+
+    _post "/command", hpk, "123"
+    _fail_response :precondition_failed # short body
+
+    bad_nonce = rand_bytes 24
+    _post "/command", hpk, bad_nonce
+    _fail_response :precondition_failed # short body
+
+    bad_nonce = rand_bytes 24
+    _post "/command", hpk, bad_nonce, "123"
+    _fail_response :precondition_failed # short body
+
+    old_nonce = _make_nonce((Time.now-2.minutes).to_i)
+    _post "/command", hpk, old_nonce
+    _fail_response :precondition_failed # short body
+
+    _post "/command", hpk, _make_nonce, "456"
+    _fail_response :bad_request # bad text
+
+    corrupt = _corrupt_str(_client_encrypt_data( _make_nonce, { cmd: 'count' }))
+    _post "/command", hpk, _make_nonce, corrupt
+    _fail_response :bad_request # corrupt ciphertext
+  end
+
   def _check_response(body)
     raise "No request body" if body.nil?
     nl = body.include?("\r\n") ? "\r\n" : "\n"
