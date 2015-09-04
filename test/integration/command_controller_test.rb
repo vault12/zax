@@ -15,23 +15,17 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     to_hpk = RbNaCl::Random.random_bytes(32)
     to_hpk = b64enc to_hpk
 
-
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     _post "/command", hpk, n, _client_encrypt_data(n,data)
     _success_response_empty
 
-
-
-
-    #_send_command hpk, cmd: 'upload', to: to_hpk, payload: 'hello world 0'
-    #_success_response_empty
-    #_send_command hpk, cmd: 'count'
-=begin
+    data = {cmd: 'count'}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
     _success_response
 
-    lines = _check_response(response)
-
+    lines = _check_response(response.body)
     assert_equal(2, lines.length)
 
     rn = b64dec lines[0]
@@ -41,14 +35,11 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil data
     assert_includes data, "count"
     assert_equal 0, data['count']
-=end
-    #puts data
   end
 
   def _check_response(body)
-    raise "No request body" if body.nil? or body.empty?
+    raise "No request body" if body.nil?
     nl = body.include?("\r\n") ? "\r\n" : "\n"
     return body.split nl
   end
-
 end
