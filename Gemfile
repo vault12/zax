@@ -3,17 +3,15 @@ ruby "2.2.2"
 
 gem 'rails', '4.2.1'
 gem 'rails-api'
-gem 'spring', :group => :development
 
 group :development do
-  # gem 'sqlite3'
+  gem 'spring'
 end
 
 group :production do
   # gem 'pg'
 end
 
-gem 'dalli'
 gem 'kgio'
 gem 'unicorn'
 
