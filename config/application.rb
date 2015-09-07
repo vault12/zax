@@ -36,9 +36,8 @@ module Zax
     config.x.relay.token_timeout              = 1.minutes
     config.x.relay.session_timeout            = 5.minutes
     config.x.relay.max_nonce_diff             = 1.minutes
-    # config.x.relay.mailbox_timeout           = 3.days
     # in seconds for redis
-    config.x.relay.mailbox_timeout            = 259200.seconds
+    config.x.relay.mailbox_timeout            = 3.days.seconds.to_i
 
     config.cache_store = :redis_store, { :host => "localhost",
                                      :port => 6379,

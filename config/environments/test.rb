@@ -43,7 +43,7 @@ Rails.application.configure do
   config.log_level = :debug
 
   # --- Relay configuration ---
-  config.x.relay.token_timeout             = 0.05
-  config.x.relay.session_timeout           = 0.05
+  config.x.relay.token_timeout             = 1
+  config.x.relay.session_timeout           = 1
   config.x.relay.max_nonce_diff            = 30
 end
