@@ -28,8 +28,8 @@ class ProofController < ApplicationController
     client_comm_pk = inner[:pub_key]
     inner_box = RbNaCl::Box.new(client_comm_pk, @session_key)
     sign = inner_box.decrypt(inner[:nonce], inner[:ctext])
-    proof_sign1 = concat_str(@client_temp_pk, @relay_token)
-    proof_sign = concat_str(proof_sign1, @client_token)
+    proof_sign1 = @client_temp_pk + @relay_token
+    proof_sign = proof_sign1 + @client_token
     proof_sign = h2 proof_sign
     fail 'Signature mismatch' unless sign && proof_sign &&
                                      sign.eql?(proof_sign) &&

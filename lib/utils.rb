@@ -34,12 +34,12 @@ module Utils
 
   def dump(obj)
     return 'nil' unless obj
-    obj.to_s.dump
+    obj.to_s[0...8].dump  # hide most of the key for log dumps
   end
 
   def dumpHex(obj)
     return 'nil' unless obj
-    toHex obj.to_s
+    (toHex obj.to_s)[0...8]  # hide most of the key for log dumps
   end
 
   def logger
@@ -48,12 +48,6 @@ module Utils
 
   def concat_str(str1,str2)
     raise "util: can not concat_str nil" if str1.nil? or str2.nil?
-    # convert strings to arrays
-    arr1 = str1.unpack("C*")
-    arr2 = str2.unpack("C*")
-    # concat the arrays
-    arr = arr1 + arr2
-    # convert arrays back to string
-    arr.pack("C*")
+    str1+str2
   end
 end

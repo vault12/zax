@@ -32,8 +32,8 @@ test "prove_hpk guard conditions" do
   # Alice creates session_sign = h₂(a_temp_pk,relay_token,client_token)
   # Alice creates 32 byte session signature as h₂(a_temp_pk,relay_token,client_token)
 
-  session_sign1 = concat_str(client_temp_pk,@relay_token)
-  session_sign = concat_str(session_sign1,@client_token)
+  session_sign1 = client_temp_pk + @relay_token
+  session_sign = session_sign1 + @client_token
   hsession_sign = h2(session_sign)
   assert_equal(32,hsession_sign.length)
 

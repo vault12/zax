@@ -41,7 +41,7 @@ test "verify session token" do
   #print 'h2 client token = ', ph2_client_token; puts
   ### end debug
 
-  client_relay = concat_str(@client_token,@relay_token)
+  client_relay = @client_token + @relay_token
   h2_client_relay = h2(client_relay)
 
   ### debug

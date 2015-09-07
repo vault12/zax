@@ -76,7 +76,7 @@ class SessionController < ApplicationController
       fail e
     end
 
-    client_relay = concat_str(client_token, relay_token)
+    client_relay = client_token + relay_token
     h2_client_relay = h2(client_relay)
 
     fail '_verify_handshake mismatch h2_client_relay in versus calculate' unless chk_h2_client_relay.eql? h2_client_relay

@@ -11,7 +11,7 @@ class ProveTestHelper < ActionDispatch::IntegrationTest
       @relay_token = b64dec lines[0]
       h2_client_token = h2(@client_token)
 
-      client_relay = concat_str(@client_token,@relay_token)
+      client_relay = @client_token + @relay_token
       h2_client_relay = h2(client_relay)
 
       _post "/verify_session", h2_client_token, h2_client_relay
@@ -37,8 +37,8 @@ class ProveTestHelper < ActionDispatch::IntegrationTest
       # Alice creates session_sign = h₂(a_temp_pk,relay_token,client_token)
       # Alice creates 32 byte session signature as h₂(a_temp_pk,relay_token,client_token)
 
-      session_sign1 = concat_str(client_temp_pk,@relay_token)
-      session_sign = concat_str(session_sign1,@client_token)
+      session_sign1 = client_temp_pk + @relay_token 
+      session_sign = session_sign1 + @client_token
       hsession_sign = h2(session_sign)
       assert_equal(32,hsession_sign.length)
 
