@@ -1,70 +1,84 @@
+require 'test_helper'
+
 class SessionControllerTest < ActionController::TestCase
 public
 
 test "new session token" do
+  # fail test - no response body
   _raw_post :start_session_token, { }
-  _fail_response :internal_server_error # no response body
+  _fail_response :bad_request 
 
-  client_token = RbNaCl::Random.random_bytes(24)
+  # fail test - 24 instead of 32 bytes
+  client_token = rand_bytes 24
   _raw_post :start_session_token, { }, client_token
-  _fail_response :internal_server_error # 24 instead of 32 bytes
+  _fail_response :bad_request 
 
   _setup_token
-
-  p1 = "#{b64enc @client_token}"
-  plength = p1.length
-  #print 'session start parameters length = ', plength; puts
-  assert_equal(plength,44)
-
   _raw_post :start_session_token, { }, @client_token
   _success_response
 end
 
 test "verify session token" do
+  # fail test - no body
+  _raw_post :verify_session_token, {}
+  _fail_response :bad_request
+
+  # fail test - just 1 line
+  _raw_post :verify_session_token, {}, rand_bytes(32)
+  _fail_response :bad_request
+
+  # fail test - wrong size line 1 
+  _raw_post :verify_session_token, {},
+    rand_bytes(24), rand_bytes(32)
+  _fail_response :bad_request
+
+  # fail test - wrong size line 2
+  _raw_post :verify_session_token, {},
+    rand_bytes(32), rand_bytes(16)
+  _fail_response :bad_request
+
+  # fail test - no such established client_token
+  _raw_post :verify_session_token, {},
+    rand_bytes(32), rand_bytes(32)
+  _fail_response :bad_request
+
+  # fail test - corrupt base64
+  @request.env['RAW_POST_DATA'] = 
+    "#{_corrupt_str(b64enc(rand_bytes(32)),false)}\r\n"\
+    "#{b64enc(rand_bytes(32))}\r\n"
+  post :verify_session_token,{}
+  _fail_response :conflict
+
+  # fail test - random response
+  _setup_token
+  _raw_post :start_session_token, { }, @client_token
+  _raw_post :verify_session_token, {}, h2(@client_token), rand_bytes(32)
+  _fail_response :conflict
+
+  # Let's do succesful test
   _setup_token
   _raw_post :start_session_token, { }, @client_token
   _success_response
   body = response.body
   lines = _check_body(body)
 
-  ### debug
   pclient_token = b64enc @client_token
-  #print 'client token = ', pclient_token; puts
-  #print 'relay token = ', lines[0]; puts
-  ### end debug
-
   @relay_token = b64dec lines[0]
   h2_client_token = h2(@client_token)
-
-  ### debug
-  #ph2_client_token = b64enc h2_client_token
-  #print 'h2 client token = ', ph2_client_token; puts
-  ### end debug
 
   client_relay = @client_token + @relay_token
   h2_client_relay = h2(client_relay)
 
-  ### debug
-  #ph2_client_relay = b64enc h2_client_relay
-  #print 'h2 client relay = ', ph2_client_relay; puts
-  ### end debug
-
   p1 = "#{b64enc h2_client_token}"
   p2 = "#{b64enc h2_client_relay}"
   plength = p1.length + p2.length
-  #print 'session verify parameters length = ', plength; puts
   assert_equal(plength,88)
 
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   _success_response
   body = response.body
   lines = _check_body(body)
-  ### debug
-  #print 'session key xor client token = ', lines[0]; puts
-  ### end debug
   skxorct = b64dec lines[0]
   session_key = xor_str(skxorct,@client_token)
-  #print 'session key = ', "#{b64enc session_key}"; puts
-
 end
 end

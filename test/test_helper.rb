@@ -51,9 +51,15 @@ class ActiveSupport::TestCase
     post route, oneline
   end
 
-  def _corrupt_str(str)
+  def _corrupt_str(str, minor = true)
     corrupt = str.clone
-    corrupt[0] = [corrupt[0].ord+1].pack("C")
+    l = str.length
+    corruption = minor ? 1 : l/5
+    (0...corruption).each do
+      idx = rand l
+      shift = minor ? 1 : rand(128)
+      corrupt[idx] = [(corrupt[idx].ord+shift) % 256 ].pack("C")
+    end
     corrupt
   end
 

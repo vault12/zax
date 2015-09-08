@@ -16,11 +16,4 @@ class ApplicationController < ActionController::API
   def allow_origin
     headers['Access-Control-Allow-Origin']    = '*'
   end
-
-  protected
-  def _check_body(body)
-    raise "No request body" if body.nil? or body.empty?
-    nl = body.include?("\r\n") ? "\r\n" : "\n"
-    return body.split nl
-  end
 end

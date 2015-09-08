@@ -32,14 +32,16 @@ module Utils
     s.bytes.map {|x| x.to_s(16)}.join
   end
 
-  def dump(obj)
+  def dump(obj, full = false)
     return 'nil' unless obj
-    obj.to_s[0...8].dump  # hide most of the key for log dumps
+    d = obj.to_s
+    full ? d.dump : d[0...8].dump # hide most of the key for log dumps
   end
 
-  def dumpHex(obj)
+  def dumpHex(obj, full = false)
     return 'nil' unless obj
-    (toHex obj.to_s)[0...8]  # hide most of the key for log dumps
+    d = toHex obj.to_s
+    full ? d : d[0...8]  # hide most of the key for log dumps
   end
 
   def logger

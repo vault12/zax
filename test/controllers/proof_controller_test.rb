@@ -1,3 +1,5 @@
+require 'test_helper'
+
 class ProofControllerTest < ActionController::TestCase
 public
 

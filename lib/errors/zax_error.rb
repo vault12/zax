@@ -11,6 +11,7 @@ module Errors
 
     def http_fail
       @controller.expires_now
+      @controller.head :bad_request, x_error_details: @data[:msg]
     end
 
     # Exception loging functions

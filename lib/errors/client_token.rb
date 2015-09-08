@@ -5,10 +5,10 @@ module Errors
     def http_fail
       super
       warn "#{INFO_NEG} bad client token\n"\
-      "#{@data[:msg]} where client token = #{dump @data[:client_token]}"
+      "#{@data[:msg]}, client_token = #{dump @data[:client_token]}"
 
       @controller.head :bad_request,
-        x_error_details: "Provide client token with 32 random bytes."
+        x_error_details: "Provide client token with #{TOKEN_LEN} random bytes."
     end
   end
 end

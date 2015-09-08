@@ -7,6 +7,48 @@ module ResponseHelper
 
   protected
 
+  # --- Body checks ---
+  # check that every request body has expected number of lines
+  def _check_body(body)
+    if body.nil? or body.empty?
+      fail BodyError.new self, msg: "No request body", body:nil, lines:0
+    end
+    nl = body.include?("\r\n") ? "\r\n" : "\n"
+    return body.split nl
+  end
+
+  def _check_body_lines(body, numoflines, m)
+    lines = _check_body body
+    unless lines and lines.count == numoflines
+      fail BodyError.new self,
+        msg: "#{m}: wrong number of lines in BODY",
+        body: "#{body[0...8]}...",
+        lines: lines.count
+    end
+    return lines
+  end
+
+  # --- Client token checks --- 
+  # check client request token: random 32 bytes
+  def _check_client_token(line)
+    unless line.length == TOKEN_B64
+      fail ClientTokenError.new self,
+        client_token: line[0...8],
+        msg: "start_session_token, wrong client_token b64 lenth"
+    end
+
+    client_token = b64dec line
+
+    unless client_token.length == TOKEN_LEN
+      fail ClientTokenError.new self,
+        client_token: client_token[0...8],
+        msg: "session controller, client_token is not #{TOKEN_LEN} bytes"
+    end
+    return client_token
+  end
+
+  # --- HPK checks --- 
+  # make sure everything is correct with hpk
   def _check_hpk(h)
     unless h.length == HPK_LEN
       raise HPKError.new(self,h),
@@ -14,16 +56,10 @@ module ResponseHelper
     end
   end
 
-  # make sure everything is correct with hpk
   def _get_hpk(h)
-    # h = request.headers["HTTP_#{HPK}"]
-    # do we have hpk header?
-    unless h
-      raise HPKError.new(self,h),
-        "Missing #{HPK} header"
-    end
-    # correct base64?
-    hpk = b64dec h
+    raise HPKError.new(self,h),
+      "Missing #{HPK} header" unless h
+    hpk = b64dec h  # correct base64?
     _check_hpk hpk
     return hpk # good hpk (hashed public key)
     rescue => e # wrap errors of b64 decode
@@ -62,14 +98,6 @@ module ResponseHelper
     # Nonce first 8 bytes are timestamp
     nonce[0,blank.length] = blank
     return nonce.pack("C*")
-  end
-
-  def _check_body_lines(body,numoflines,msg)
-    lines = _check_body body
-    unless lines and lines.count == numoflines
-      raise "#{msg} wrong number of lines in body, #{ lines ? lines.count : 0} lines"
-    end
-    return lines
   end
 
   # === Error reporting ===

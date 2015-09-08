@@ -1,6 +1,6 @@
 module KeyParams
   # Well known names
-  TOKEN     = "X_REQUEST_TOKEN"
+  TOKEN     = "REQUEST_TOKEN"
   TOKEN_LEN = 32
   TOKEN_B64 = 44
 
