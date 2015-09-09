@@ -13,7 +13,10 @@ class MailboxDeleteTest < ProveTestHelper
     end
     increment_number_of_messages
     # print 'number of messages = ', get_number_of_messages; puts
-    downloadMessage
+    hpk, messages = downloadMessages
+    deleteMessages(hpk, messages)
+    print "hpk = #{b64enc hpk}"; puts
+    print 'number of messages after delete = ',countMessage(hpk); puts
   end
 
   def uploadMessage
@@ -33,7 +36,7 @@ class MailboxDeleteTest < ProveTestHelper
     _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
 
-  def downloadMessage
+  def downloadMessages
     ary = getHpks
     pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
     hpk = b64dec ary[pairary[0]]
@@ -62,9 +65,24 @@ class MailboxDeleteTest < ProveTestHelper
       mbxcount = MAX_ITEMS
     end
     # print "hpk = #{b64enc hpk}"; puts
-    # print 'mbxcount = ', mbxcount; puts
+    print 'mbxcount = ', mbxcount; puts
     assert_not_nil data
     assert_equal data.length,mbxcount
+    [hpk, data]
+  end
+
+  def deleteMessages(hpk, msgin)
+    print 'deleteMessages in = ',msgin.length; puts
+    half = _getHalfOfNumber(msgin.length)
+    print 'deleteMessages = ',half; puts
+    half = half - 1
+    0.upto(half) { |i|
+      nonce = msgin[i]["nonce"]
+      #print "#{i}. "
+      #print nonce; puts
+      deleteMessage(hpk,nonce)
+    }
+    #puts
   end
 
   def countMessage(hpk)
@@ -86,6 +104,21 @@ class MailboxDeleteTest < ProveTestHelper
     assert_not_nil data
     assert_includes data, "count"
     data["count"]
+  end
+
+  def deleteMessage(hpk,nonce)
+    print 'deleteMessage = ',nonce; puts
+    @session_key = Rails.cache.read("session_key_#{hpk}")
+    @client_key = Rails.cache.read("client_key_#{hpk}")
+
+    puts nonce.class.name
+    arydelete = []
+    arydelete.push(nonce)
+
+    data = {cmd: 'delete', payload: arydelete}
+    n = _make_nonce
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response_empty
   end
 
   def increment_number_of_messages
@@ -117,10 +150,10 @@ class MailboxDeleteTest < ProveTestHelper
     ary.each do |key|
       mbxkey = 'mbx_' + key
       num_of_messages = redisc.llen(mbxkey)
-      # print mbxkey, ' ', num_of_messages; puts
+      print mbxkey, ' ', num_of_messages; puts
       total_messages = total_messages + num_of_messages.to_i
     end
-    # print 'total messages = ', total_messages; puts
+    print 'total messages = ', total_messages; puts
     total_messages
   end
 
@@ -165,6 +198,11 @@ class MailboxDeleteTest < ProveTestHelper
     raise "No request body" if body.nil?
     nl = body.include?("\r\n") ? "\r\n" : "\n"
     return body.split nl
+  end
+
+  def _getHalfOfNumber(calchalf)
+    half = calchalf.to_f / 2
+    half = half.to_i
   end
 
   private
