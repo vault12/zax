@@ -3,24 +3,18 @@ require 'prove_test_helper'
 
 class MultipleHpkTest < ProveTestHelper
 
-  test "multiple hpk storage in redis" do
-    @config = {
-      :number_of_mailboxes => 3,
-      :number_of_messages => 24,
-      :testdb => 5,
-      :hpkey => 'hpks',
-      :number_of_iterations => 'hpkiteration'
-    }
+  test "upload messages to mailbox" do
+    @config = getConfig
     @tmout = Rails.configuration.x.relay.session_timeout - 5
     ary = getHpks
     setHpks if ary.length == 0
     for i in 0..@config[:number_of_messages]
-      sendMessage
+      uploadMessage
     end
     check_number_of_messages
   end
 
-  def sendMessage
+  def uploadMessage
     ary = getHpks
     pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
     hpk = b64dec ary[pairary[0]]
@@ -86,6 +80,16 @@ class MultipleHpkTest < ProveTestHelper
     result = redisc.smembers(@config[:hpkey])
     redisc.select 0
     result
+  end
+
+  def getConfig
+    config = {
+      :number_of_mailboxes => 3,
+      :number_of_messages => 24,
+      :testdb => 5,
+      :hpkey => 'hpks',
+      :number_of_iterations => 'hpkiteration'
+    }
   end
 
   def cleanup
