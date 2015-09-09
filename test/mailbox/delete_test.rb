@@ -13,15 +13,16 @@ class MailboxDeleteTest < ProveTestHelper
       uploadMessage
     end
     increment_number_of_messages
-    numofmessages = get_number_of_messages
+    numofmessages_before = get_number_of_messages
 
-    _print_debug 'number of messages before delete', numofmessages if @debug
+    _print_debug 'number of messages before delete', numofmessages_before if @debug
     hpk, messages = downloadMessages
     _print_debug 'hpk', "#{b64enc hpk}" if @debug
     numofmessagesdelete = deleteMessages(hpk, messages)
     decrement_number_of_messages(numofmessagesdelete)
     numofmessages = get_number_of_messages
     _print_debug 'number of messages after delete', numofmessages if @debug
+    assert_equal(numofmessages.to_i,numofmessages_before.to_i - numofmessagesdelete)
   end
 
   def uploadMessage
