@@ -94,7 +94,8 @@ class MailboxUploadTest < ProveTestHelper
 
   def cleanup
     redisc.select @config[:testdb]
-    redisc.flushdb
+    redisc.del(@config[:hpkey])
+    redisc.del(@config[:number_of_iterations])
     redisc.select 0
   end
 
