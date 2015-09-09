@@ -11,7 +11,8 @@ class MultipleHpkTest < ProveTestHelper
       :hpkey => 'hpks',
       :number_of_iterations => 'hpkiteration'
     }
-    cleanup
+    @tmout = 295.seconds
+    #cleanup
     ary = getHpks
     setHpks if ary.length == 0
     for i in 0..@config[:number_of_messages]
@@ -50,10 +51,12 @@ class MultipleHpkTest < ProveTestHelper
     iterations = redisc.get(@config[:number_of_iterations]).to_i
     if iterations.nil?
       redisc.set(@config[:number_of_iterations],1)
+      redisc.expire(@config[:number_of_iterations],@tmout)
       iterations = 1
     else
       iterations = iterations.to_i + 1
       redisc.set(@config[:number_of_iterations],iterations)
+      redisc.expire(@config[:number_of_iterations],@tmout)
     end
     redisc.select 0
     total_messages = get_total_number_of_messages
@@ -82,6 +85,7 @@ class MultipleHpkTest < ProveTestHelper
       hpk_b64 = b64enc hpk
       redisc.select @config[:testdb]
       redisc.sadd(@config[:hpkey],hpk_b64)
+      redisc.expire(@config[:number_of_iterations],@tmout)
       redisc.select 0
     end
   end
