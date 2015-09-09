@@ -1,7 +1,7 @@
 require 'test_helper'
 require 'prove_test_helper'
 
-class MultipleHpkTest < ProveTestHelper
+class MailboxUploadTest < ProveTestHelper
 
   test "upload messages to mailbox" do
     @config = getConfig
