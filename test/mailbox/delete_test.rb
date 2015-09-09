@@ -8,10 +8,11 @@ class MailboxDeleteTest < ProveTestHelper
     @tmout = Rails.configuration.x.relay.session_timeout - 5
     ary = getHpks
     setHpks if ary.length == 0
-    for i in 0..@config[:number_of_messages]
+    for i in 0..@config[:upload_number_of_messages]
       uploadMessage
     end
-    check_number_of_messages
+    increment_number_of_messages
+    print 'number of messages = ',get_number_of_messages; puts
   end
 
   def uploadMessage
@@ -31,25 +32,30 @@ class MailboxDeleteTest < ProveTestHelper
     _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
 
-  def check_number_of_messages
+  def increment_number_of_messages
     redisc.select @config[:testdb]
-    iterations = redisc.get(@config[:number_of_iterations]).to_i
-    if iterations.nil?
-      redisc.set(@config[:number_of_iterations],1)
-      iterations = 1
-    else
-      iterations = iterations.to_i + 1
-      redisc.set(@config[:number_of_iterations],iterations)
-    end
+    numofmessages = @config[:upload_number_of_messages] + 1
+    redisc.incrby(@config[:total_number_of_messages],numofmessages)
     redisc.select 0
-    total_messages = get_total_number_of_messages
-    numofmessages = @config[:number_of_messages] + 1
-    total_messages_calc = iterations * numofmessages
-    assert_equal(total_messages,total_messages_calc)
+  end
+
+  def decrement_number_of_messages(numofmessages)
+    redisc.select @config[:testdb]
+    redisc.decrby(@config[:total_number_of_messages],numofmessages)
+    redisc.select 0
+  end
+
+  def get_number_of_messages
+    redisc.select @config[:testdb]
+    numofmessages = redisc.get(@config[:total_number_of_messages])
+    redisc.select 0
+    numofmessages_mbx = get_total_number_of_messages_across_mbx
+    assert_equal(numofmessages.to_i,numofmessages_mbx)
+    numofmessages
   end
 
   # this gets the total number of messages across all mailboxes
-  def get_total_number_of_messages
+  def get_total_number_of_messages_across_mbx
     ary = getHpks
     total_messages = 0
     ary.each do |key|
@@ -85,11 +91,10 @@ class MailboxDeleteTest < ProveTestHelper
   def getConfig
     config = {
       :number_of_mailboxes => 3,
-      :number_of_messages => 24,
+      :upload_number_of_messages => 24,
       :testdb => 5,
       :hpkey => 'hpksdelete',
-      ### This is going away, will be changed to total messages
-      :number_of_iterations => 'hpkiterationdelete'
+      :total_number_of_messages => 'hpktotalmessages'
     }
   end
 
