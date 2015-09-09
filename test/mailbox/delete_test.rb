@@ -4,6 +4,7 @@ require 'prove_test_helper'
 class MailboxDeleteTest < ProveTestHelper
 
   test "upload messages to mailbox for delete" do
+    @debug = false
     @config = getConfig
     @tmout = Rails.configuration.x.relay.session_timeout - 5
     ary = getHpks
@@ -14,16 +15,13 @@ class MailboxDeleteTest < ProveTestHelper
     increment_number_of_messages
     numofmessages = get_number_of_messages
 
-    print 'number of messages before delete = ', numofmessages; puts
+    _print_debug 'number of messages before delete', numofmessages if @debug
     hpk, messages = downloadMessages
+    _print_debug 'hpk', "#{b64enc hpk}" if @debug
     numofmessagesdelete = deleteMessages(hpk, messages)
     decrement_number_of_messages(numofmessagesdelete)
     numofmessages = get_number_of_messages
-    print 'number of messages after delete = ', numofmessages; puts
-
-    print "hpk = #{b64enc hpk}"; puts
-    print 'number of messages after delete = ',countMessage(hpk); puts
-    print 'number of messages = ', get_number_of_messages; puts
+    _print_debug 'number of messages after delete', numofmessages if @debug
   end
 
   def uploadMessage
@@ -71,8 +69,6 @@ class MailboxDeleteTest < ProveTestHelper
     if mbxcount >= MAX_ITEMS
       mbxcount = MAX_ITEMS
     end
-    # print "hpk = #{b64enc hpk}"; puts
-    print 'mbxcount = ', mbxcount; puts
     assert_not_nil data
     assert_equal data.length,mbxcount
     [hpk, data]
@@ -80,7 +76,7 @@ class MailboxDeleteTest < ProveTestHelper
 
   def deleteMessages(hpk, msgin)
     halfdelete = _getHalfOfNumber(msgin.length)
-    print 'deleteMessages = ',halfdelete; puts
+    _print_debug 'deleteMessages', halfdelete if @debug
     half = halfdelete - 1
     0.upto(half) { |i|
       nonce = msgin[i]["nonce"]
@@ -113,7 +109,6 @@ class MailboxDeleteTest < ProveTestHelper
   end
 
   def deleteMessage(hpk,nonce)
-    #print 'deleteMessage = ',nonce; puts
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
 
@@ -135,11 +130,7 @@ class MailboxDeleteTest < ProveTestHelper
 
   def decrement_number_of_messages(numofmessages)
     redisc.select @config[:testdb]
-    print "BEFORE ", redisc.get(@config[:total_number_of_messages]);puts
-    print 'decrby = ', numofmessages; puts
     result = redisc.decrby(@config[:total_number_of_messages],numofmessages.to_s)
-    puts result
-    print "AFTER ",redisc.get(@config[:total_number_of_messages]);puts
     redisc.select 0
   end
 
@@ -148,8 +139,7 @@ class MailboxDeleteTest < ProveTestHelper
     numofmessages = redisc.get(@config[:total_number_of_messages])
     redisc.select 0
     numofmessages_mbx = get_total_number_of_messages_across_mbx
-    # TODO fix this...
-    # assert_equal(numofmessages.to_i,numofmessages_mbx)
+    assert_equal(numofmessages.to_i,numofmessages_mbx)
     numofmessages
   end
 
@@ -160,10 +150,9 @@ class MailboxDeleteTest < ProveTestHelper
     ary.each do |key|
       mbxkey = 'mbx_' + key
       num_of_messages = redisc.llen(mbxkey)
-      print mbxkey, ' ', num_of_messages; puts
+      _print_debug mbxkey, num_of_messages if @debug
       total_messages = total_messages + num_of_messages.to_i
     end
-    print 'total messages = ', total_messages; puts
     total_messages
   end
 
@@ -213,6 +202,10 @@ class MailboxDeleteTest < ProveTestHelper
   def _getHalfOfNumber(calchalf)
     half = calchalf.to_f / 2
     half = half.to_i
+  end
+
+  def _print_debug(msg,value)
+    print "#{msg} = #{value}"; puts
   end
 
   private
