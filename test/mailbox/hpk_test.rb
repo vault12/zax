@@ -11,8 +11,7 @@ class MultipleHpkTest < ProveTestHelper
       :hpkey => 'hpks',
       :number_of_iterations => 'hpkiteration'
     }
-    @tmout = 295.seconds
-    #cleanup
+    @tmout = Rails.configuration.x.relay.session_timeout - 5
     ary = getHpks
     setHpks if ary.length == 0
     for i in 0..@config[:number_of_messages]
@@ -31,17 +30,9 @@ class MultipleHpkTest < ProveTestHelper
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
 
-    #print 'hpk ', ary[pairary[0]]; puts
-    #print 'to_hpk ', to_hpk; puts
-
-    # TODO Fix this when the above 2 keys have expired
-    # TODO fire up a whole new test infrastructure with new keys et al
-    # TODO for now the simple solution to fix this is to do a flushall
     skpk = @session_key.public_key
     skpk = b64enc skpk
     ckpk = b64enc @client_key
-    #print 'session key ',skpk; puts
-    #print 'client key ',ckpk; puts; puts
 
     _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
@@ -51,12 +42,10 @@ class MultipleHpkTest < ProveTestHelper
     iterations = redisc.get(@config[:number_of_iterations]).to_i
     if iterations.nil?
       redisc.set(@config[:number_of_iterations],1)
-      redisc.expire(@config[:number_of_iterations],@tmout)
       iterations = 1
     else
       iterations = iterations.to_i + 1
       redisc.set(@config[:number_of_iterations],iterations)
-      redisc.expire(@config[:number_of_iterations],@tmout)
     end
     redisc.select 0
     total_messages = get_total_number_of_messages
@@ -80,12 +69,13 @@ class MultipleHpkTest < ProveTestHelper
   end
 
   def setHpks
+    cleanup
     for i in 0..@config[:number_of_mailboxes]-1
       hpk = setup_prove
       hpk_b64 = b64enc hpk
       redisc.select @config[:testdb]
       redisc.sadd(@config[:hpkey],hpk_b64)
-      redisc.expire(@config[:number_of_iterations],@tmout)
+      redisc.expire(@config[:hpkey],@tmout)
       redisc.select 0
     end
   end
