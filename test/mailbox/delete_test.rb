@@ -1,9 +1,9 @@
 require 'test_helper'
 require 'prove_test_helper'
 
-class MailboxUploadTest < ProveTestHelper
+class MailboxDeleteTest < ProveTestHelper
 
-  test "upload messages to mailbox" do
+  test "upload messages to mailbox for delete" do
     @config = getConfig
     @tmout = Rails.configuration.x.relay.session_timeout - 5
     ary = getHpks
@@ -87,8 +87,9 @@ class MailboxUploadTest < ProveTestHelper
       :number_of_mailboxes => 3,
       :number_of_messages => 24,
       :testdb => 5,
-      :hpkey => 'hpksupload',
-      :number_of_iterations => 'hpkiteration'
+      :hpkey => 'hpksdelete',
+      ### This is going away, will be changed to total messages
+      :number_of_iterations => 'hpkiterationdelete'
     }
   end
 
