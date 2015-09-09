@@ -7,10 +7,11 @@ class MultipleHpkTest < ProveTestHelper
     @config = {
       :number_of_mailboxes => 3,
       :number_of_messages => 24,
-      :testdb => 0,
+      :testdb => 5,
       :hpkey => 'hpks',
       :number_of_iterations => 'hpkiteration'
     }
+    cleanup
     ary = getHpks
     setHpks if ary.length == 0
     for i in 0..@config[:number_of_messages]
@@ -46,13 +47,12 @@ class MultipleHpkTest < ProveTestHelper
 
   def check_number_of_messages
     redisc.select @config[:testdb]
-    iterations = redisc.get(@config[:number_of_iterations])
+    iterations = redisc.get(@config[:number_of_iterations]).to_i
     if iterations.nil?
-      print 'iterations = 1'; puts
       redisc.set(@config[:number_of_iterations],1)
+      iterations = 1
     else
       iterations = iterations.to_i + 1
-      print 'iterations = ', iterations; puts
       redisc.set(@config[:number_of_iterations],iterations)
     end
     redisc.select 0
@@ -66,15 +66,13 @@ class MultipleHpkTest < ProveTestHelper
   def get_total_number_of_messages
     ary = getHpks
     total_messages = 0
-    redisc.select 0
     ary.each do |key|
       mbxkey = 'mbx_' + key
-      redisc.select 0
       num_of_messages = redisc.llen(mbxkey)
-      print mbxkey, ' ', num_of_messages; puts
+      #print mbxkey, ' ', num_of_messages; puts
       total_messages = total_messages + num_of_messages.to_i
     end
-    print 'total messages = ', total_messages; puts
+    #print 'total messages = ', total_messages; puts
     total_messages
   end
 
@@ -85,14 +83,6 @@ class MultipleHpkTest < ProveTestHelper
       redisc.select @config[:testdb]
       redisc.sadd(@config[:hpkey],hpk_b64)
       redisc.select 0
-=begin
-      _setup_keys hpk
-      to_hpk = RbNaCl::Random.random_bytes(32)
-      to_hpk = b64enc to_hpk
-      data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
-      n = _make_nonce
-      _post "/command", hpk, n, _client_encrypt_data(n,data)
-=end
     end
   end
 
@@ -102,6 +92,12 @@ class MultipleHpkTest < ProveTestHelper
     result = redisc.smembers(@config[:hpkey])
     redisc.select 0
     result
+  end
+
+  def cleanup
+    redisc.select @config[:testdb]
+    redisc.flushdb
+    redisc.select 0
   end
 
   private
