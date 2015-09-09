@@ -13,6 +13,7 @@ class MailboxDeleteTest < ProveTestHelper
     end
     increment_number_of_messages
     print 'number of messages = ',get_number_of_messages; puts
+    downloadMessage
   end
 
   def uploadMessage
@@ -30,6 +31,34 @@ class MailboxDeleteTest < ProveTestHelper
     ckpk = b64enc @client_key
 
     _post "/command", hpk, n, _client_encrypt_data(n,data)
+  end
+
+  def downloadMessage
+    ary = getHpks
+    pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
+    hpk = b64dec ary[pairary[0]]
+    to_hpk = ary[pairary[1]]
+    data = {cmd: 'download'}
+    n = _make_nonce
+    @session_key = Rails.cache.read("session_key_#{hpk}")
+    @client_key = Rails.cache.read("client_key_#{hpk}")
+
+    skpk = @session_key.public_key
+    skpk = b64enc skpk
+    ckpk = b64enc @client_key
+
+    _post "/command", hpk, n, _client_encrypt_data(n,data)
+    _success_response
+
+    lines = _check_response(response.body)
+    assert_equal(2, lines.length)
+
+    rn = b64dec lines[0]
+    rct = b64dec lines[1]
+    data = _client_decrypt_data rn,rct
+
+    assert_not_nil data
+    assert_equal data.length,0
   end
 
   def increment_number_of_messages
@@ -61,10 +90,10 @@ class MailboxDeleteTest < ProveTestHelper
     ary.each do |key|
       mbxkey = 'mbx_' + key
       num_of_messages = redisc.llen(mbxkey)
-      #print mbxkey, ' ', num_of_messages; puts
+      print mbxkey, ' ', num_of_messages; puts
       total_messages = total_messages + num_of_messages.to_i
     end
-    #print 'total messages = ', total_messages; puts
+    print 'total messages = ', total_messages; puts
     total_messages
   end
 
@@ -103,6 +132,12 @@ class MailboxDeleteTest < ProveTestHelper
     redisc.del(@config[:hpkey])
     redisc.del(@config[:total_number_of_messages])
     redisc.select 0
+  end
+
+  def _check_response(body)
+    raise "No request body" if body.nil?
+    nl = body.include?("\r\n") ? "\r\n" : "\n"
+    return body.split nl
   end
 
   private
