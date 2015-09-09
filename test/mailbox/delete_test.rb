@@ -12,9 +12,15 @@ class MailboxDeleteTest < ProveTestHelper
       uploadMessage
     end
     increment_number_of_messages
-    print 'number of messages = ', get_number_of_messages; puts
+    numofmessages = get_number_of_messages
+
+    print 'number of messages before delete = ', numofmessages; puts
     hpk, messages = downloadMessages
-    deleteMessages(hpk, messages)
+    numofmessagesdelete = deleteMessages(hpk, messages)
+    decrement_number_of_messages(numofmessagesdelete)
+    numofmessages = get_number_of_messages
+    print 'number of messages after delete = ', numofmessages; puts
+
     print "hpk = #{b64enc hpk}"; puts
     print 'number of messages after delete = ',countMessage(hpk); puts
     print 'number of messages = ', get_number_of_messages; puts
@@ -73,16 +79,16 @@ class MailboxDeleteTest < ProveTestHelper
   end
 
   def deleteMessages(hpk, msgin)
-    half = _getHalfOfNumber(msgin.length)
-    print 'deleteMessages = ',half; puts
-    half = half - 1
+    halfdelete = _getHalfOfNumber(msgin.length)
+    print 'deleteMessages = ',halfdelete; puts
+    half = halfdelete - 1
     0.upto(half) { |i|
       nonce = msgin[i]["nonce"]
       #print "#{i}. "
       #print nonce; puts
       deleteMessage(hpk,nonce)
     }
-    #puts
+    halfdelete
   end
 
   def countMessage(hpk)
@@ -129,7 +135,11 @@ class MailboxDeleteTest < ProveTestHelper
 
   def decrement_number_of_messages(numofmessages)
     redisc.select @config[:testdb]
-    redisc.decrby(@config[:total_number_of_messages],numofmessages)
+    print "BEFORE ", redisc.get(@config[:total_number_of_messages]);puts
+    print 'decrby = ', numofmessages; puts
+    result = redisc.decrby(@config[:total_number_of_messages],numofmessages.to_s)
+    puts result
+    print "AFTER ",redisc.get(@config[:total_number_of_messages]);puts
     redisc.select 0
   end
 
