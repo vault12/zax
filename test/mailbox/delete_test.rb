@@ -100,7 +100,8 @@ class MailboxDeleteTest < ProveTestHelper
 
   def cleanup
     redisc.select @config[:testdb]
-    redisc.flushdb
+    redisc.del(@config[:hpkey])
+    redisc.del(@config[:total_number_of_messages])
     redisc.select 0
   end
 
