@@ -25,7 +25,7 @@ class SessionController < ApplicationController
     @body = request.body.read SESSION_VERIFY_BODY
     lines = _check_body_lines @body, 2, 'verify session'
     _check_client_token lines[0]
-    decode = lines.map do |l| 
+    decode = lines.map do |l|
       if l.length == TOKEN_B64
         b64dec l
       else
@@ -35,7 +35,7 @@ class SessionController < ApplicationController
     end
 
     # check handshake or throw error
-    # returns client_token and its h2() from cache 
+    # returns client_token and its h2() from cache
     ct, h2_ct = _verify_handshake(decode)
     session_key = _make_session_key h2_ct
 
@@ -88,7 +88,7 @@ class SessionController < ApplicationController
     if rt.nil? || rt.length != TOKEN_LEN
       fail RelayTokenError.new self,
         rt: rt[0...8],
-        msg: 'session controller: relay token not registered/wrong size, expecting #{TOKEN_LEN}b'
+        msg: "session controller: relay token not registered/wrong size, expecting #{TOKEN_LEN}b"
     end
     [ct,rt]
   end
