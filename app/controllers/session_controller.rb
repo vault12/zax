@@ -22,21 +22,24 @@ class SessionController < ApplicationController
 
   # POST /verify_session - verify started handshake
   def verify_session_token
-    @tmout = Rails.configuration.x.relay.session_timeout
     @body = request.body.read SESSION_VERIFY_BODY
-
     lines = _check_body_lines @body, 2, 'verify session'
-    lines.each { |l| fail ReportError.new self,
-      msg:"verify_session lines wrong size, expecting #{TOKEN_B64}" if l.length != TOKEN_B64
-    }
+    decode = lines.map do |l| 
+      if l.length == TOKEN_B64
+        b64dec l
+      else
+        fail ReportError.new self,
+          msg:"verify_session lines wrong size, expecting #{TOKEN_B64}"
+      end
+    end
 
     # check handshake or throw error
-    client_token, h2_client_token = _verify_handshake(lines)
-    session_key = _make_session_key h2_client_token
+    # returns client_token and its h2() from cache 
+    ct, h2_ct = _verify_handshake(decode)
+    session_key = _make_session_key h2_ct
 
-    session_key_xor_client_token = xor_str(session_key.public_key.to_bytes, client_token)
-    session_key_xor_client_token = b64enc session_key_xor_client_token
-    render text: "#{session_key_xor_client_token}"
+    # resond with relay temp key for this session masked by client token
+    render text: "#{b64enc(xor_str(session_key.public_key.to_bytes, ct))}"
 
   rescue ZAXError => e
     e.http_fail
@@ -72,33 +75,29 @@ class SessionController < ApplicationController
       expires_in: Rails.configuration.x.relay.token_timeout
   end
 
-  def _verify_handshake(lines)
-    chk_h2_client_token = b64dec lines[0]
-    chk_h2_client_relay = b64dec lines[1]
-
-    # client_token
-    ct = Rails.cache.read "client_token_#{chk_h2_client_token}"
+  def _load_cached_tokens(h2_ct)
+    ct = Rails.cache.read "client_token_#{h2_ct}"
     if ct.nil? || ct.length != TOKEN_LEN
       fail ClientTokenError.new self,
         client_token: ct ? ct[0...8] : nil,
         msg: "session controller: client token not registered/wrong size, expecting #{TOKEN_LEN}b"
     end
 
-    h2_client_token = h2 ct
-    fail '_verify_handshake mismatch h2_client_token' unless chk_h2_client_token.eql? h2_client_token
-
-    relay_token = Rails.cache.read "relay_token_#{h2_client_token}"
-    if relay_token.nil? || relay_token.length != TOKEN_LEN
-      e = RelayTokenError.new self,
-            relay_token: relay_token[0..3],
-            msg: 'session controller: relay token not in cache or equal to 32'
-      fail e
+    rt = Rails.cache.read "relay_token_#{h2_ct}"
+    if rt.nil? || rt.length != TOKEN_LEN
+      fail RelayTokenError.new self,
+        rt: rt[0...8],
+        msg: 'session controller: relay token not registered/wrong size, expecting #{TOKEN_LEN}b'
     end
+    [ct,rt]
+  end
 
-    client_relay = ct + relay_token
-    h2_client_relay = h2(client_relay)
-
-    fail '_verify_handshake mismatch h2_client_relay in versus calculate' unless chk_h2_client_relay.eql? h2_client_relay
+  def _verify_handshake(lines)
+    h2_client_token, h2_client_sign = lines
+    ct, rt = _load_cached_tokens(h2_client_token)
+    fail '_verify_handshake mismatch: wrong client token' unless h2_client_token.eql? h2(ct)
+    correct_sign = h2(ct + rt)
+    fail '_verify_handshake mismatch: wrong handshake signature' unless h2_client_sign.eql? correct_sign
     [ct, h2_client_token]
   end
 
@@ -106,11 +105,13 @@ class SessionController < ApplicationController
     # establish session keys
     session_key = RbNaCl::PrivateKey.generate
     # report errors with keys if any
-    if session_key.nil? || session_key.public_key.to_bytes.length != 32
-      fail KeyError.new(self, session_key),
-           'Session key failed or too short'
+    if session_key.nil? || session_key.public_key.to_bytes.length != KEY_LEN
+      fail KeyError.new(self, msg: 'New session key: generation failed or too short')
     end
-    Rails.cache.write("session_key_#{h2_client_token}", session_key, expires_in: @tmout)
+    Rails.cache.write(
+      "session_key_#{h2_client_token}",
+      session_key,
+      expires_in: Rails.configuration.x.relay.session_timeout )
     session_key
   end
 end
