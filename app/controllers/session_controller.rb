@@ -1,5 +1,3 @@
-require 'response_helper'
-
 class SessionController < ApplicationController
   before_filter :_preamble
 

@@ -1,105 +1,18 @@
-require "utils"
 require "errors/all"
+require "helpers/request_body_helper"
+require "helpers/client_token_helper"
+require "helpers/hpk_helper"
+require "helpers/nonce_helper"
+
 
 module ResponseHelper
-  include Utils
   include Errors
+  include RequestBodyHelper
+  include ClientTokenHelper
+  include HPKHelper
+  include NonceHelper
 
   protected
-
-  # --- Body checks ---
-  # check that every request body has expected number of lines
-  def _check_body(body)
-    if body.nil? or body.empty?
-      fail BodyError.new self, msg: "No request body", body:nil, lines:0
-    end
-    nl = body.include?("\r\n") ? "\r\n" : "\n"
-    return body.split nl
-  end
-
-  def _check_body_lines(body, numoflines, m)
-    lines = _check_body body
-    unless lines and lines.count == numoflines
-      fail BodyError.new self,
-        msg: "#{m}: wrong number of lines in BODY",
-        body: "#{body[0...8]}...",
-        lines: lines.count
-    end
-    return lines
-  end
-
-  # --- Client token checks --- 
-  # check client request token: random 32 bytes
-  def _check_client_token(line)
-    unless line.length == TOKEN_B64
-      fail ClientTokenError.new self,
-        client_token: line[0...8],
-        msg: "start_session_token, wrong client_token b64 lenth"
-    end
-
-    client_token = b64dec line
-
-    unless client_token.length == TOKEN_LEN
-      fail ClientTokenError.new self,
-        client_token: client_token[0...8],
-        msg: "session controller, client_token is not #{TOKEN_LEN} bytes"
-    end
-    return client_token
-  end
-
-  # --- HPK checks --- 
-  # make sure everything is correct with hpk
-  def _check_hpk(h)
-    unless h.length == HPK_LEN
-      raise HPKError.new(self,h),
-        "#{HPK} is not #{HPK_LEN} bytes"
-    end
-  end
-
-  def _get_hpk(h)
-    raise HPKError.new(self,h),
-      "Missing #{HPK} header" unless h
-    hpk = b64dec h  # correct base64?
-    _check_hpk hpk
-    return hpk # good hpk (hashed public key)
-    rescue => e # wrap errors of b64 decode
-      raise HPKError.new(self,h), e.message
-  end
-
-  # 8 byte timestamp in 24 byte nonce
-  # MSB first; first 4 bytes will be 0 for a while.
-  def _get_nonce_time(n)
-    nb = n.unpack("C*")[0,8]
-    nb.each_index.reduce { |s,i| s + nb[i]*256**(7-i) }
-  end
-
-  # check nonce to be withing valid expiration window
-  def _check_nonce(nonce)
-    # TODO: keep nonces in 5 min memcached to prevent replay attack
-    raise "Bad nonce: #{dump nonce}" unless nonce and nonce.length==NONCE_LEN
-    nt = _get_nonce_time nonce
-    if (Time.now.to_i-nt).abs > Rails.configuration.x.relay.max_nonce_diff
-      raise "Nonce timestamp #{nt} delta #{Time.now.to_i-nt}"
-    end
-    return nonce
-  end
-
-  def _make_nonce(tnow = Time.now.to_i)
-    nonce = (rand_bytes 24).unpack "C24"
-
-    timestamp = (Math.log(tnow)/Math.log(256)).floor.downto(0).map do
-      |i| (tnow / 256**i) % 256
-    end
-    blank = Array.new(8) { 0 } # zero as 8 byte integer
-
-    # 64 bit timestamp, MSB first
-    blank[-timestamp.length,timestamp.length] = timestamp
-
-    # Nonce first 8 bytes are timestamp
-    nonce[0,blank.length] = blank
-    return nonce.pack("C*")
-  end
-
   # === Error reporting ===
 
   def _report_NaCl_error(e)
