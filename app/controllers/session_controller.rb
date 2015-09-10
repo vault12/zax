@@ -24,6 +24,7 @@ class SessionController < ApplicationController
   def verify_session_token
     @body = request.body.read SESSION_VERIFY_BODY
     lines = _check_body_lines @body, 2, 'verify session'
+    _check_client_token lines[0]
     decode = lines.map do |l| 
       if l.length == TOKEN_B64
         b64dec l
