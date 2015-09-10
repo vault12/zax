@@ -17,7 +17,7 @@ class SessionController < ApplicationController
   rescue => e
     logger.error "#{ERROR} start_session_token error: #{e}"
     head :internal_server_error, x_error_details:
-      'Server-side error: try again later'
+      'Relay error: try again later'
   end
 
   # POST /verify_session - verify started handshake
@@ -87,7 +87,7 @@ class SessionController < ApplicationController
     rt = Rails.cache.read "relay_token_#{h2_ct}"
     if rt.nil? || rt.length != TOKEN_LEN
       fail RelayTokenError.new self,
-        rt: rt[0...8],
+        rt: rt ? rt[0...8] : nil,
         msg: "session controller: relay token not registered/wrong size, expecting #{TOKEN_LEN}b"
     end
     [ct,rt]
