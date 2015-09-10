@@ -14,15 +14,21 @@ class MailboxDeleteTest < ProveTestHelper
     end
     increment_number_of_messages
     numofmessages_before = get_number_of_messages
+    mbx_hash_before = get_mbx_hash
 
     _print_debug 'number of messages before delete', numofmessages_before if @debug
+
     hpk, messages = downloadMessages
     _print_debug 'hpk', "#{b64enc hpk}" if @debug
-    numofmessagesdelete = deleteMessages(hpk, messages)
-    decrement_number_of_messages(numofmessagesdelete)
-    numofmessages = get_number_of_messages
-    _print_debug 'number of messages after delete', numofmessages if @debug
-    assert_equal(numofmessages.to_i,numofmessages_before.to_i - numofmessagesdelete)
+    numofmessages_delete = deleteMessages(hpk, messages)
+    decrement_number_of_messages(numofmessages_delete)
+    numofmessages_after = get_number_of_messages
+    mbx_hash_after = get_mbx_hash
+
+    _print_debug 'number of messages after delete', numofmessages_after if @debug
+
+    _compare_mbx_hash(mbx_hash_before,mbx_hash_after,hpk,numofmessages_delete)
+    assert_equal(numofmessages_after.to_i,numofmessages_before.to_i - numofmessages_delete)
   end
 
   def uploadMessage
@@ -157,6 +163,19 @@ class MailboxDeleteTest < ProveTestHelper
     total_messages
   end
 
+  # this builds a hash of all of the hpk mailboxes
+  def get_mbx_hash
+    mbx_hash = Hash.new
+    ary = getHpks
+    ary.each do |key|
+      mbxkey = 'mbx_' + key
+      num_of_messages = redisc.llen(mbxkey)
+      _print_debug mbxkey, num_of_messages if @debug
+      mbx_hash[mbxkey] = num_of_messages.to_i
+    end
+    mbx_hash
+  end
+
   def setHpks
     cleanup
     for i in 0..@config[:number_of_mailboxes]-1
@@ -207,6 +226,23 @@ class MailboxDeleteTest < ProveTestHelper
 
   def _print_debug(msg,value)
     print "#{msg} = #{value}"; puts
+  end
+
+  def _compare_mbx_hash(mbx_hash_before,mbx_hash_after,hpk,numofmessages_delete)
+    hpk = b64enc(hpk)
+    mbxkey = 'mbx_' + hpk
+    mbx_hash_before.each do |key, value_before|
+      value_after = mbx_hash_after[key]
+      if key == mbxkey
+        # Debug
+        # print value_before, ' ', value_after; puts
+        # assert_equal(value_before,value_after)
+        assert_equal(value_before - numofmessages_delete, value_after)
+        assert_not_equal(value_before,value_after)
+      else
+        assert_equal(value_before,value_after)
+      end
+    end
   end
 
   private
