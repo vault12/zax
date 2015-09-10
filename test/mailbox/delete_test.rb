@@ -15,22 +15,19 @@ class MailboxDeleteTest < ProveTestHelper
     increment_number_of_messages
     numofmessages_before = get_number_of_messages
     mbx_hash_before = get_mbx_hash
-
     _print_debug 'number of messages before delete', numofmessages_before if @debug
-
     hpk, messages = downloadMessages
     _print_debug 'hpk', "#{b64enc hpk}" if @debug
     numofmessages_delete = deleteMessages(hpk, messages)
     decrement_number_of_messages(numofmessages_delete)
     numofmessages_after = get_number_of_messages
     mbx_hash_after = get_mbx_hash
-
     _print_debug 'number of messages after delete', numofmessages_after if @debug
-
     _compare_mbx_hash(mbx_hash_before,mbx_hash_after,hpk,numofmessages_delete)
     assert_equal(numofmessages_after.to_i,numofmessages_before.to_i - numofmessages_delete)
   end
 
+  private
   def uploadMessage
     ary = getHpks
     pairary = _get_random_pair(@config[:number_of_mailboxes]-1)
@@ -40,11 +37,9 @@ class MailboxDeleteTest < ProveTestHelper
     n = _make_nonce
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
-
     skpk = @session_key.public_key
     skpk = b64enc skpk
     ckpk = b64enc @client_key
-
     _post "/command", hpk, n, _client_encrypt_data(n,data)
   end
 
@@ -57,21 +52,16 @@ class MailboxDeleteTest < ProveTestHelper
     n = _make_nonce
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
-
     skpk = @session_key.public_key
     skpk = b64enc skpk
     ckpk = b64enc @client_key
-
     _post "/command", hpk, n, _client_encrypt_data(n,data)
     _success_response
-
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
-
     rn = b64dec lines[0]
     rct = b64dec lines[1]
     data = _client_decrypt_data rn,rct
-
     mbxcount = countMessage(hpk)
     if mbxcount >= MAX_ITEMS
       mbxcount = MAX_ITEMS
@@ -87,8 +77,6 @@ class MailboxDeleteTest < ProveTestHelper
     half = halfdelete - 1
     0.upto(half) { |i|
       nonce = msgin[i]["nonce"]
-      #print "#{i}. "
-      #print nonce; puts
       deleteMessage(hpk,nonce)
     }
     halfdelete
@@ -97,19 +85,15 @@ class MailboxDeleteTest < ProveTestHelper
   def countMessage(hpk)
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
-
     data = {cmd: 'count'}
     n = _make_nonce
     _post "/command", hpk, n, _client_encrypt_data(n,data)
     _success_response
-
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
-
     rn = b64dec lines[0]
     rct = b64dec lines[1]
     data = _client_decrypt_data rn,rct
-
     assert_not_nil data
     assert_includes data, "count"
     data["count"]
@@ -118,10 +102,8 @@ class MailboxDeleteTest < ProveTestHelper
   def deleteMessage(hpk,nonce)
     @session_key = Rails.cache.read("session_key_#{hpk}")
     @client_key = Rails.cache.read("client_key_#{hpk}")
-
     arydelete = []
     arydelete.push(nonce)
-
     data = {cmd: 'delete', payload: arydelete}
     n = _make_nonce
     _post "/command", hpk, n, _client_encrypt_data(n,data)
@@ -170,7 +152,6 @@ class MailboxDeleteTest < ProveTestHelper
     ary.each do |key|
       mbxkey = 'mbx_' + key
       num_of_messages = redisc.llen(mbxkey)
-      _print_debug mbxkey, num_of_messages if @debug
       mbx_hash[mbxkey] = num_of_messages.to_i
     end
     mbx_hash
@@ -245,7 +226,6 @@ class MailboxDeleteTest < ProveTestHelper
     end
   end
 
-  private
   def redisc
     Redis.current
   end
