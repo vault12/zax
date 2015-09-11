@@ -3,24 +3,31 @@ require 'mailbox'
 class ProofController < ApplicationController
   PROVE_CIPHER_B64 = 256
 
-  # POST /prove - prove client ownership of dual key for HPK
+  # POST /prove - prove client ownership of secret key for HPK
   def prove_hpk
-    @body = request.body.read PROVE_BODY
-    lines = _check_body_lines @body, 5, 'prove hpk'
+    # We expect 5 lines, base64 each:
+    # 1: h₂(client_token): client_token used to receive relay session pk 
+    # 2: h₂(a_comm_pk) ⊕ h₂(relay_token): Masked hpk.
+    # 3: a_temp_pk ⊕ h₂(relay_token): Masked client temp session key.
+    # 4: nonce_outter: timestamped nonce.
+    # 5: crypto_box(JSON, nonce_inner, relay_session_pk, client_temp_sk): Outer crypto-text.
 
-    @h2_client_token = b64dec lines[0]
-    _good_session_state?
+    body = request.body.read PROVE_BODY
+    lines = _check_body_lines body, 5, 'prove hpk'
+
+    @h2_client_token = _check_client_token lines[0]
+    _check_session_state
     h2_relay_token = h2(@relay_token)
 
-    # masked_hpk
-    @hpk = _process_xor(lines[1], h2_relay_token)
-    # masked_client_temp_pk
-    @client_temp_pk = _process_xor(lines[2], h2_relay_token)
+    # unmask hpk
+    @hpk = _unmask_line lines[1], h2_relay_token
+    
+    # unmask client_temp_pk
+    @client_temp_pk = _unmask_line lines[2], h2_relay_token
 
     nonce_outer = _check_nonce b64dec lines[3]
-    ctext = b64dec lines[4]
-
-    outer_box = RbNaCl::Box.new(@client_temp_pk, @session_key)
+    ctext       = b64dec lines[4]
+    outer_box   = RbNaCl::Box.new(@client_temp_pk, @session_key)
     inner = JSON.parse outer_box.decrypt(nonce_outer, ctext)
     inner = Hash[inner.map { |k, v| [k.to_sym, b64dec(v)] }]
 
@@ -32,8 +39,7 @@ class ProofController < ApplicationController
     proof_sign = proof_sign1 + @client_token
     proof_sign = h2 proof_sign
     fail 'Signature mismatch' unless sign && proof_sign &&
-                                     sign.eql?(proof_sign) &&
-                                     proof_sign.length == 32
+      sign.eql?(proof_sign) && proof_sign.length == KEY_LEN
     fail 'HPK mismatch' unless @hpk.eql? h2(inner[:pub_key])
     # --- No exceptions: success path now ---
     _save_hpk_session
@@ -49,22 +55,21 @@ class ProofController < ApplicationController
     _report_error e
   end
 
+  # ----- Private helper functions ----
   private
-
-  def _good_session_state?
+  def _check_session_state
     @client_token = Rails.cache.read("client_token_#{@h2_client_token}")
     @relay_token = Rails.cache.read("relay_token_#{@h2_client_token}")
     @session_key = Rails.cache.read("session_key_#{@h2_client_token}")
 
     # raise error if bad session state
     if @session_key.nil? || @session_key.to_bytes.length != KEY_LEN ||
-       @relay_token.nil? || @relay_token.length != KEY_LEN ||
-       @client_token.nil? || @client_token.length != KEY_LEN
-      e = SessionKeyError.new self,
-                              session_key: @session_key.to_bytes[0..3],
-                              relay_token: @relay_token[0..3],
-                              client_token: @client_token[0..3]
-      fail e, 'proof_controller: bad session state'
+       @relay_token.nil? || @relay_token.length != TOKEN_LEN ||
+       @client_token.nil? || @client_token.length != TOKEN_LEN
+      fail SessionKeyError.new self,
+        session_key: @session_key.to_bytes[0..3],
+        relay_token: @relay_token[0..3],
+        client_token: @client_token[0..3]
     end
   end
 
@@ -89,9 +94,8 @@ class ProofController < ApplicationController
     key
   end
 
-  def _process_xor(line, h2_relay_token)
-    result = b64dec line
-    xor_str(result, h2_relay_token)
+  def _unmask_line(line, mask)
+    xor_str b64dec(line), mask
   end
 
   def _save_hpk_session

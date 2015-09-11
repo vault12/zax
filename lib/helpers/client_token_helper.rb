@@ -22,7 +22,8 @@ module ClientTokenHelper
         client_token: client_token[0...8],
         msg: "session controller, client_token is not #{TOKEN_LEN} bytes"
     end
-    return client_token
+
+    client_token
   end
 
 end

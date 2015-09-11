@@ -9,7 +9,7 @@ module Errors
       "client_token #{dumpHex @data[:client_token]}"
 
       @controller.head :precondition_failed, x_error_details:
-        "No session_key/relay_token/client_token: establish session first"
+        "Error in session_key/relay_token/client_token: establish session first"
     end
   end
 end
