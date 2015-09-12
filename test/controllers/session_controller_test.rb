@@ -4,11 +4,15 @@ class SessionControllerTest < ActionController::TestCase
 public
 
 test "new session token" do
-  # fail test - no response body
+  # fail: no response body
   _raw_post :start_session_token, { }
   _fail_response :bad_request 
 
-  # fail test - 24 instead of 32 bytes
+  # fail: wrong encoding
+  @request.env['RAW_POST_DATA'] = rand_bytes 32
+  _fail_response :bad_request
+
+  # fail: 24 instead of 32 bytes
   client_token = rand_bytes 24
   _raw_post :start_session_token, { }, client_token
   _fail_response :bad_request 
@@ -21,6 +25,11 @@ end
 test "verify session token" do
   # fail test - no body
   _raw_post :verify_session_token, {}
+  _fail_response :bad_request
+
+  # fail: wrong encoding
+  @request.env['RAW_POST_DATA'] = "#{rand_bytes 32}\r\n#{rand_bytes 32}"
+  post :verify_session_token
   _fail_response :bad_request
 
   # fail test - just 1 line

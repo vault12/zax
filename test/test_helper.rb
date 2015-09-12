@@ -38,17 +38,17 @@ class ActiveSupport::TestCase
     assert_not_empty response.body
   end
 
+  def _encode_lines(lines)
+    lines.reduce("") { |s,l| s+="#{b64enc l}\r\n" }
+  end
+
   def _raw_post(action, params, *lines)
-    @request.env['RAW_POST_DATA'] = lines.reduce("") { |s,v| s+="#{b64enc v}\r\n" }
+    @request.env['RAW_POST_DATA'] = _encode_lines lines
     post action,params
   end
 
   def _post(route, *lines)
-    oneline = ""
-    lines.each do |line|
-      oneline = oneline.concat "#{b64enc line}\r\n"
-    end
-    post route, oneline
+    post route, _encode_lines(lines)
   end
 
   def _corrupt_str(str, minor = true)
