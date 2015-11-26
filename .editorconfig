@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+indent_size = 2
+indent_style = space
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{css,js,ts}]
+indent_size = 4
+
+[*.{rb}]
+indent_size = 2
+
+[config.xml]
+indent_size = 4
+
+[**/locale/**/*.json]
+indent_size = 4
