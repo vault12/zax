@@ -20,7 +20,14 @@
 
   CryptoService = (function() {
     CryptoService.prototype.relayUrl = function() {
-      return this.$window.location.origin;
+      var org, test;
+      org = this.$window.location.origin;
+      test = 'https://zax_test.vault12.com';
+      if (org.includes('localhost')) {
+        return test;
+      } else {
+        return org;
+      }
     };
 
     function CryptoService($window) {
@@ -265,7 +272,7 @@
           for (l = 0, len1 = ref.length; l < len1; l++) {
             msg = ref[l];
             if (mailbox.messagesNonces.indexOf(msg.nonce) === -1) {
-              console.log(msg);
+              console.log("incoming message:", msg);
               mailbox.messagesNonces.push(msg.nonce);
               results.push(mailbox.messages.push(msg));
             } else {
@@ -350,7 +357,7 @@
       for (l = 0, len1 = ref.length; l < len1; l++) {
         key = ref[l];
         if (key.indexOf(this.mailboxPrefix) === 0) {
-          console.log("saving" + key, $scope.addMailbox(localStorage.getItem(key)));
+          $scope.addMailbox(localStorage.getItem(key));
         }
       }
     }
