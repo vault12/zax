@@ -26,7 +26,6 @@ class Mailbox
     fail ReportError.new self, msg: 'Mailbox expire must be greater than or equal to Message expire' if @tmout_msg > @tmout_mbx
 
     @hpk = b64enc hpk
-    @index = {}
     @lastCount = nil
   end
 
