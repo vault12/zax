@@ -126,8 +126,8 @@ class Mailbox
         rds.hdel hpk_tag, nonce
         logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
       end
-      _resetCount()
    end
+   _resetCount()
   end
 
   private
