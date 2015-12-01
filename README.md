@@ -2,6 +2,10 @@
 
 Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
 
+Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
+
+![Zax Infographics](https://bit.ly/zax_relay)
+
 ## Features
 - **Universal**: All Zax Relay nodes are mutually interchangeable and operate in a global address space. Any mobile device can contact any node to pass private messages to any other mobile device without a pre-existing setup or registration with that Relay.
 - **Encrypted end-to-end**: It is cryptographically impossible for a Zax Relay node to decrypt the traffic passing though it between endpoint devices even if the Relay is taken over by an external agency.
