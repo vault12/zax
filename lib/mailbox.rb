@@ -58,6 +58,7 @@ class Mailbox
       time: Time.new.to_f # time message is received by relay
     }
 
+    _resetCount()
     res = runMbxTransaction(@hpk, 'store') do
       # store message itself on the msg_hpk_nonce tag
       rds.set(msg_tag(b64_nonce), item.to_json)
@@ -67,8 +68,6 @@ class Mailbox
       rds.hset(hpk_tag, b64_nonce, Time.new + @tmout_msg)
       rds.expire(hpk_tag, @tmout_mbx)
       # by default everytihing in mailbox will expire in 3 days
-
-      _resetCount()
     end
     return res
   end
@@ -110,24 +109,24 @@ class Mailbox
 
   # Delete one message by nonce
   def delete(nonce)
+    _resetCount()
     runMbxTransaction(@hpk, 'delete') do
       rds.del msg_tag nonce
       rds.hdel hpk_tag, nonce
       logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
     end
-    _resetCount()
   end
 
   # Delete list of messages by list of nonces
   def delete_list(nonce_list)
+    _resetCount()
     runMbxTransaction(@hpk, 'delete list') do
       nonce_list.each do |nonce|
         rds.del msg_tag nonce
         rds.hdel hpk_tag, nonce
         logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
       end
-      _resetCount()
-   end
+    end
   end
 
   private
