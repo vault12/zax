@@ -89,7 +89,7 @@
       })(this)).then((function(_this) {
         return function() {
           return _this._defer(function() {
-            return mailbox.relay_count();
+            return mailbox.relayCount();
           });
         };
       })(this));
@@ -108,7 +108,7 @@
         messagesToDelete = null;
       }
       if (!messagesToDelete) {
-        messagesToDelete = mailbox.relay_nonce_list();
+        messagesToDelete = mailbox.relayNonceList();
       }
       return this._defer((function(_this) {
         return function() {
@@ -117,7 +117,7 @@
       })(this)).then((function(_this) {
         return function() {
           return _this._defer(function() {
-            return mailbox.relay_delete(messagesToDelete);
+            return mailbox.relayDelete(messagesToDelete);
           });
         };
       })(this));
@@ -169,10 +169,11 @@
     };
 
     RelayService.prototype.sendToVia = function(recipient, mailbox, message) {
-      var deffered;
-      deffered = this.$q.defer();
-      deffered.resolve(mailbox.sendToVia(recipient, this.relay, message));
-      return deffered.promise;
+      return this._defer((function(_this) {
+        return function() {
+          return mailbox.sendToVia(recipient, _this.relay, message);
+        };
+      })(this));
     };
 
     RelayService.prototype._defer = function(fnToDefer) {
@@ -228,6 +229,8 @@
 
     function RequestPaneController(RelayService, $scope) {
       var first_names, i, j, k, key, l, len, len1, name, ref;
+      $('#key-confirmation').hide();
+      $('#send-confirmation').hide();
       first_names = ["Alice", "Bob", "Charlie", "Chuck", "Dave", "Erin", "Eve", "Faith", "Frank", "Mallory", "Oscar", "Peggy", "Pat", "Sam", "Sally", "Sybil", "Trent", "Trudy", "Victor", "Walter", "Wendy"].sort(function() {
         return .5 - Math.random();
       });
@@ -299,6 +302,7 @@
       $scope.sendMessage = (function(_this) {
         return function(mailbox, outgoing) {
           return RelayService.sendToVia(outgoing.recipient, mailbox, outgoing.message).then(function(data) {
+            $('#send-confirmation').show().fadeOut(3000);
             return $scope.outgoing = {
               message: "",
               recipient: ""
@@ -339,6 +343,7 @@
       $scope.addPublicKey = (function(_this) {
         return function(mailbox, key) {
           if (mailbox.keyRing.addGuest(key.name, key.key)) {
+            $('#key-confirmation').show().fadeOut(3000);
             return $scope.pubKey = {
               name: "",
               key: ""
