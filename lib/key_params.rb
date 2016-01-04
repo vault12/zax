@@ -35,23 +35,22 @@ module KeyParams
 
   # Low level info, can be ignored
   # 🔩 - Nuts and bolts
-  INFO      = '\xF0\x9F\x94\xA9 '
-
+  INFO      = "\xF0\x9F\x94\xA9 "
   # Low level info, can be ignored, minor positve on the protocol path
   # 🔑 - Secure keys, good path
-  INFO_GOOD = '\xF0\x9F\x94\x91 '
+  INFO_GOOD = "\xF0\x9F\x94\x91 "
 
   # Low level info, can be ignored, minor deviation from the protocol path
   # 🔻 - Downward tick
-  INFO_NEG  = '\xF0\x9F\x94\xBB '
+  INFO_NEG  = "\xF0\x9F\x94\xBB "
 
   # A noteworthy event, a non-breaking deviation from the protocol path
   # 🚩 - A red flag
-  WARN      = '\xF0\x9F\x9A\xA9 ' # '\xE2\x80\xA0'
+  WARN      = "\xF0\x9F\x9A\xA9 " # "\xE2\x80\xA0"
 
   # important, breaking event, must be investigated.
   # ❗️ - A red error
-  ERROR     = '\xE2\x9D\x97\xEF\xB8\x8F'
+  ERROR     = "\xE2\x9D\x97\xEF\xB8\x8F"
 
   # Exception text
   # ☢ - A toxic trace
