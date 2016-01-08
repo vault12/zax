@@ -1,2 +1,1804 @@
-!function t(e,n,r){function o(i,u){if(!n[i]){if(!e[i]){var a="function"==typeof require&&require;if(!u&&a)return a(i,!0);if(s)return s(i,!0);var l=new Error("Cannot find module '"+i+"'");throw l.code="MODULE_NOT_FOUND",l}var h=n[i]={exports:{}};e[i][0].call(h.exports,function(t){var n=e[i][1][t];return o(n?n:t)},h,h.exports,t,e,n,r)}return n[i].exports}for(var s="function"==typeof require&&require,i=0;i<r.length;i++)o(r[i]);return o}({1:[function(t,e,n){var r;r=function(){function t(){}return t._NONCE_TAG="__nc",t._SKEY_TAG="storage_key",t._DEF_ROOT=".v1.stor.vlt12",t.RELAY_TOKEN_LEN=32,t.RELAY_TOKEN_TIMEOUT=6e4,t.RELAY_SESSION_TIMEOUT=3e5,t.RELAY_AJAX_TIMEOUT=5e3,t}(),e.exports=r},{}],2:[function(t,e,n){var r,o,s,i;r=t("config"),s=t("keys"),i=t("nacl"),o=function(){function t(t,e){this.storageKey=null!=t?t:null,null==e&&(e=null),this.root=e?"."+e+r._DEF_ROOT:r._DEF_ROOT,this.storageKey||this._loadKey(),this.storageKey||this.newKey()}return t.prototype.tag=function(t){return t&&t+this.root},t.prototype._saveKey=function(){return this._set(r._SKEY_TAG,this.storageKey.toString())},t.prototype._loadKey=function(){var t;return t=this._get(r._SKEY_TAG),t?this.setKey(s.fromString(t)):void 0},t.prototype.selfDestruct=function(t){return t?this._localRemove(this.tag(r._SKEY_TAG)):void 0},t.prototype.setKey=function(t){return this.storageKey=t,this._saveKey()},t.prototype.newKey=function(){return this.setKey(i.makeSecretKey())},t.prototype.save=function(t,e){var n,o,s;return t&&e?(o=i.use(),e=o.encode_utf8(JSON.stringify(e)),s=o.crypto_secretbox_random_nonce(),n=o.crypto_secretbox(e,s,this.storageKey.key),this._set(t,n.toBase64()),this._set(r._NONCE_TAG+"."+t,s.toBase64()),!0):null},t.prototype.get=function(t){var e,n,o,s;return(n=this._get(t))&&(s=this._get(r._NONCE_TAG+"."+t))?(o=i.use(),e=o.crypto_secretbox_open(n.fromBase64(),s.fromBase64(),this.storageKey.key),JSON.parse(o.decode_utf8(e))):null},t.prototype.remove=function(t){var e,n,o,s;for(o=[t,r._NONCE_TAG+"."+t],e=0,n=o.length;n>e;e++)s=o[e],this._localRemove(this.tag(s));return!0},t.prototype._get=function(t){return this._localGet(this.tag(t))},t.prototype._set=function(t,e){return t&&e?(this._localSet(this.tag(t),e),e):null},t.prototype._localGet=function(t){return this._storage().get(t)||null},t.prototype._localSet=function(t,e){return this._storage().set(t,e)},t.prototype._localRemove=function(t){return this._storage().remove(t)},t.prototype._storage=function(){return t._storageDriver||t.startStorageSystem(),t._storageDriver},t._storageDriver=null,t.startStorageSystem=function(t){if(!t)throw new Error("The driver parameter cannot be empty.");return this._storageDriver=t},t}(),e.exports=o},{config:1,keys:5,nacl:9}],3:[function(t,e,n){var r,o;o=t("nacl"),r=function(){function t(t,e,n){var r,o,s,i;if(this.id=t,this.keyRing=e,null==n&&(n=null),!this.id||!this.keyRing)throw new Error("KeyRatchet - missing params");for(s=this._roles,r=0,o=s.length;o>r;r++)i=s[r],this[i]=this.keyRing.getKey(this.keyTag(i));n&&this.startRatchet(n)}return t.prototype.lastKey=null,t.prototype.confirmedKey=null,t.prototype.nextKey=null,t.prototype._roles=["lastKey","confirmedKey","nextKey"],t.prototype.keyTag=function(t){return t+"_"+this.id},t.prototype.storeKey=function(t){return this.keyRing.saveKey(this.keyTag(t),this[t])},t.prototype.startRatchet=function(t){var e,n,r,s;for(s=["confirmedKey","lastKey"],e=0,r=s.length;r>e;e++)n=s[e],this[n]||(this[n]=t,this.storeKey(n));return this.nextKey?void 0:(this.nextKey=o.makeKeyPair(),this.storeKey("nextKey"))},t.prototype.pushKey=function(t){var e,n,r,o,s;for(this.lastKey=this.confirmedKey,this.confirmedKey=this.nextKey,this.nextKey=t,r=this._roles,o=[],e=0,n=r.length;n>e;e++)s=r[e],o.push(this.storeKey(s));return o},t.prototype.confKey=function(t){var e,n,r,o;if(null!=this.confirmedKey&&this.confirmedKey.equal(t))return!1;for(this.lastKey=this.confirmedKey,this.confirmedKey=t,r=["lastKey","confirmedKey"],e=0,n=r.length;n>e;e++)o=r[e],this.storeKey(o);return!0},t.prototype.curKey=function(){return this.confirmedKey?this.confirmedKey:this.lastKey},t.prototype.h2LastKey=function(){return o.h2(this.lastKey.boxPk)},t.prototype.h2ConfirmedKey=function(){return o.h2(this.confirmedKey.boxPk)},t.prototype.h2NextKey=function(){return o.h2(this.nextKey.boxPk)},t.prototype.keyByHash=function(t){var e,n,r,s;for(r=this._roles,e=0,n=r.length;n>e;e++)if(s=r[e],o.h2(this[s].boxPk)===t)return this[s]},t.prototype.isNextKeyHash=function(t){return this.h2NextKey().equal(t)},t.prototype.toStr=function(){return JSON.stringify(this).toBase64()},t.prototype.fromStr=function(t){return Utils.extend(this,JSON.parse(t.fromBase64()))},t.prototype.selfDestruct=function(t){var e,n,r,o,s;if(!t)return null;for(r=this._roles,o=[],e=0,n=r.length;n>e;e++)s=r[e],o.push(this.keyRing.deleteKey(this.keyTag(s)));return o},t}(),e.exports=r,window.__CRYPTO_DEBUG&&(window.KeyRatchet=r)},{nacl:9}],4:[function(t,e,n){var r,o,s,i,u,a,l={}.hasOwnProperty;r=t("config"),o=t("crypto_storage"),i=t("keys"),u=t("nacl"),a=t("utils"),s=function(){function t(t,e){var n;null==e&&(e=null),e&&(n=i.fromString(e),this.storage=new o(n,t)),this.storage||(this.storage=new o(null,t)),this._ensureKeys()}return t.prototype._ensureKeys=function(){return this._loadCommKey(),this._loadGuestKeys()},t.prototype._loadCommKey=function(){return this.commKey=this.getKey("comm_key"),this.commKey?void 0:(this.commKey=u.makeKeyPair(),this.saveKey("comm_key",this.commKey))},t.prototype._loadGuestKeys=function(){var t,e,n,r,o;for(this.registry=this.storage.get("guest_registry")||[],this.guestKeys={},r=this.registry,o=[],t=0,e=r.length;e>t;t++)n=r[t],o.push(this.guestKeys[n]=this.storage.get("guest["+n+"]"));return o},t.prototype.commFromSeed=function(t){return this.commKey=u.fromSeed(u.encode_utf8(t)),this.storage.save("comm_key",this.commKey.toString())},t.prototype.commFromSecKey=function(t){return this.commKey=u.fromSecretKey(t),this.storage.save("comm_key",this.commKey.toString())},t.prototype.tagByHpk=function(t){var e,n,r;n=this.guestKeys;for(e in n)if(l.call(n,e)&&(r=n[e],t===u.h2(r.fromBase64()).toBase64()))return e},t.prototype.getMasterKey=function(){return this.storage.storageKey.key2str("key")},t.prototype.getPubCommKey=function(){return this.commKey.strPubKey()},t.prototype.saveKey=function(t,e){return this.storage.save(t,e.toString()),e},t.prototype.getKey=function(t){var e;return e=this.storage.get(t),e?i.fromString(e):null},t.prototype.deleteKey=function(t){return this.storage.remove(t)},t.prototype._addRegistry=function(t){return t?this.registry.indexOf(t)>-1?void 0:this.registry.push(t):null},t.prototype._saveNewGuest=function(t,e){return t&&e?(this.storage.save("guest["+t+"]",e),this.storage.save("guest_registry",this.registry)):null},t.prototype._removeGuestRecord=function(t){var e;return t?(this.storage.remove("guest["+t+"]"),e=this.registry.indexOf(t),e>-1?(this.registry.splice(e,1),this.storage.save("guest_registry",this.registry)):void 0):null},t.prototype.addGuest=function(t,e){return t&&e?(e=e.trimLines(),this._addRegistry(t),this.guestKeys[t]=e,this._saveNewGuest(t,e)):null},t.prototype.addTempGuest=function(t,e){return t&&e?(e=e.trimLines(),this.guestKeys[t]=e,a.delay(r.RELAY_SESSION_TIMEOUT,function(e){return function(){return delete e.guestKeys[t]}}(this))):null},t.prototype.removeGuest=function(t){return t&&this.guestKeys[t]?(this.guestKeys[t]=null,delete this.guestKeys[t],this._removeGuestRecord(t)):null},t.prototype.getGuestKey=function(t){return t&&this.guestKeys[t]?new i({boxPk:this.getGuestRecord(t).fromBase64()}):null},t.prototype.getGuestRecord=function(t){return t&&this.guestKeys[t]?this.guestKeys[t]:null},t.prototype.selfDestruct=function(t){var e,n,r,o;if(!t)return null;for(o=this.registry.slice(),n=0,r=o.length;r>n;n++)e=o[n],this.removeGuest(e);return this.storage.remove("guest_registry"),this.storage.remove("comm_key"),this.storage.selfDestruct(t)},t}(),e.exports=s,window.__CRYPTO_DEBUG&&(window.KeyRing=s)},{config:1,crypto_storage:2,keys:5,nacl:9,utils:13}],5:[function(t,e,n){var r,o,s={}.hasOwnProperty;o=t("utils"),r=function(){function t(t){t&&o.extend(this,t)}return t.prototype.toString=function(){return JSON.stringify(this.constructor.keys2str(this))},t.fromString=function(t){return t?this.str2keys(JSON.parse(t.trimLines())):null},t.prototype.key2str=function(t){return t&&null!=this[t]?this[t].toBase64():null},t.prototype.strPubKey=function(){return this.boxPk.toBase64()},t.prototype.strSecKey=function(){return this.boxSk.toBase64()},t.prototype.equal=function(t){return this.strPubKey()!==t.strPubKey()?!1:null!=this.boxSk!=(null!=t.boxSk)?!1:null!=this.boxSk?this.strSecKey()===t.strSecKey():!0},t.keys2str=function(e){var n,r,o;r=new t;for(n in e)s.call(e,n)&&(o=e[n],r[n]=o.toBase64());return r},t.str2keys=function(e){var n,r,o;r=new t;for(n in e)s.call(e,n)&&(o=e[n],r[n]=o.fromBase64());return r},t}(),e.exports=r,window.__CRYPTO_DEBUG&&(window.Keys=r)},{utils:13}],6:[function(t,e,n){var r,o,s,i,u;r=t("config"),o=t("keyring"),i=t("nacl"),u=t("utils"),s=function(){function t(t,e){this.identity=t,null==e&&(e=null),this.keyRing=new o(this.identity,e),this.sessionKeys={},this.sessionRelay={},this.sessionTimeout={}}return t.fromSeed=function(e,n,r){var o;return null==n&&(n=e),null==r&&(r=null),o=new t(n,r),o.keyRing.commFromSeed(n),o._hpk=null,o},t.fromSecKey=function(e,n,r){var o;return null==r&&(r=null),o=new t(n,r),o.keyRing.commFromSecKey(e),o._hpk=null,o},t.prototype.hpk=function(){return this._hpk?this._hpk:this._hpk=i.h2(this.keyRing.commKey.boxPk)},t.prototype.getPubCommKey=function(){return this.keyRing.getPubCommKey()},t.prototype.createSessionKey=function(t){if(!t)throw new Error("createSessionKey - no sess_id");return null!=this.sessionKeys[t]?this.sessionKeys[t]:(this.sessionKeys[t]=i.makeKeyPair(),this.sessionTimeout[t]=u.delay(r.RELAY_SESSION_TIMEOUT,function(e){return function(){return e.sessionKeys[t]=null,delete e.sessionKeys[t],e.sessionTimeout[t]=null,delete e.sessionTimeout[t],e.sessionRelay[t]=null,delete e.sessionRelay[t]}}(this)),this.sessionKeys[t])},t.prototype.rawEncodeMessage=function(t,e,n){var r,o;if(null==t||null==e||null==n)throw new Error("rawEncodeMessage: missing params");return r=this._makeNonce(),o={nonce:r.toBase64(),ctext:i.use().crypto_box(this._parseData(t),r,e,n).toBase64()}},t.prototype.rawDecodeMessage=function(t,e,n,r){var o;if(null==t||null==e||null==n||null==r)throw new Error("rawEncodeMessage: missing params");return o=i.use(),JSON.parse(o.decode_utf8(o.crypto_box_open(e,t,n,r)))},t.prototype.encodeMessage=function(t,e,n,r){var o,s;if(null==n&&(n=!1),null==r&&(r=null),null==t||null==e)throw new Error("encodeMessage: missing params");if(null==(o=this._gPk(t)))throw new Error("encodeMessage: don't know guest "+t);return s=this._getSecretKey(t,n,r),this.rawEncodeMessage(e,o,s)},t.prototype.decodeMessage=function(t,e,n,r,o){var s,i;if(null==r&&(r=!1),null==o&&(o=null),null==t||null==e||null==n)throw new Error("decodeMessage: missing params");if(null==(s=this._gPk(t)))throw new Error("decodeMessage: don't know guest "+t);return i=this._getSecretKey(t,r,o),this.rawDecodeMessage(e.fromBase64(),n.fromBase64(),s,i)},t.prototype.connectToRelay=function(t){return t.openConnection().then(function(e){return function(){return t.connectMailbox(e).then(function(){return e.lastRelay=t})}}(this))},t.prototype.sendToVia=function(t,e,n){return this.connectToRelay(e).then(function(r){return function(){return r.relaySend(t,n,e)}}(this))},t.prototype.getRelayMessages=function(t){return this.connectToRelay(t).then(function(t){return function(){return t.relayMessages()}}(this))},t.prototype.relayCount=function(){if(!this.lastRelay)throw new Error("relayCount - no open relay");return this.lastRelay.count(this).then(function(t){return function(){return t.count=parseInt(t.lastRelay.result)}}(this))},t.prototype.relaySend=function(t,e){var n;if(!this.lastRelay)throw new Error("mbx: relaySend - no open relay");return n=this.encodeMessage(t,e),this.lastMsg=n,this.lastRelay.upload(this,i.h2(this._gPk(t)),n)},t.prototype.relayMessages=function(){if(!this.lastRelay)throw new Error("relayMessages - no open relay");return this.lastRelay.download(this).then(function(t){return function(){var e,n,r,o,s,i;for(t.lastDownload=[],o=t.lastRelay.result,s=[],n=0,r=o.length;r>n;n++)e=o[n],(i=t.keyRing.tagByHpk(e.from))&&(e.fromTag=i,e.msg=t.decodeMessage(i,e.nonce,e.data),null!=e.msg&&delete e.data),s.push(t.lastDownload.push(e));return s}}(this))},t.prototype.relayNonceList=function(){if(!this.lastDownload)throw new Error("relayNonceList - no metadata");return u.map(this.lastDownload,function(t){return t.nonce})},t.prototype.relayDelete=function(t){if(!this.lastRelay)throw new Error("relayDelete - no open relay");return this.lastRelay["delete"](this,t)},t.prototype.clean=function(t){return this.getRelayMessages(t).then(function(t){return function(){return t.relayDelete(t.relayNonceList())}}(this))},t.prototype.selfDestruct=function(t){return t?this.keyRing.selfDestruct(t):null},t.prototype._gKey=function(t){return t?this.keyRing.getGuestKey(t):null},t.prototype._gPk=function(t){var e;return t?null!=(e=this._gKey(t))?e.boxPk:void 0:null},t.prototype._gHpk=function(t){return t?i.h2(this._gPk(t)):null},t.prototype._getSecretKey=function(t,e,n){return n?this._gPk(n):e?this.sessionKeys[t].boxSk:this.keyRing.commKey.boxSk},t.prototype._parseData=function(t){return"Uint8Array"===u.type(t)?t:i.use().encode_utf8(JSON.stringify(t))},t.prototype._makeNonce=function(t){var e,n,r,o,s,a;if(null==t&&(t=parseInt(Date.now()/1e3)),s=i.use().crypto_box_random_nonce(),null==s||24!==s.length)throw new Error("RNG failed, try again?");for(e=u.itoa(t),n=r=0;7>=r;n=++r)s[n]=0;for(n=o=0,a=e.length-1;a>=0?a>=o:o>=a;n=a>=0?++o:--o)s[8-e.length+n]=e[n];return s},t}(),e.exports=s,window.__CRYPTO_DEBUG&&(window.MailBox=s)},{config:1,keyring:4,nacl:9,utils:13}],7:[function(t,e,n){e.exports={Utils:t("utils"),Mixins:t("mixins"),Nacl:t("nacl"),Keys:t("keys"),SimpleStorageDriver:t("test_driver"),CryptoStorage:t("crypto_storage"),KeyRing:t("keyring"),MailBox:t("mailbox"),Relay:t("relay"),RachetBox:t("rachetbox"),Config:t("config"),startStorageSystem:function(t){return this.CryptoStorage.startStorageSystem(t)},setAjaxImpl:function(t){return this.Utils.setAjaxImpl(t)}},window&&(window.glow=e.exports)},{config:1,crypto_storage:2,keyring:4,keys:5,mailbox:6,mixins:8,nacl:9,rachetbox:10,relay:11,test_driver:12,utils:13}],8:[function(t,e,n){var r,o,s,i,u;for(o=t("utils"),o.include(String,{toCodeArray:function(){var t,e,n,r;for(n=[],t=0,e=this.length;e>t;t++)r=this[t],n.push(r.charCodeAt());return n},toUTF8:function(){return unescape(encodeURIComponent(this))},fromUTF8:function(){return decodeURIComponent(escape(this))},toUint8Array:function(){return new Uint8Array(this.toUTF8().toCodeArray())},toUint8ArrayRaw:function(){return new Uint8Array(this.toCodeArray())},fromBase64:function(){return new Uint8Array(atob(this).toCodeArray())},trimLines:function(){return this.replace("\r\n","").replace("\n","").replace("\r","")}}),u=[Array,Uint8Array,Uint16Array],s=0,i=u.length;i>s;s++)r=u[s],o.include(r,{fromCharCodes:function(){var t;return function(){var e,n,r;for(r=[],e=0,n=this.length;n>e;e++)t=this[e],r.push(String.fromCharCode(t));return r}.call(this).join("")},toBase64:function(){return btoa(this.fromCharCodes())},xorWith:function(t){var e,n;return this.length!==t.length?null:new Uint8Array(function(){var r,o,s;for(s=[],n=r=0,o=this.length;o>r;n=++r)e=this[n],s.push(e^t[n]);return s}.call(this))},equal:function(t){var e,n,r,o;if(this.length!==t.length)return!1;for(e=n=0,r=this.length;r>n;e=++n)if(o=this[e],o!==t[e])return!1;return!0}});o.include(Uint8Array,{concat:function(t){var e;return e=new Uint8Array(this.byteLength+t.byteLength),e.set(new Uint8Array(this),0),e.set(t,this.byteLength),e},fillWith:function(t){var e,n,r,o;for(e=n=0,r=this.length;r>n;e=++n)o=this[e],this[e]=t;return this}}),e.exports={}},{utils:13}],9:[function(t,e,n){var r,o,s,i;i="undefined"!=typeof nacl_factory&&null!==nacl_factory?nacl_factory:t("js-nacl"),r=t("keys"),s=t("utils"),o=function(){function t(){}return t.HEAP_SIZE=Math.pow(2,23),t._instance=null,t._unloadTimer=null,t.use=function(){return this._unloadTimer&&clearTimeout(this._unloadTimer),this._unloadTimer=setTimeout(function(){return t.unload()},15e3),window.__naclInstance||(window.__naclInstance=i.instantiate(this.HEAP_SIZE)),window.__naclInstance},t.unload=function(){return this._unloadTimer=null,window.__naclInstance=null,delete window.__naclInstance},t.makeSecretKey=function(){return new r({key:this.use().random_bytes(this.use().crypto_secretbox_KEYBYTES)})},t.random=function(t){return null==t&&(t=32),this.use().random_bytes(t)},t.makeKeyPair=function(){return new r(this.use().crypto_box_keypair())},t.fromSecretKey=function(t){return new r(this.use().crypto_box_keypair_from_raw_sk(t))},t.fromSeed=function(t){return new r(this.use().crypto_box_keypair_from_seed(t))},t.sha256=function(t){return this.use().crypto_hash_sha256(t)},t.to_hex=function(t){return this.use().to_hex(t)},t.from_hex=function(t){return this.use().from_hex(t)},t.encode_utf8=function(t){return this.use().encode_utf8(t)},t.decode_utf8=function(t){return this.use().decode_utf8(t)},t.h2=function(t){var e;return"String"===s.type(t)&&(t=t.toUint8ArrayRaw()),e=new Uint8Array(32+t.length),e.fillWith(0),e.set(t,32),this.sha256(this.sha256(e))},t.h2_64=function(e){return t.h2(e.fromBase64()).toBase64()},t}(),e.exports=o,window.__CRYPTO_DEBUG&&(window.Nacl=o)},{"js-nacl":void 0,keys:5,utils:13}],10:[function(t,e,n){var r,o,s,i,u,a,l,h=function(t,e){function n(){this.constructor=t}for(var r in e)c.call(e,r)&&(t[r]=e[r]);return n.prototype=e.prototype,t.prototype=new n,t.__super__=e.prototype,t},c={}.hasOwnProperty;l=t("utils"),u=t("nacl"),s=t("keys"),o=t("keyring"),r=t("keyratchet"),i=t("mailbox"),a=function(t){function e(){return e.__super__.constructor.apply(this,arguments)}return h(e,t),e.prototype._loadRatchets=function(t){var e;return e=this._gHpk(t).toBase64(),this.krLocal=new r("local_"+e+"_for_"+this.hpk().toBase64(),this.keyRing,this.keyRing.commKey),this.krGuest=new r("guest_"+e+"_for_"+this.hpk().toBase64(),this.keyRing,this.keyRing.getGuestKey(t))},e.prototype.relaySend=function(t,e){var n,r;if(!this.lastRelay)throw new Error("rbx: relaySend - no open relay");if(!t||!e)throw new Error("rbx: relaySend - missing params");return this._loadRatchets(t),r={org_msg:e},null==e.got_key&&(r.nextKey=this.krLocal.nextKey.strPubKey()),null==e.got_key?(n=this.rawEncodeMessage(r,this.krGuest.confirmedKey.boxPk,this.krLocal.confirmedKey.boxSk),this.lastMsg=n):n=this.rawEncodeMessage(r,this.krGuest.lastKey.boxPk,this.krLocal.confirmedKey.boxSk),this.lastRelay.upload(this,u.h2(this._gPk(t)),n)},e.prototype._tryKeypair=function(t,e,n,r){var o,s;try{return this.rawDecodeMessage(t.fromBase64(),e.fromBase64(),n,r)}catch(s){return o=s,null}},e.prototype.decodeMessage=function(t,n,r,o,s){var i,u,a,l,h,c;if(null==o&&(o=!1),null==s&&(s=null),o)return e.__super__.decodeMessage.call(this,t,n,r,o,s);if(null==t||null==n||null==r)throw new Error("decodeMessage: missing params");for(this._loadRatchets(t),a=[[this.krGuest.confirmedKey.boxPk,this.krLocal.confirmedKey.boxSk],[this.krGuest.lastKey.boxPk,this.krLocal.lastKey.boxSk],[this.krGuest.confirmedKey.boxPk,this.krLocal.lastKey.boxSk],[this.krGuest.lastKey.boxPk,this.krLocal.confirmedKey.boxSk]],i=u=0,h=a.length;h>u;i=++u)if(l=a[i],c=this._tryKeypair(n,r,l[0],l[1]),null!=c)return c;return console.log("RatchetBox decryption failed: message from unknown guest or ratchet out of sync"),null},e.prototype.relayMessages=function(){return e.__super__.relayMessages.call(this).then(function(t){return function(){var e,n,r,o,i,a,l,h,c;for(h=[],o=t.lastDownload,e=0,n=o.length;n>e;e++)r=o[e],r.fromTag&&(t._loadRatchets(r.fromTag),null!=(null!=(i=r.msg)?i.nextKey:void 0)&&t.krGuest.confKey(new s({boxPk:r.msg.nextKey.fromBase64()}))&&h.push({toTag:r.fromTag,key:r.msg.nextKey,msg:{got_key:u.h2_64(r.msg.nextKey)}}),null!=(null!=(a=r.msg)&&null!=(l=a.org_msg)?l.got_key:void 0)&&(r.msg=r.msg.org_msg,t.krLocal.isNextKeyHash(r.msg.got_key.fromBase64())&&t.krLocal.pushKey(u.makeKeyPair()),r.msg=null),null!=r.msg&&(r.msg=r.msg.org_msg));return(c=function(){var e;return h.length>0?(e=h.shift(),t.relaySend(e.toTag,e.msg).then(function(){return c()})):void 0})()}}(this))},e.prototype.selfDestruct=function(t,n){var r,o,s,i;if(null==n&&(n=!1),t){if(n)for(i=this.keyRing.registry,o=0,s=i.length;s>o;o++)r=i[o],this._loadRatchets(r),this.krLocal.selfDestruct(n),this.krGuest.selfDestruct(n);return e.__super__.selfDestruct.call(this,t)}},e}(i),e.exports=a,window.__CRYPTO_DEBUG&&(window.RatchetBox=a)},{keyratchet:3,keyring:4,keys:5,mailbox:6,nacl:9,utils:13}],11:[function(t,e,n){var r,o,s,i,u,a=function(t,e){return function(){return t.apply(e,arguments)}},l=[].indexOf||function(t){for(var e=0,n=this.length;n>e;e++)if(e in this&&this[e]===t)return e;return-1};r=t("config"),o=t("keys"),s=t("nacl"),u=t("utils"),i=function(){function t(t){this.url=null!=t?t:null,this._ajax=a(this._ajax,this),this._resetState(),this.lastError=null,this.RELAY_COMMANDS=["count","upload","download","delete"]}return t.prototype.openConnection=function(){return this.getServerToken().then(function(t){return function(){return t.getServerKey()}}(this))},t.prototype.getServerToken=function(){if(!this.url)throw new Error("getServerToken - no url");if(this.lastError=null,this.clientToken||(this.clientToken=s.random(r.RELAY_TOKEN_LEN)),this.clientToken&&this.clientToken.length!==r.RELAY_TOKEN_LEN)throw new Error("Token must be "+r.RELAY_TOKEN_LEN+" bytes");return this._ajax("start_session",this.clientToken.toBase64()).then(function(t){return function(e){var n;return n=t._processData(e),t.relayToken=n[0].fromBase64(),t.diff=2===n.length?parseInt(n[1]):0,t._scheduleExpireSession(r.RELAY_TOKEN_TIMEOUT),t.diff>4&&console.log("Relay "+t.url+" requested difficulty "+t.diff+". Session handshake may take longer."),t.diff>16?console.log("Attempting handshake at difficulty "+t.diff+"! This may take a while"):void 0}}(this))},t.prototype.getServerKey=function(){var t,e,n;if(!(this.url&&this.clientToken&&this.relayToken))throw new Error("getServerKey - missing params");if(this.lastError=null,this.h2ClientToken=s.h2(this.clientToken).toBase64(),t=this.clientToken.concat(this.relayToken),0===this.diff)n=s.h2(t).toBase64();else{for(e=s.random(32);!u.arrayZeroBits(s.h2(t.concat(e)),this.diff);)e=s.random(32);n=e.toBase64()}return this._ajax("verify_session",this.h2ClientToken+"\r\n"+n+"\r\n").then(function(t){return function(e){var n;return n=e.fromBase64(),t.relayKey=new o({boxPk:n}),t.online=!0}}(this))},t.prototype.connectMailbox=function(t){var e,n,r,o,i,u,a;if(null==t||!this.online||null==this.relayKey||null==this.url)throw new Error("connectMailbox - missing params");return this.lastError=null,u="relay_"+this.url,e=t.createSessionKey(u).boxPk,t.keyRing.addTempGuest(u,this.relayKey.strPubKey()),delete this.relayKey,o=e.toBase64(),a=e.concat(this.relayToken).concat(this.clientToken),n=s.h2(a),r=t.encodeMessage(u,n),r.pub_key=t.keyRing.getPubCommKey(),i=t.encodeMessage("relay_"+this.url,r,!0),this._ajax("prove",this.h2ClientToken+"\r\n"+(o+"\r\n")+(i.nonce+"\r\n")+(""+i.ctext)).then(function(t){return function(t){}}(this))},t.prototype.runCmd=function(t,e,n){var r,o;if(null==n&&(n=null),null==t||null==e)throw new Error("runCmd - missing params");if(l.call(this.RELAY_COMMANDS,t)<0)throw new Error("Relay "+this.url+" doesn't support "+t);return r={cmd:t},n&&(r=u.extend(r,n)),o=e.encodeMessage("relay_"+this.url,r,!0),this._ajax("command",e.hpk().toBase64()+"\r\n"+(o.nonce+"\r\n")+(""+o.ctext)).then(function(n){return function(r){if("upload"!==t){if(null==r)throw new Error(n.url+" - "+t+" error");return"count"===t||"download"===t?n.result=n._processResponse(r,e,t):n.result=JSON.parse(r)}}}(this))},t.prototype._processResponse=function(t,e,n){var r,o,s;if(o=this._processData(t),2!==o.length)throw new Error(this.url+" - "+n+": Bad response");return s=o[0],r=o[1],e.decodeMessage("relay_"+this.url,s,r,!0)},t.prototype._processData=function(t){var e;return e=t.split("\r\n"),e.length>=2||(e=t.split("\n")),e},t.prototype.count=function(t){return this.runCmd("count",t)},t.prototype.upload=function(t,e,n){return this.runCmd("upload",t,{to:e.toBase64(),payload:n})},t.prototype.download=function(t){return this.runCmd("download",t)},t.prototype["delete"]=function(t,e){return this.runCmd("delete",t,{payload:e})},t.prototype._resetState=function(){return this.clientToken=null,this.online=!1,this.relayToken=null,this.relayKey=null,this.clientTokenExpiration=null},t.prototype._scheduleExpireSession=function(t){return this.clientTokenExpiration&&clearTimeout(this.clientTokenExpiration),this.clientTokenExpiration=setTimeout(function(t){return function(){return t._resetState()}}(this),t)},t.prototype._ajax=function(t,e){return u.ajax(this.url+"/"+t,e)},t}(),e.exports=i,window.__CRYPTO_DEBUG&&(window.Relay=i)},{config:1,keys:5,nacl:9,utils:13}],12:[function(t,e,n){var r;r=function(){function t(t,e){null==t&&(t="storage."),null==e&&(e=null),this._root_tag="__glow."+t,this._load(e)}return t.prototype._state=null,t.prototype._key_tag=function(t){return this._root_tag+"."+t},t.prototype.get=function(t){return this._state||this._load(),this._state[t]?this._state[t]:JSON.parse(localStorage.getItem(this._key_tag(t)))},t.prototype.set=function(t,e){return this._state||this._load(),this._state[t]=e,localStorage.setItem(this._key_tag(t),JSON.stringify(e)),this._persist()},t.prototype.remove=function(t){return this._state||this._load(),delete this._state[t],localStorage.removeItem(this._key_tag(t)),this._persist()},t.prototype._persist=function(){},t.prototype._load=function(t){return null==t&&(t=null),this._state=t?t:{},console.log("INFO: SimpleTestDriver uses localStorage and should not be used in production for permanent key storage.")},t}(),e.exports=r},{}],13:[function(t,e,n){var r,o;r=t("config"),o=function(){function t(){}return t.extend=function(t,e){var n,r;if("undefined"!=typeof $&&null!==$?$.extend:void 0)return $.extend(t,e);for(n in e)r=e[n],void 0!==e[n]&&(t[n]=e[n]);return t},t.map=function(t,e){return("undefined"!=typeof $&&null!==$?$.map:void 0)?"undefined"!=typeof $&&null!==$?$.map(t,e):void 0:Array.prototype.map.apply(t,[e])},t.include=function(t,e){return this.extend(t.prototype,e)},t.type=function(t){return void 0===t?"undefined":null===t?"null":Object.prototype.toString.call(t).replace("[","").replace("]","").split(" ")[1]},t.ajaxImpl=null,t.setAjaxImpl=function(t){return this.ajaxImpl=t},t.ajax=function(t,e){if(null===this.ajaxImpl)if("undefined"!=typeof Q&&null!==Q?Q.xhr:void 0)this.setAjaxImpl(function(t,e){return Q.xhr({method:"POST",url:t,headers:{Accept:"text/plain","Content-Type":"text/plain"},data:e,responseType:"text",timeout:r.RELAY_AJAX_TIMEOUT,disableUploadProgress:!0}).then(function(t){return t.data})});else{if(!(("undefined"!=typeof $&&null!==$?$.ajax:void 0)&&("undefined"!=typeof $&&null!==$?$.Deferred:void 0)))throw new Error("ajax implementation not set; use q-xhr or $http");console.log("default ajax impl: setting to zepto with promises"),this.setAjaxImpl(function(t,e){return $.ajax({url:t,type:"POST",dataType:"text",timeout:r.RELAY_AJAX_TIMEOUT,context:this,error:console.log,contentType:"text/plain",data:e})})}return this.ajaxImpl(t,e)},t.delay=function(t,e){return setTimeout(e,t)},t.itoa=function(t){var e,n,r,o,s,i;return 0>=t?new Uint8Array(function(){var t,e;for(e=[],n=t=0;7>=t;n=++t)e.push(0);return e}()):(s=[Math.floor,Math.pow,Math.log],e=s[0],o=s[1],r=s[2],i=e(r(t)/r(256)),new Uint8Array(function(){var r,s,u;for(u=[],n=r=s=i;0>=s?0>=r:r>=0;n=0>=s?++r:--r)u.push(e(t/o(256,n))%256);return u}()))},t.firstZeroBits=function(t,e){return t===t>>e<<e},t.arrayZeroBits=function(t,e){var n,r,o,s,i;for(i=e,r=o=0,s=1+e/8;s>=0?s>=o:o>=s;r=s>=0?++o:--o){if(n=t[r],0>=i)return!0;if(!(i>8))return this.firstZeroBits(n,i);if(i-=8,n>0)return!1}return!1},t.logStack=function(t){var e,n,r,o,s,i;for(t||(t=new Error("stackLog")),s=t.stack.replace(/^[^\(]+?[\n$]/gm,"").replace(/^\s+at\s+/gm,"").replace(/^Object.<anonymous>\s*\(/gm,"{anonymous}()@").split("\n"),o=[],e=n=0,r=s.length;r>n;e=++n)i=s[e],o.push(console.log(e+": "+i));return o},t}(),e.exports=o,window.__CRYPTO_DEBUG&&(window.Utils=o)},{config:1}]},{},[7]);
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Config;
+
+Config = (function() {
+  function Config() {}
+
+  Config._NONCE_TAG = '__nc';
+
+  Config._SKEY_TAG = 'storage_key';
+
+  Config._DEF_ROOT = '.v1.stor.vlt12';
+
+  Config.RELAY_TOKEN_LEN = 32;
+
+  Config.RELAY_TOKEN_TIMEOUT = 60 * 1000;
+
+  Config.RELAY_SESSION_TIMEOUT = 5 * 60 * 1000;
+
+  Config.RELAY_AJAX_TIMEOUT = 5 * 1000;
+
+  return Config;
+
+})();
+
+module.exports = Config;
+
+
+},{}],2:[function(require,module,exports){
+var Config, CryptoStorage, Keys, Nacl;
+
+Config = require('config');
+
+Keys = require('keys');
+
+Nacl = require('nacl');
+
+CryptoStorage = (function() {
+  CryptoStorage.prototype.tag = function(strKey) {
+    return strKey && strKey + this.root;
+  };
+
+  function CryptoStorage(storageKey, r) {
+    this.storageKey = storageKey != null ? storageKey : null;
+    if (r == null) {
+      r = null;
+    }
+    this.root = r ? "." + r + Config._DEF_ROOT : Config._DEF_ROOT;
+    if (!this.storageKey) {
+      this._loadKey();
+    }
+    if (!this.storageKey) {
+      this.newKey();
+    }
+  }
+
+  CryptoStorage.prototype._saveKey = function() {
+    return this._set(Config._SKEY_TAG, this.storageKey.toString());
+  };
+
+  CryptoStorage.prototype._loadKey = function() {
+    var keyStr;
+    keyStr = this._get(Config._SKEY_TAG);
+    if (keyStr) {
+      return this.setKey(Keys.fromString(keyStr));
+    }
+  };
+
+  CryptoStorage.prototype.selfDestruct = function(overseerAuthorized) {
+    if (overseerAuthorized) {
+      return this._localRemove(this.tag(Config._SKEY_TAG));
+    }
+  };
+
+  CryptoStorage.prototype.setKey = function(objStorageKey) {
+    this.storageKey = objStorageKey;
+    return this._saveKey();
+  };
+
+  CryptoStorage.prototype.newKey = function() {
+    return this.setKey(Nacl.makeSecretKey());
+  };
+
+  CryptoStorage.prototype.save = function(strTag, data) {
+    var aCText, n, nonce;
+    if (!(strTag && data)) {
+      return null;
+    }
+    n = Nacl.use();
+    data = n.encode_utf8(JSON.stringify(data));
+    nonce = n.crypto_secretbox_random_nonce();
+    aCText = n.crypto_secretbox(data, nonce, this.storageKey.key);
+    this._set(strTag, aCText.toBase64());
+    this._set(Config._NONCE_TAG + "." + strTag, nonce.toBase64());
+    return true;
+  };
+
+  CryptoStorage.prototype.get = function(strTag) {
+    var aPText, ct, n, nonce;
+    ct = this._get(strTag);
+    if (!ct) {
+      return null;
+    }
+    nonce = this._get(Config._NONCE_TAG + "." + strTag);
+    if (!nonce) {
+      return null;
+    }
+    n = Nacl.use();
+    aPText = n.crypto_secretbox_open(ct.fromBase64(), nonce.fromBase64(), this.storageKey.key);
+    return JSON.parse(n.decode_utf8(aPText));
+  };
+
+  CryptoStorage.prototype.remove = function(strTag) {
+    var i, len, ref, tag;
+    ref = [strTag, Config._NONCE_TAG + "." + strTag];
+    for (i = 0, len = ref.length; i < len; i++) {
+      tag = ref[i];
+      this._localRemove(this.tag(tag));
+    }
+    return true;
+  };
+
+  CryptoStorage.prototype._get = function(strTag) {
+    return this._localGet(this.tag(strTag));
+  };
+
+  CryptoStorage.prototype._set = function(strTag, strData) {
+    if (!(strTag && strData)) {
+      return null;
+    }
+    this._localSet(this.tag(strTag), strData);
+    return strData;
+  };
+
+  CryptoStorage.prototype._localGet = function(str) {
+    return this._storage().get(str) || null;
+  };
+
+  CryptoStorage.prototype._localSet = function(str, data) {
+    return this._storage().set(str, data);
+  };
+
+  CryptoStorage.prototype._localRemove = function(str) {
+    return this._storage().remove(str);
+  };
+
+  CryptoStorage.prototype._storage = function() {
+    if (!CryptoStorage._storageDriver) {
+      CryptoStorage.startStorageSystem();
+    }
+    return CryptoStorage._storageDriver;
+  };
+
+  CryptoStorage._storageDriver = null;
+
+  CryptoStorage.startStorageSystem = function(driver) {
+    if (!driver) {
+      throw new Error('The driver parameter cannot be empty.');
+    }
+    return this._storageDriver = driver;
+  };
+
+  return CryptoStorage;
+
+})();
+
+module.exports = CryptoStorage;
+
+
+},{"config":1,"keys":5,"nacl":9}],3:[function(require,module,exports){
+var KeyRatchet, Nacl;
+
+Nacl = require('nacl');
+
+KeyRatchet = (function() {
+  KeyRatchet.prototype.lastKey = null;
+
+  KeyRatchet.prototype.confirmedKey = null;
+
+  KeyRatchet.prototype.nextKey = null;
+
+  KeyRatchet.prototype._roles = ['lastKey', 'confirmedKey', 'nextKey'];
+
+  function KeyRatchet(id, keyRing, firstKey) {
+    var i, len, ref, s;
+    this.id = id;
+    this.keyRing = keyRing;
+    if (firstKey == null) {
+      firstKey = null;
+    }
+    if (!(this.id && this.keyRing)) {
+      throw new Error('KeyRatchet - missing params');
+    }
+    ref = this._roles;
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      this[s] = this.keyRing.getKey(this.keyTag(s));
+    }
+    if (firstKey) {
+      this.startRatchet(firstKey);
+    }
+  }
+
+  KeyRatchet.prototype.keyTag = function(role) {
+    return role + "_" + this.id;
+  };
+
+  KeyRatchet.prototype.storeKey = function(role) {
+    return this.keyRing.saveKey(this.keyTag(role), this[role]);
+  };
+
+  KeyRatchet.prototype.startRatchet = function(firstKey) {
+    var i, k, len, ref;
+    ref = ['confirmedKey', 'lastKey'];
+    for (i = 0, len = ref.length; i < len; i++) {
+      k = ref[i];
+      if (!this[k]) {
+        this[k] = firstKey;
+        this.storeKey(k);
+      }
+    }
+    if (!this.nextKey) {
+      this.nextKey = Nacl.makeKeyPair();
+      return this.storeKey('nextKey');
+    }
+  };
+
+  KeyRatchet.prototype.pushKey = function(newKey) {
+    var i, len, ref, results, s;
+    this.lastKey = this.confirmedKey;
+    this.confirmedKey = this.nextKey;
+    this.nextKey = newKey;
+    ref = this._roles;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      results.push(this.storeKey(s));
+    }
+    return results;
+  };
+
+  KeyRatchet.prototype.confKey = function(newConfirmedKey) {
+    var i, len, ref, s;
+    if ((this.confirmedKey != null) && this.confirmedKey.equal(newConfirmedKey)) {
+      return false;
+    }
+    this.lastKey = this.confirmedKey;
+    this.confirmedKey = newConfirmedKey;
+    ref = ['lastKey', 'confirmedKey'];
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      this.storeKey(s);
+    }
+    return true;
+  };
+
+  KeyRatchet.prototype.curKey = function() {
+    if (this.confirmedKey) {
+      return this.confirmedKey;
+    }
+    return this.lastKey;
+  };
+
+  KeyRatchet.prototype.h2LastKey = function() {
+    return Nacl.h2(this.lastKey.boxPk);
+  };
+
+  KeyRatchet.prototype.h2ConfirmedKey = function() {
+    return Nacl.h2(this.confirmedKey.boxPk);
+  };
+
+  KeyRatchet.prototype.h2NextKey = function() {
+    return Nacl.h2(this.nextKey.boxPk);
+  };
+
+  KeyRatchet.prototype.keyByHash = function(hash) {
+    var i, len, ref, s;
+    ref = this._roles;
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      if (Nacl.h2(this[s].boxPk) === hash) {
+        return this[s];
+      }
+    }
+  };
+
+  KeyRatchet.prototype.isNextKeyHash = function(hash) {
+    return this.h2NextKey().equal(hash);
+  };
+
+  KeyRatchet.prototype.toStr = function() {
+    return JSON.stringify(this).toBase64();
+  };
+
+  KeyRatchet.prototype.fromStr = function(str) {
+    return Utils.extend(this, JSON.parse(str.fromBase64()));
+  };
+
+  KeyRatchet.prototype.selfDestruct = function(overseerAuthorized) {
+    var i, len, ref, results, s;
+    if (!overseerAuthorized) {
+      return null;
+    }
+    ref = this._roles;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      results.push(this.keyRing.deleteKey(this.keyTag(s)));
+    }
+    return results;
+  };
+
+  return KeyRatchet;
+
+})();
+
+module.exports = KeyRatchet;
+
+if (window.__CRYPTO_DEBUG) {
+  window.KeyRatchet = KeyRatchet;
+}
+
+
+},{"nacl":9}],4:[function(require,module,exports){
+var Config, CryptoStorage, KeyRing, Keys, Nacl, Utils,
+  hasProp = {}.hasOwnProperty;
+
+Config = require('config');
+
+CryptoStorage = require('crypto_storage');
+
+Keys = require('keys');
+
+Nacl = require('nacl');
+
+Utils = require('utils');
+
+KeyRing = (function() {
+  function KeyRing(id, strMasterKey) {
+    var key;
+    if (strMasterKey == null) {
+      strMasterKey = null;
+    }
+    if (strMasterKey) {
+      key = Keys.fromString(strMasterKey);
+      this.storage = new CryptoStorage(key, id);
+    }
+    if (!this.storage) {
+      this.storage = new CryptoStorage(null, id);
+    }
+    this._ensureKeys();
+  }
+
+  KeyRing.prototype._ensureKeys = function() {
+    this._loadCommKey();
+    return this._loadGuestKeys();
+  };
+
+  KeyRing.prototype._loadCommKey = function() {
+    this.commKey = this.getKey('comm_key');
+    if (this.commKey) {
+      return;
+    }
+    this.commKey = Nacl.makeKeyPair();
+    return this.saveKey('comm_key', this.commKey);
+  };
+
+  KeyRing.prototype._loadGuestKeys = function() {
+    var j, len, r, ref, results;
+    this.registry = this.storage.get('guest_registry') || [];
+    this.guestKeys = {};
+    ref = this.registry;
+    results = [];
+    for (j = 0, len = ref.length; j < len; j++) {
+      r = ref[j];
+      results.push(this.guestKeys[r] = this.storage.get("guest[" + r + "]"));
+    }
+    return results;
+  };
+
+  KeyRing.prototype.commFromSeed = function(seed) {
+    this.commKey = Nacl.fromSeed(Nacl.encode_utf8(seed));
+    return this.storage.save('comm_key', this.commKey.toString());
+  };
+
+  KeyRing.prototype.commFromSecKey = function(rawSecKey) {
+    this.commKey = Nacl.fromSecretKey(rawSecKey);
+    return this.storage.save('comm_key', this.commKey.toString());
+  };
+
+  KeyRing.prototype.tagByHpk = function(hpk) {
+    var k, ref, v;
+    ref = this.guestKeys;
+    for (k in ref) {
+      if (!hasProp.call(ref, k)) continue;
+      v = ref[k];
+      if (hpk === Nacl.h2(v.fromBase64()).toBase64()) {
+        return k;
+      }
+    }
+  };
+
+  KeyRing.prototype.getMasterKey = function() {
+    return this.storage.storageKey.key2str('key');
+  };
+
+  KeyRing.prototype.getPubCommKey = function() {
+    return this.commKey.strPubKey();
+  };
+
+  KeyRing.prototype.saveKey = function(tag, key) {
+    this.storage.save(tag, key.toString());
+    return key;
+  };
+
+  KeyRing.prototype.getKey = function(tag) {
+    var k;
+    k = this.storage.get(tag);
+    if (k) {
+      return Keys.fromString(k);
+    } else {
+      return null;
+    }
+  };
+
+  KeyRing.prototype.deleteKey = function(tag) {
+    return this.storage.remove(tag);
+  };
+
+  KeyRing.prototype._addRegistry = function(strGuestTag) {
+    if (!strGuestTag) {
+      return null;
+    }
+    if (!(this.registry.indexOf(strGuestTag) > -1)) {
+      return this.registry.push(strGuestTag);
+    }
+  };
+
+  KeyRing.prototype._saveNewGuest = function(tag, pk) {
+    if (!(tag && pk)) {
+      return null;
+    }
+    this.storage.save("guest[" + tag + "]", pk);
+    return this.storage.save('guest_registry', this.registry);
+  };
+
+  KeyRing.prototype._removeGuestRecord = function(tag) {
+    var i;
+    if (!tag) {
+      return null;
+    }
+    this.storage.remove("guest[" + tag + "]");
+    i = this.registry.indexOf(tag);
+    if (i > -1) {
+      this.registry.splice(i, 1);
+      return this.storage.save('guest_registry', this.registry);
+    }
+  };
+
+  KeyRing.prototype.addGuest = function(strGuestTag, b64_pk) {
+    if (!(strGuestTag && b64_pk)) {
+      return null;
+    }
+    b64_pk = b64_pk.trimLines();
+    this._addRegistry(strGuestTag);
+    this.guestKeys[strGuestTag] = b64_pk;
+    return this._saveNewGuest(strGuestTag, b64_pk);
+  };
+
+  KeyRing.prototype.addTempGuest = function(strGuestTag, strPubKey) {
+    if (!(strGuestTag && strPubKey)) {
+      return null;
+    }
+    strPubKey = strPubKey.trimLines();
+    this.guestKeys[strGuestTag] = strPubKey;
+    return Utils.delay(Config.RELAY_SESSION_TIMEOUT, (function(_this) {
+      return function() {
+        return delete _this.guestKeys[strGuestTag];
+      };
+    })(this));
+  };
+
+  KeyRing.prototype.removeGuest = function(strGuestTag) {
+    if (!(strGuestTag && this.guestKeys[strGuestTag])) {
+      return null;
+    }
+    this.guestKeys[strGuestTag] = null;
+    delete this.guestKeys[strGuestTag];
+    return this._removeGuestRecord(strGuestTag);
+  };
+
+  KeyRing.prototype.getGuestKey = function(strGuestTag) {
+    if (!(strGuestTag && this.guestKeys[strGuestTag])) {
+      return null;
+    }
+    return new Keys({
+      boxPk: this.getGuestRecord(strGuestTag).fromBase64()
+    });
+  };
+
+  KeyRing.prototype.getGuestRecord = function(strGuestTag) {
+    if (!(strGuestTag && this.guestKeys[strGuestTag])) {
+      return null;
+    }
+    return this.guestKeys[strGuestTag];
+  };
+
+  KeyRing.prototype.selfDestruct = function(overseerAuthorized) {
+    var g, j, len, rcopy;
+    if (!overseerAuthorized) {
+      return null;
+    }
+    rcopy = this.registry.slice();
+    for (j = 0, len = rcopy.length; j < len; j++) {
+      g = rcopy[j];
+      this.removeGuest(g);
+    }
+    this.storage.remove('guest_registry');
+    this.storage.remove('comm_key');
+    return this.storage.selfDestruct(overseerAuthorized);
+  };
+
+  return KeyRing;
+
+})();
+
+module.exports = KeyRing;
+
+if (window.__CRYPTO_DEBUG) {
+  window.KeyRing = KeyRing;
+}
+
+
+},{"config":1,"crypto_storage":2,"keys":5,"nacl":9,"utils":13}],5:[function(require,module,exports){
+var Keys, Utils,
+  hasProp = {}.hasOwnProperty;
+
+Utils = require('utils');
+
+Keys = (function() {
+  function Keys(hashKeys) {
+    if (!hashKeys) {
+      return;
+    }
+    Utils.extend(this, hashKeys);
+  }
+
+  Keys.prototype.toString = function() {
+    return JSON.stringify(this.constructor.keys2str(this));
+  };
+
+  Keys.fromString = function(strKeys) {
+    if (!strKeys) {
+      return null;
+    }
+    return this.str2keys(JSON.parse(strKeys.trimLines()));
+  };
+
+  Keys.prototype.key2str = function(strName) {
+    if (!(strName && (this[strName] != null))) {
+      return null;
+    }
+    return this[strName].toBase64();
+  };
+
+  Keys.prototype.strPubKey = function() {
+    return this.boxPk.toBase64();
+  };
+
+  Keys.prototype.strSecKey = function() {
+    return this.boxSk.toBase64();
+  };
+
+  Keys.prototype.equal = function(k) {
+    if (this.strPubKey() !== k.strPubKey()) {
+      return false;
+    }
+    if ((this.boxSk != null) !== (k.boxSk != null)) {
+      return false;
+    }
+    if (this.boxSk != null) {
+      return this.strSecKey() === k.strSecKey();
+    }
+    return true;
+  };
+
+  Keys.keys2str = function(objKey) {
+    var k, r, v;
+    r = new Keys();
+    for (k in objKey) {
+      if (!hasProp.call(objKey, k)) continue;
+      v = objKey[k];
+      r[k] = v.toBase64();
+    }
+    return r;
+  };
+
+  Keys.str2keys = function(strObj) {
+    var k, r, v;
+    r = new Keys();
+    for (k in strObj) {
+      if (!hasProp.call(strObj, k)) continue;
+      v = strObj[k];
+      r[k] = v.fromBase64();
+    }
+    return r;
+  };
+
+  return Keys;
+
+})();
+
+module.exports = Keys;
+
+if (window.__CRYPTO_DEBUG) {
+  window.Keys = Keys;
+}
+
+
+},{"utils":13}],6:[function(require,module,exports){
+var Config, KeyRing, MailBox, Nacl, Utils;
+
+Config = require('config');
+
+KeyRing = require('keyring');
+
+Nacl = require('nacl');
+
+Utils = require('utils');
+
+MailBox = (function() {
+  function MailBox(identity, strMasterKey) {
+    this.identity = identity;
+    if (strMasterKey == null) {
+      strMasterKey = null;
+    }
+    this.keyRing = new KeyRing(this.identity, strMasterKey);
+    this.sessionKeys = {};
+    this.sessionRelay = {};
+    this.sessionTimeout = {};
+  }
+
+  MailBox.fromSeed = function(seed, id, strMasterKey) {
+    var mbx;
+    if (id == null) {
+      id = seed;
+    }
+    if (strMasterKey == null) {
+      strMasterKey = null;
+    }
+    mbx = new MailBox(id, strMasterKey);
+    mbx.keyRing.commFromSeed(seed);
+    mbx._hpk = null;
+    return mbx;
+  };
+
+  MailBox.fromSecKey = function(secKey, id, strMasterKey) {
+    var mbx;
+    if (strMasterKey == null) {
+      strMasterKey = null;
+    }
+    mbx = new MailBox(id, strMasterKey);
+    mbx.keyRing.commFromSecKey(secKey);
+    mbx._hpk = null;
+    return mbx;
+  };
+
+  MailBox.prototype.hpk = function() {
+    if (this._hpk) {
+      return this._hpk;
+    }
+    return this._hpk = Nacl.h2(this.keyRing.commKey.boxPk);
+  };
+
+  MailBox.prototype.getPubCommKey = function() {
+    return this.keyRing.getPubCommKey();
+  };
+
+  MailBox.prototype.createSessionKey = function(sess_id) {
+    if (!sess_id) {
+      throw new Error('createSessionKey - no sess_id');
+    }
+    if (this.sessionKeys[sess_id] != null) {
+      return this.sessionKeys[sess_id];
+    }
+    this.sessionKeys[sess_id] = Nacl.makeKeyPair();
+    this.sessionTimeout[sess_id] = Utils.delay(Config.RELAY_SESSION_TIMEOUT, (function(_this) {
+      return function() {
+        _this.sessionKeys[sess_id] = null;
+        delete _this.sessionKeys[sess_id];
+        _this.sessionTimeout[sess_id] = null;
+        delete _this.sessionTimeout[sess_id];
+        _this.sessionRelay[sess_id] = null;
+        return delete _this.sessionRelay[sess_id];
+      };
+    })(this));
+    return this.sessionKeys[sess_id];
+  };
+
+  MailBox.prototype.rawEncodeMessage = function(msg, pkTo, skFrom) {
+    var nonce, r;
+    if (!((msg != null) && (pkTo != null) && (skFrom != null))) {
+      throw new Error('rawEncodeMessage: missing params');
+    }
+    nonce = this._makeNonce();
+    return r = {
+      nonce: nonce.toBase64(),
+      ctext: Nacl.use().crypto_box(this._parseData(msg), nonce, pkTo, skFrom).toBase64()
+    };
+  };
+
+  MailBox.prototype.rawDecodeMessage = function(nonce, ctext, pkFrom, skTo) {
+    var NC;
+    if (!((nonce != null) && (ctext != null) && (pkFrom != null) && (skTo != null))) {
+      throw new Error('rawEncodeMessage: missing params');
+    }
+    NC = Nacl.use();
+    return JSON.parse(NC.decode_utf8(NC.crypto_box_open(ctext, nonce, pkFrom, skTo)));
+  };
+
+  MailBox.prototype.encodeMessage = function(guest, msg, session, skTag) {
+    var gpk, sk;
+    if (session == null) {
+      session = false;
+    }
+    if (skTag == null) {
+      skTag = null;
+    }
+    if (!((guest != null) && (msg != null))) {
+      throw new Error('encodeMessage: missing params');
+    }
+    if ((gpk = this._gPk(guest)) == null) {
+      throw new Error("encodeMessage: don't know guest " + guest);
+    }
+    sk = this._getSecretKey(guest, session, skTag);
+    return this.rawEncodeMessage(msg, gpk, sk);
+  };
+
+  MailBox.prototype.decodeMessage = function(guest, nonce, ctext, session, skTag) {
+    var gpk, sk;
+    if (session == null) {
+      session = false;
+    }
+    if (skTag == null) {
+      skTag = null;
+    }
+    if (!((guest != null) && (nonce != null) && (ctext != null))) {
+      throw new Error('decodeMessage: missing params');
+    }
+    if ((gpk = this._gPk(guest)) == null) {
+      throw new Error("decodeMessage: don't know guest " + guest);
+    }
+    sk = this._getSecretKey(guest, session, skTag);
+    return this.rawDecodeMessage(nonce.fromBase64(), ctext.fromBase64(), gpk, sk);
+  };
+
+  MailBox.prototype.connectToRelay = function(relay) {
+    return relay.openConnection().then((function(_this) {
+      return function() {
+        return relay.connectMailbox(_this).then(function() {
+          return _this.lastRelay = relay;
+        });
+      };
+    })(this));
+  };
+
+  MailBox.prototype.sendToVia = function(guest, relay, msg) {
+    return this.connectToRelay(relay).then((function(_this) {
+      return function() {
+        return _this.relaySend(guest, msg, relay);
+      };
+    })(this));
+  };
+
+  MailBox.prototype.getRelayMessages = function(relay) {
+    return this.connectToRelay(relay).then((function(_this) {
+      return function() {
+        return _this.relayMessages();
+      };
+    })(this));
+  };
+
+  MailBox.prototype.relayCount = function() {
+    if (!this.lastRelay) {
+      throw new Error('relayCount - no open relay');
+    }
+    return this.lastRelay.count(this).then((function(_this) {
+      return function() {
+        return _this.count = parseInt(_this.lastRelay.result);
+      };
+    })(this));
+  };
+
+  MailBox.prototype.relaySend = function(guest, msg) {
+    var encMsg;
+    if (!this.lastRelay) {
+      throw new Error('mbx: relaySend - no open relay');
+    }
+    encMsg = this.encodeMessage(guest, msg);
+    this.lastMsg = encMsg;
+    return this.lastRelay.upload(this, Nacl.h2(this._gPk(guest)), encMsg);
+  };
+
+  MailBox.prototype.relayMessages = function() {
+    if (!this.lastRelay) {
+      throw new Error('relayMessages - no open relay');
+    }
+    return this.lastRelay.download(this).then((function(_this) {
+      return function() {
+        var emsg, j, len, ref, results, tag;
+        _this.lastDownload = [];
+        ref = _this.lastRelay.result;
+        results = [];
+        for (j = 0, len = ref.length; j < len; j++) {
+          emsg = ref[j];
+          if ((tag = _this.keyRing.tagByHpk(emsg.from))) {
+            emsg['fromTag'] = tag;
+            emsg['msg'] = _this.decodeMessage(tag, emsg.nonce, emsg.data);
+            if (emsg['msg'] != null) {
+              delete emsg.data;
+            }
+          }
+          results.push(_this.lastDownload.push(emsg));
+        }
+        return results;
+      };
+    })(this));
+  };
+
+  MailBox.prototype.relayNonceList = function() {
+    if (!this.lastDownload) {
+      throw new Error('relayNonceList - no metadata');
+    }
+    return Utils.map(this.lastDownload, function(i) {
+      return i.nonce;
+    });
+  };
+
+  MailBox.prototype.relayDelete = function(list) {
+    if (!this.lastRelay) {
+      throw new Error('relayDelete - no open relay');
+    }
+    return this.lastRelay["delete"](this, list);
+  };
+
+  MailBox.prototype.clean = function(r) {
+    return this.getRelayMessages(r).then((function(_this) {
+      return function() {
+        return _this.relayDelete(_this.relayNonceList());
+      };
+    })(this));
+  };
+
+  MailBox.prototype.selfDestruct = function(overseerAuthorized) {
+    if (!overseerAuthorized) {
+      return null;
+    }
+    return this.keyRing.selfDestruct(overseerAuthorized);
+  };
+
+  MailBox.prototype._gKey = function(strId) {
+    if (!strId) {
+      return null;
+    }
+    return this.keyRing.getGuestKey(strId);
+  };
+
+  MailBox.prototype._gPk = function(strId) {
+    var ref;
+    if (!strId) {
+      return null;
+    }
+    return (ref = this._gKey(strId)) != null ? ref.boxPk : void 0;
+  };
+
+  MailBox.prototype._gHpk = function(strId) {
+    if (!strId) {
+      return null;
+    }
+    return Nacl.h2(this._gPk(strId));
+  };
+
+  MailBox.prototype._getSecretKey = function(guest, session, skTag) {
+    if (!skTag) {
+      if (session) {
+        return this.sessionKeys[guest].boxSk;
+      } else {
+        return this.keyRing.commKey.boxSk;
+      }
+    } else {
+      return this._gPk(skTag);
+    }
+  };
+
+  MailBox.prototype._parseData = function(data) {
+    if (Utils.type(data) === 'Uint8Array') {
+      return data;
+    }
+    return Nacl.use().encode_utf8(JSON.stringify(data));
+  };
+
+  MailBox.prototype._makeNonce = function(time) {
+    var bytes, i, j, k, nonce, ref;
+    if (time == null) {
+      time = parseInt(Date.now() / 1000);
+    }
+    nonce = Nacl.use().crypto_box_random_nonce();
+    if (!((nonce != null) && nonce.length === 24)) {
+      throw new Error('RNG failed, try again?');
+    }
+    bytes = Utils.itoa(time);
+    for (i = j = 0; j <= 7; i = ++j) {
+      nonce[i] = 0;
+    }
+    for (i = k = 0, ref = bytes.length - 1; 0 <= ref ? k <= ref : k >= ref; i = 0 <= ref ? ++k : --k) {
+      nonce[8 - bytes.length + i] = bytes[i];
+    }
+    return nonce;
+  };
+
+  return MailBox;
+
+})();
+
+module.exports = MailBox;
+
+if (window.__CRYPTO_DEBUG) {
+  window.MailBox = MailBox;
+}
+
+
+},{"config":1,"keyring":4,"nacl":9,"utils":13}],7:[function(require,module,exports){
+module.exports = {
+  Utils: require('utils'),
+  Mixins: require('mixins'),
+  Nacl: require('nacl'),
+  Keys: require('keys'),
+  SimpleStorageDriver: require('test_driver'),
+  CryptoStorage: require('crypto_storage'),
+  KeyRing: require('keyring'),
+  MailBox: require('mailbox'),
+  Relay: require('relay'),
+  RachetBox: require('rachetbox'),
+  Config: require('config'),
+  startStorageSystem: function(storeImpl) {
+    return this.CryptoStorage.startStorageSystem(storeImpl);
+  },
+  setAjaxImpl: function(ajaxImpl) {
+    return this.Utils.setAjaxImpl(ajaxImpl);
+  }
+};
+
+if (window) {
+  window.glow = module.exports;
+}
+
+
+},{"config":1,"crypto_storage":2,"keyring":4,"keys":5,"mailbox":6,"mixins":8,"nacl":9,"rachetbox":10,"relay":11,"test_driver":12,"utils":13}],8:[function(require,module,exports){
+var C, Utils, j, len, ref;
+
+Utils = require('utils');
+
+Utils.include(String, {
+  toCodeArray: function() {
+    var j, len, results, s;
+    results = [];
+    for (j = 0, len = this.length; j < len; j++) {
+      s = this[j];
+      results.push(s.charCodeAt());
+    }
+    return results;
+  },
+  toUTF8: function() {
+    return unescape(encodeURIComponent(this));
+  },
+  fromUTF8: function() {
+    return decodeURIComponent(escape(this));
+  },
+  toUint8Array: function() {
+    return new Uint8Array(this.toUTF8().toCodeArray());
+  },
+  toUint8ArrayRaw: function() {
+    return new Uint8Array(this.toCodeArray());
+  },
+  fromBase64: function() {
+    return new Uint8Array((atob(this)).toCodeArray());
+  },
+  trimLines: function() {
+    return this.replace('\r\n', '').replace('\n', '').replace('\r', '');
+  }
+});
+
+ref = [Array, Uint8Array, Uint16Array];
+for (j = 0, len = ref.length; j < len; j++) {
+  C = ref[j];
+  Utils.include(C, {
+    fromCharCodes: function() {
+      var c;
+      return ((function() {
+        var k, len1, results;
+        results = [];
+        for (k = 0, len1 = this.length; k < len1; k++) {
+          c = this[k];
+          results.push(String.fromCharCode(c));
+        }
+        return results;
+      }).call(this)).join('');
+    },
+    toBase64: function() {
+      return btoa(this.fromCharCodes());
+    },
+    xorWith: function(a) {
+      var c, i;
+      if (this.length !== a.length) {
+        return null;
+      }
+      return new Uint8Array((function() {
+        var k, len1, results;
+        results = [];
+        for (i = k = 0, len1 = this.length; k < len1; i = ++k) {
+          c = this[i];
+          results.push(c ^ a[i]);
+        }
+        return results;
+      }).call(this));
+    },
+    equal: function(a2) {
+      var i, k, len1, v;
+      if (this.length !== a2.length) {
+        return false;
+      }
+      for (i = k = 0, len1 = this.length; k < len1; i = ++k) {
+        v = this[i];
+        if (v !== a2[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+  });
+}
+
+Utils.include(Uint8Array, {
+  concat: function(anotherArray) {
+    var tmp;
+    tmp = new Uint8Array(this.byteLength + anotherArray.byteLength);
+    tmp.set(new Uint8Array(this), 0);
+    tmp.set(anotherArray, this.byteLength);
+    return tmp;
+  },
+  fillWith: function(val) {
+    var i, k, len1, v;
+    for (i = k = 0, len1 = this.length; k < len1; i = ++k) {
+      v = this[i];
+      this[i] = val;
+    }
+    return this;
+  }
+});
+
+module.exports = {};
+
+
+},{"utils":13}],9:[function(require,module,exports){
+var Keys, Nacl, Utils, js_nacl;
+
+if (typeof nacl_factory !== "undefined" && nacl_factory !== null) {
+  js_nacl = nacl_factory;
+} else {
+  js_nacl = require('js-nacl');
+}
+
+Keys = require('keys');
+
+Utils = require('utils');
+
+Nacl = (function() {
+  function Nacl() {}
+
+  Nacl.HEAP_SIZE = Math.pow(2, 23);
+
+  Nacl._instance = null;
+
+  Nacl._unloadTimer = null;
+
+  Nacl.use = function() {
+    if (this._unloadTimer) {
+      clearTimeout(this._unloadTimer);
+    }
+    this._unloadTimer = setTimeout((function() {
+      return Nacl.unload();
+    }), 15 * 1000);
+    if (!window.__naclInstance) {
+      window.__naclInstance = js_nacl.instantiate(this.HEAP_SIZE);
+    }
+    return window.__naclInstance;
+  };
+
+  Nacl.unload = function() {
+    this._unloadTimer = null;
+    window.__naclInstance = null;
+    return delete window.__naclInstance;
+  };
+
+  Nacl.makeSecretKey = function() {
+    return new Keys({
+      key: this.use().random_bytes(this.use().crypto_secretbox_KEYBYTES)
+    });
+  };
+
+  Nacl.random = function(size) {
+    if (size == null) {
+      size = 32;
+    }
+    return this.use().random_bytes(size);
+  };
+
+  Nacl.makeKeyPair = function() {
+    return new Keys(this.use().crypto_box_keypair());
+  };
+
+  Nacl.fromSecretKey = function(raw_sk) {
+    return new Keys(this.use().crypto_box_keypair_from_raw_sk(raw_sk));
+  };
+
+  Nacl.fromSeed = function(seed) {
+    return new Keys(this.use().crypto_box_keypair_from_seed(seed));
+  };
+
+  Nacl.sha256 = function(data) {
+    return this.use().crypto_hash_sha256(data);
+  };
+
+  Nacl.to_hex = function(data) {
+    return this.use().to_hex(data);
+  };
+
+  Nacl.from_hex = function(data) {
+    return this.use().from_hex(data);
+  };
+
+  Nacl.encode_utf8 = function(data) {
+    return this.use().encode_utf8(data);
+  };
+
+  Nacl.decode_utf8 = function(data) {
+    return this.use().decode_utf8(data);
+  };
+
+  Nacl.h2 = function(str) {
+    var tmp;
+    if (Utils.type(str) === 'String') {
+      str = str.toUint8ArrayRaw();
+    }
+    tmp = new Uint8Array(32 + str.length);
+    tmp.fillWith(0);
+    tmp.set(str, 32);
+    return this.sha256(this.sha256(tmp));
+  };
+
+  Nacl.h2_64 = function(b64str) {
+    return Nacl.h2(b64str.fromBase64()).toBase64();
+  };
+
+  return Nacl;
+
+})();
+
+module.exports = Nacl;
+
+if (window.__CRYPTO_DEBUG) {
+  window.Nacl = Nacl;
+}
+
+
+},{"js-nacl":undefined,"keys":5,"utils":13}],10:[function(require,module,exports){
+var KeyRatchet, KeyRing, Keys, Mailbox, Nacl, RatchetBox, Utils,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Utils = require('utils');
+
+Nacl = require('nacl');
+
+Keys = require('keys');
+
+KeyRing = require('keyring');
+
+KeyRatchet = require('keyratchet');
+
+Mailbox = require('mailbox');
+
+RatchetBox = (function(superClass) {
+  extend(RatchetBox, superClass);
+
+  function RatchetBox() {
+    return RatchetBox.__super__.constructor.apply(this, arguments);
+  }
+
+  RatchetBox.prototype._loadRatchets = function(guest) {
+    var gHpk;
+    gHpk = this._gHpk(guest).toBase64();
+    this.krLocal = new KeyRatchet("local_" + gHpk + "_for_" + (this.hpk().toBase64()), this.keyRing, this.keyRing.commKey);
+    return this.krGuest = new KeyRatchet("guest_" + gHpk + "_for_" + (this.hpk().toBase64()), this.keyRing, this.keyRing.getGuestKey(guest));
+  };
+
+  RatchetBox.prototype.relaySend = function(guest, m) {
+    var encMsg, msg;
+    if (!this.lastRelay) {
+      throw new Error('rbx: relaySend - no open relay');
+    }
+    if (!(guest && m)) {
+      throw new Error('rbx: relaySend - missing params');
+    }
+    this._loadRatchets(guest);
+    msg = {
+      org_msg: m
+    };
+    if (m.got_key == null) {
+      msg['nextKey'] = this.krLocal.nextKey.strPubKey();
+    }
+    if (m.got_key == null) {
+      encMsg = this.rawEncodeMessage(msg, this.krGuest.confirmedKey.boxPk, this.krLocal.confirmedKey.boxSk);
+      this.lastMsg = encMsg;
+    } else {
+      encMsg = this.rawEncodeMessage(msg, this.krGuest.lastKey.boxPk, this.krLocal.confirmedKey.boxSk);
+    }
+    return this.lastRelay.upload(this, Nacl.h2(this._gPk(guest)), encMsg);
+  };
+
+  RatchetBox.prototype._tryKeypair = function(nonce, ctext, pk, sk) {
+    var e, error;
+    try {
+      return this.rawDecodeMessage(nonce.fromBase64(), ctext.fromBase64(), pk, sk);
+    } catch (error) {
+      e = error;
+      return null;
+    }
+  };
+
+  RatchetBox.prototype.decodeMessage = function(guest, nonce, ctext, session, skTag) {
+    var i, j, keyPairs, kp, len, r;
+    if (session == null) {
+      session = false;
+    }
+    if (skTag == null) {
+      skTag = null;
+    }
+    if (session) {
+      return RatchetBox.__super__.decodeMessage.call(this, guest, nonce, ctext, session, skTag);
+    }
+    if (!((guest != null) && (nonce != null) && (ctext != null))) {
+      throw new Error('decodeMessage: missing params');
+    }
+    this._loadRatchets(guest);
+    keyPairs = [[this.krGuest.confirmedKey.boxPk, this.krLocal.confirmedKey.boxSk], [this.krGuest.lastKey.boxPk, this.krLocal.lastKey.boxSk], [this.krGuest.confirmedKey.boxPk, this.krLocal.lastKey.boxSk], [this.krGuest.lastKey.boxPk, this.krLocal.confirmedKey.boxSk]];
+    for (i = j = 0, len = keyPairs.length; j < len; i = ++j) {
+      kp = keyPairs[i];
+      r = this._tryKeypair(nonce, ctext, kp[0], kp[1]);
+      if (r != null) {
+        return r;
+      }
+    }
+    console.log('RatchetBox decryption failed: message from unknown guest or ratchet out of sync');
+    return null;
+  };
+
+  RatchetBox.prototype.relayMessages = function() {
+    return RatchetBox.__super__.relayMessages.call(this).then((function(_this) {
+      return function() {
+        var j, len, m, ref, ref1, ref2, ref3, sendConfs, sendNext;
+        sendConfs = [];
+        ref = _this.lastDownload;
+        for (j = 0, len = ref.length; j < len; j++) {
+          m = ref[j];
+          if (!m.fromTag) {
+            continue;
+          }
+          _this._loadRatchets(m.fromTag);
+          if (((ref1 = m.msg) != null ? ref1.nextKey : void 0) != null) {
+            if (_this.krGuest.confKey(new Keys({
+              boxPk: m.msg.nextKey.fromBase64()
+            }))) {
+              sendConfs.push({
+                toTag: m.fromTag,
+                key: m.msg.nextKey,
+                msg: {
+                  got_key: Nacl.h2_64(m.msg.nextKey)
+                }
+              });
+            }
+          }
+          if (((ref2 = m.msg) != null ? (ref3 = ref2.org_msg) != null ? ref3.got_key : void 0 : void 0) != null) {
+            m.msg = m.msg.org_msg;
+            if (_this.krLocal.isNextKeyHash(m.msg.got_key.fromBase64())) {
+              _this.krLocal.pushKey(Nacl.makeKeyPair());
+            }
+            m.msg = null;
+          }
+          if (m.msg != null) {
+            m.msg = m.msg.org_msg;
+          }
+        }
+        sendNext = function() {
+          var sc;
+          if (sendConfs.length > 0) {
+            sc = sendConfs.shift();
+            return _this.relaySend(sc.toTag, sc.msg).then(function() {
+              return sendNext();
+            });
+          }
+        };
+        return sendNext();
+      };
+    })(this));
+  };
+
+  RatchetBox.prototype.selfDestruct = function(overseerAuthorized, withRatchet) {
+    var guest, j, len, ref;
+    if (withRatchet == null) {
+      withRatchet = false;
+    }
+    if (!overseerAuthorized) {
+      return;
+    }
+    if (withRatchet) {
+      ref = this.keyRing.registry;
+      for (j = 0, len = ref.length; j < len; j++) {
+        guest = ref[j];
+        this._loadRatchets(guest);
+        this.krLocal.selfDestruct(withRatchet);
+        this.krGuest.selfDestruct(withRatchet);
+      }
+    }
+    return RatchetBox.__super__.selfDestruct.call(this, overseerAuthorized);
+  };
+
+  return RatchetBox;
+
+})(Mailbox);
+
+module.exports = RatchetBox;
+
+if (window.__CRYPTO_DEBUG) {
+  window.RatchetBox = RatchetBox;
+}
+
+
+},{"keyratchet":3,"keyring":4,"keys":5,"mailbox":6,"nacl":9,"utils":13}],11:[function(require,module,exports){
+var Config, Keys, Nacl, Relay, Utils,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+Config = require('config');
+
+Keys = require('keys');
+
+Nacl = require('nacl');
+
+Utils = require('utils');
+
+Relay = (function() {
+  function Relay(url) {
+    this.url = url != null ? url : null;
+    this._ajax = bind(this._ajax, this);
+    this._resetState();
+    this.lastError = null;
+    this.RELAY_COMMANDS = ['count', 'upload', 'download', 'delete'];
+  }
+
+  Relay.prototype.openConnection = function() {
+    return this.getServerToken().then((function(_this) {
+      return function() {
+        return _this.getServerKey();
+      };
+    })(this));
+  };
+
+  Relay.prototype.getServerToken = function() {
+    if (!this.url) {
+      throw new Error('getServerToken - no url');
+    }
+    this.lastError = null;
+    if (!this.clientToken) {
+      this.clientToken = Nacl.random(Config.RELAY_TOKEN_LEN);
+    }
+    if (this.clientToken && this.clientToken.length !== Config.RELAY_TOKEN_LEN) {
+      throw new Error("Token must be " + Config.RELAY_TOKEN_LEN + " bytes");
+    }
+    return this._ajax('start_session', this.clientToken.toBase64()).then((function(_this) {
+      return function(data) {
+        var lines;
+        lines = _this._processData(data);
+        _this.relayToken = lines[0].fromBase64();
+        _this.diff = lines.length === 2 ? parseInt(lines[1]) : 0;
+        _this._scheduleExpireSession(Config.RELAY_TOKEN_TIMEOUT);
+        if (_this.diff > 4) {
+          console.log("Relay " + _this.url + " requested difficulty " + _this.diff + ". Session handshake may take longer.");
+        }
+        if (_this.diff > 16) {
+          return console.log("Attempting handshake at difficulty " + _this.diff + "! This may take a while");
+        }
+      };
+    })(this));
+  };
+
+  Relay.prototype.getServerKey = function() {
+    var handshake, nonce, sessionHandshake;
+    if (!(this.url && this.clientToken && this.relayToken)) {
+      throw new Error('getServerKey - missing params');
+    }
+    this.lastError = null;
+    this.h2ClientToken = Nacl.h2(this.clientToken).toBase64();
+    handshake = this.clientToken.concat(this.relayToken);
+    if (this.diff === 0) {
+      sessionHandshake = Nacl.h2(handshake).toBase64();
+    } else {
+      nonce = Nacl.random(32);
+      while (!Utils.arrayZeroBits(Nacl.h2(handshake.concat(nonce)), this.diff)) {
+        nonce = Nacl.random(32);
+      }
+      sessionHandshake = nonce.toBase64();
+    }
+    return this._ajax('verify_session', this.h2ClientToken + "\r\n" + sessionHandshake + "\r\n").then((function(_this) {
+      return function(d) {
+        var relayPk;
+        relayPk = d.fromBase64();
+        _this.relayKey = new Keys({
+          boxPk: relayPk
+        });
+        return _this.online = true;
+      };
+    })(this));
+  };
+
+  Relay.prototype.connectMailbox = function(mbx) {
+    var clientTemp, h2Sign, inner, maskedClientTempPk, outer, relayId, sign;
+    if (!((mbx != null) && this.online && (this.relayKey != null) && (this.url != null))) {
+      throw new Error('connectMailbox - missing params');
+    }
+    this.lastError = null;
+    relayId = "relay_" + this.url;
+    clientTemp = mbx.createSessionKey(relayId).boxPk;
+    mbx.keyRing.addTempGuest(relayId, this.relayKey.strPubKey());
+    delete this.relayKey;
+    maskedClientTempPk = clientTemp.toBase64();
+    sign = clientTemp.concat(this.relayToken).concat(this.clientToken);
+    h2Sign = Nacl.h2(sign);
+    inner = mbx.encodeMessage(relayId, h2Sign);
+    inner['pub_key'] = mbx.keyRing.getPubCommKey();
+    outer = mbx.encodeMessage("relay_" + this.url, inner, true);
+    return this._ajax('prove', (this.h2ClientToken + "\r\n") + (maskedClientTempPk + "\r\n") + (outer.nonce + "\r\n") + ("" + outer.ctext)).then((function(_this) {
+      return function(d) {};
+    })(this));
+  };
+
+  Relay.prototype.runCmd = function(cmd, mbx, params) {
+    var data, message;
+    if (params == null) {
+      params = null;
+    }
+    if (!((cmd != null) && (mbx != null))) {
+      throw new Error('runCmd - missing params');
+    }
+    if (indexOf.call(this.RELAY_COMMANDS, cmd) < 0) {
+      throw new Error("Relay " + this.url + " doesn't support " + cmd);
+    }
+    data = {
+      cmd: cmd
+    };
+    if (params) {
+      data = Utils.extend(data, params);
+    }
+    message = mbx.encodeMessage("relay_" + this.url, data, true);
+    return this._ajax('command', ((mbx.hpk().toBase64()) + "\r\n") + (message.nonce + "\r\n") + ("" + message.ctext)).then((function(_this) {
+      return function(d) {
+        if (cmd === 'upload') {
+          return;
+        }
+        if (d == null) {
+          throw new Error(_this.url + " - " + cmd + " error");
+        }
+        if (cmd === 'count' || cmd === 'download') {
+          return _this.result = _this._processResponse(d, mbx, cmd);
+        } else {
+          return _this.result = JSON.parse(d);
+        }
+      };
+    })(this));
+  };
+
+  Relay.prototype._processResponse = function(d, mbx, cmd) {
+    var ctext, datain, nonce;
+    datain = this._processData(d);
+    if (datain.length !== 2) {
+      throw new Error(this.url + " - " + cmd + ": Bad response");
+    }
+    nonce = datain[0];
+    ctext = datain[1];
+    return mbx.decodeMessage("relay_" + this.url, nonce, ctext, true);
+  };
+
+  Relay.prototype._processData = function(d) {
+    var datain;
+    datain = d.split('\r\n');
+    if (!(datain.length >= 2)) {
+      datain = d.split('\n');
+    }
+    return datain;
+  };
+
+  Relay.prototype.count = function(mbx) {
+    return this.runCmd('count', mbx);
+  };
+
+  Relay.prototype.upload = function(mbx, toHpk, payload) {
+    return this.runCmd('upload', mbx, {
+      to: toHpk.toBase64(),
+      payload: payload
+    });
+  };
+
+  Relay.prototype.download = function(mbx) {
+    return this.runCmd('download', mbx);
+  };
+
+  Relay.prototype["delete"] = function(mbx, nonceList) {
+    return this.runCmd('delete', mbx, {
+      payload: nonceList
+    });
+  };
+
+  Relay.prototype._resetState = function() {
+    this.clientToken = null;
+    this.online = false;
+    this.relayToken = null;
+    this.relayKey = null;
+    return this.clientTokenExpiration = null;
+  };
+
+  Relay.prototype._scheduleExpireSession = function(tout) {
+    if (this.clientTokenExpiration) {
+      clearTimeout(this.clientTokenExpiration);
+    }
+    return this.clientTokenExpiration = setTimeout((function(_this) {
+      return function() {
+        return _this._resetState();
+      };
+    })(this), tout);
+  };
+
+  Relay.prototype._ajax = function(cmd, data) {
+    return Utils.ajax(this.url + "/" + cmd, data);
+  };
+
+  return Relay;
+
+})();
+
+module.exports = Relay;
+
+if (window.__CRYPTO_DEBUG) {
+  window.Relay = Relay;
+}
+
+
+},{"config":1,"keys":5,"nacl":9,"utils":13}],12:[function(require,module,exports){
+var SimpleTestDriver;
+
+SimpleTestDriver = (function() {
+  SimpleTestDriver.prototype._state = null;
+
+  SimpleTestDriver.prototype._key_tag = function(key) {
+    return this._root_tag + "." + key;
+  };
+
+  function SimpleTestDriver(root, sourceData) {
+    if (root == null) {
+      root = 'storage.';
+    }
+    if (sourceData == null) {
+      sourceData = null;
+    }
+    this._root_tag = "__glow." + root;
+    this._load(sourceData);
+  }
+
+  SimpleTestDriver.prototype.get = function(key) {
+    if (!this._state) {
+      this._load();
+    }
+    if (this._state[key]) {
+      return this._state[key];
+    } else {
+      return JSON.parse(localStorage.getItem(this._key_tag(key)));
+    }
+  };
+
+  SimpleTestDriver.prototype.set = function(key, value) {
+    if (!this._state) {
+      this._load();
+    }
+    this._state[key] = value;
+    localStorage.setItem(this._key_tag(key), JSON.stringify(value));
+    return this._persist();
+  };
+
+  SimpleTestDriver.prototype.remove = function(key) {
+    if (!this._state) {
+      this._load();
+    }
+    delete this._state[key];
+    localStorage.removeItem(this._key_tag(key));
+    return this._persist();
+  };
+
+  SimpleTestDriver.prototype._persist = function() {};
+
+  SimpleTestDriver.prototype._load = function(sourceData) {
+    if (sourceData == null) {
+      sourceData = null;
+    }
+    this._state = sourceData ? sourceData : {};
+    return console.log('INFO: SimpleTestDriver uses localStorage and should not be used in production for permanent key storage.');
+  };
+
+  return SimpleTestDriver;
+
+})();
+
+module.exports = SimpleTestDriver;
+
+
+},{}],13:[function(require,module,exports){
+var Config, Utils;
+
+Config = require('config');
+
+Utils = (function() {
+  function Utils() {}
+
+  Utils.extend = function(target, source) {
+    var key, val;
+    if (typeof $ !== "undefined" && $ !== null ? $.extend : void 0) {
+      return $.extend(target, source);
+    } else {
+      for (key in source) {
+        val = source[key];
+        if (source[key] !== void 0) {
+          target[key] = source[key];
+        }
+      }
+      return target;
+    }
+  };
+
+  Utils.map = function(array, func) {
+    if (typeof $ !== "undefined" && $ !== null ? $.map : void 0) {
+      return typeof $ !== "undefined" && $ !== null ? $.map(array, func) : void 0;
+    } else {
+      return Array.prototype.map.apply(array, [func]);
+    }
+  };
+
+  Utils.include = function(klass, mixin) {
+    return this.extend(klass.prototype, mixin);
+  };
+
+  Utils.type = function(obj) {
+    if (obj === void 0) {
+      return 'undefined';
+    }
+    if (obj === null) {
+      return 'null';
+    }
+    return Object.prototype.toString.call(obj).replace('[', '').replace(']', '').split(' ')[1];
+  };
+
+  Utils.ajaxImpl = null;
+
+  Utils.setAjaxImpl = function(ajaxImpl) {
+    return this.ajaxImpl = ajaxImpl;
+  };
+
+  Utils.ajax = function(url, data) {
+    if (this.ajaxImpl === null) {
+      if (typeof Q !== "undefined" && Q !== null ? Q.xhr : void 0) {
+        this.setAjaxImpl(function(url, data) {
+          return Q.xhr({
+            method: 'POST',
+            url: url,
+            headers: {
+              'Accept': 'text/plain',
+              'Content-Type': 'text/plain'
+            },
+            data: data,
+            responseType: 'text',
+            timeout: Config.RELAY_AJAX_TIMEOUT,
+            disableUploadProgress: true
+          }).then(function(response) {
+            return response.data;
+          });
+        });
+      } else if ((typeof $ !== "undefined" && $ !== null ? $.ajax : void 0) && (typeof $ !== "undefined" && $ !== null ? $.Deferred : void 0)) {
+        console.log('default ajax impl: setting to zepto with promises');
+        this.setAjaxImpl(function(url, data) {
+          return $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'text',
+            timeout: Config.RELAY_AJAX_TIMEOUT,
+            context: this,
+            error: console.log,
+            contentType: 'text/plain',
+            data: data
+          });
+        });
+      } else {
+        throw new Error('ajax implementation not set; use q-xhr or $http');
+      }
+    }
+    return this.ajaxImpl(url, data);
+  };
+
+  Utils.delay = function(milliseconds, func) {
+    return setTimeout(func, milliseconds);
+  };
+
+  Utils.itoa = function(n) {
+    var floor, i, lg, pw, ref, top;
+    if (n <= 0) {
+      return new Uint8Array((function() {
+        var j, results;
+        results = [];
+        for (i = j = 0; j <= 7; i = ++j) {
+          results.push(0);
+        }
+        return results;
+      })());
+    }
+    ref = [Math.floor, Math.pow, Math.log], floor = ref[0], pw = ref[1], lg = ref[2];
+    top = floor(lg(n) / lg(256));
+    return new Uint8Array((function() {
+      var j, ref1, results;
+      results = [];
+      for (i = j = ref1 = top; ref1 <= 0 ? j <= 0 : j >= 0; i = ref1 <= 0 ? ++j : --j) {
+        results.push(floor(n / pw(256, i)) % 256);
+      }
+      return results;
+    })());
+  };
+
+  Utils.firstZeroBits = function(byte, n) {
+    return byte === ((byte >> n) << n);
+  };
+
+  Utils.arrayZeroBits = function(arr, diff) {
+    var a, i, j, ref, rmd;
+    rmd = diff;
+    for (i = j = 0, ref = 1 + diff / 8; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
+      a = arr[i];
+      if (rmd <= 0) {
+        return true;
+      }
+      if (rmd > 8) {
+        rmd -= 8;
+        if (a > 0) {
+          return false;
+        }
+      } else {
+        return this.firstZeroBits(a, rmd);
+      }
+    }
+    return false;
+  };
+
+  Utils.logStack = function(err) {
+    var i, j, len, results, s, sl;
+    if (!err) {
+      err = new Error('stackLog');
+    }
+    s = err.stack.replace(/^[^\(]+?[\n$]/gm, '').replace(/^\s+at\s+/gm, '').replace(/^Object.<anonymous>\s*\(/gm, '{anonymous}()@').split('\n');
+    results = [];
+    for (i = j = 0, len = s.length; j < len; i = ++j) {
+      sl = s[i];
+      results.push(console.log(i + ": " + sl));
+    }
+    return results;
+  };
+
+  return Utils;
+
+})();
+
+module.exports = Utils;
+
+if (window.__CRYPTO_DEBUG) {
+  window.Utils = Utils;
+}
+
+
+},{"config":1}]},{},[7])
+
+
 //# sourceMappingURL=theglow.js.map
