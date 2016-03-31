@@ -41,6 +41,7 @@ class ActiveSupport::TestCase
     assert_response :success
     assert_not_includes(response.headers, 'X-Error-Details')
     assert_not_empty response.body
+    response.body
   end
 
   def _encode_lines(lines)

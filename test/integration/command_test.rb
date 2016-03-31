@@ -12,7 +12,8 @@ class CommandTest < ProveTestHelper
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
-    _success_response_empty
+    r = _success_response # 32 byte storage token for the message
+    assert_equal(32, b64dec(r).length)
   end
 
   test 'nonce repeat rejection' do
@@ -23,7 +24,9 @@ class CommandTest < ProveTestHelper
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 1'}
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
-    _success_response_empty
+
+    r = _success_response # 32 byte storage token for the message
+    assert_equal(32, b64dec(r).length)
 
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 2'}
     _post '/command', hpk, n, _client_encrypt_data(n, data) # nonce re-used

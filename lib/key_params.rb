@@ -54,5 +54,7 @@ module KeyParams
 
   # Exception text
   # ☢ - A toxic trace
-  EXPT      = '\xE2\x98\xA2'
+  EXPT      = "\xE2\x98\xA2"
+
+  BAR       = "\xE2\x94\x80"
 end

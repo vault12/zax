@@ -42,20 +42,27 @@ module Errors
         x_error_details: 'Your request can not be completed.'
     end
 
+    def _log_exception(icon, note, excpt)
+      warn "#{icon} #{note}:\n#{EXPT} \xE2\x94\x8C#{excpt} \xE2\x94\x90"
+      warn excpt.backtrace[0..3].reduce("") { |s,x|
+        s += "#{EXPT} \xE2\x94\x9C#{x}\n" } +
+      "#{EXPT} \xE2\x94\x94#{BAR*25}\xE2\x94\x98"
+    end
+
     # Used when the relay's internal integrity is in doubt
     def severe_error(note =null)
       @controller.expires_now
-      error "#{ERROR} #{note}: #{@data[:msg]}"
       head :internal_server_error,
         x_error_details: 'Something is wrong with this relay. Try again later.'
+      error "#{ERROR} #{note}: #{@data[:msg]}"
     end
 
     # This is used to log general non-ZAX exceptions
     def report(note, excpt)
       # handle non-ZAX errors, such as encoding, etc.
-      warn "#{WARN} #{note}:\n#{EXPT} #{excpt}"
       @controller.head :bad_request,
         x_error_details: 'Your request can not be completed.'
+      _log_exception WARN,note,excpt
     end
 
     # This is used to log RbNaCl errors
@@ -64,8 +71,10 @@ module Errors
       e1 = e.is_a?(RbNaCl::BadAuthenticatorError) ? 'The authenticator was forged or otherwise corrupt' : ''
       e2 = e.is_a?(RbNaCl::BadSignatureError) ? 'The signature was forged or otherwise corrupt' : ''
       error "#{ERROR} Decryption error for packet:\n"\
-        "#{e1}#{e2}\n"\
-        "#{@body}\n#{EXPT} #{e}"
+        "#{e1}#{e2} "\
+        "#{@controller.body}"
+      _log_exception ERROR, "Stack trace", e
+
       @controller.head :bad_request,
         x_error_details: 'Your request can not be completed.'
     end
@@ -73,7 +82,7 @@ module Errors
     # === Exception loging functions ===
     def log_message(m)
       #  "#{m}:\n#{dumpHex @data}:\n#{EXPT} #{self}\n---"
-      "#{m}\n"
+      "#{m}"
     end
 
     def info(m)

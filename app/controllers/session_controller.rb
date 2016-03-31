@@ -7,10 +7,10 @@ class SessionController < ApplicationController
   # POST /start_session - start handshake
   def start_session_token
     # ready only the number of bytes we expect
-    body = request.body.read SESSION_START_BODY
+    @body = request.body.read SESSION_START_BODY
 
     # we expect 1 line to be start session
-    lines = _check_body_lines body, 1, 'start session'
+    lines = _check_body_lines @body, 1, 'start session'
 
     # check that the client token is valid
     @client_token = _check_client_token lines[0]
@@ -35,10 +35,10 @@ class SessionController < ApplicationController
   # POST /verify_session - verify started handshake
   def verify_session_token
     # read only the bytes we expect for verification
-    body = request.body.read SESSION_VERIFY_BODY
+    @body = request.body.read SESSION_VERIFY_BODY
 
     # original token and signature in 2 lines
-    lines = _check_body_lines body, 2, 'verify session'
+    lines = _check_body_lines @body, 2, 'verify session'
 
     # check that client token line is valid
     _check_client_token lines[0]

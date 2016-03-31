@@ -17,6 +17,10 @@ class Mailbox
     "msg_#{@hpk}_#{b64_nonce}"
   end
 
+  def token_tag(token)
+    "token_#{b64enc token}"
+  end
+
   # --- create Mailbox for the given HPK with options to override timeouts
   def initialize( hpk, options = {})
     fail HPKError.new self, msg: 'Mailbox: wrong hpk format' unless hpk and hpk.length==HPK_LEN
@@ -58,18 +62,40 @@ class Mailbox
       time: Time.new.to_f # time message is received by relay
     }
 
+    # Using storage record token sender can check
+    # status of her message
+    storage_record = {
+      hpk: @hpk,
+      nonce: b64_nonce
+    }
+    storage_token = h2 "#{@hpk}#{b64_nonce}"
+
     _resetCount()
     res = runMbxTransaction(@hpk, 'store') do
       # store message itself on the msg_hpk_nonce tag
       rds.set(msg_tag(b64_nonce), item.to_json)
       rds.expire(msg_tag(b64_nonce), @tmout_msg)
+      # by default everytihing in mailbox will expire in 3 days
 
       # mbx_hpk is used as index hash
       rds.hset(hpk_tag, b64_nonce, Time.new + @tmout_msg)
       rds.expire(hpk_tag, @tmout_mbx)
-      # by default everytihing in mailbox will expire in 3 days
+
+      # store unique storage token for that item
+      rds.set(token_tag(storage_token), storage_record.to_json)
+      rds.expire(token_tag(storage_token), @tmout_msg)
     end
-    return res
+    return { opResult: res, storage_token: storage_token }
+  end
+
+  # Is message for given storage token still in redis?
+  def check_msg_status(storage_token)
+    tag = token_tag storage_token
+    storage_item = parse rds.get tag
+    return "-2" unless storage_item # following redis TTL codes
+    mbx = Mailbox.new storage_item[:hpk]
+    ttl = rds.ttl mbx.msg_tag b64enc storage_item[:nonce]
+    return "#{ttl}"
   end
 
   # read all or subset of messages in mailbox
@@ -107,12 +133,17 @@ class Mailbox
     return Hash[msg.map { |k, v| [ k.to_sym, k != "time" ? b64dec(v) : v ] }]
   end
 
+  def _delete_item(nonce)
+    rds.del msg_tag nonce
+    rds.hdel hpk_tag, nonce
+    rds.del h2 "#{@hpk}#{nonce}" # storage_token
+  end
+
   # Delete one message by nonce
   def delete(nonce)
     _resetCount()
     runMbxTransaction(@hpk, 'delete') do
-      rds.del msg_tag nonce
-      rds.hdel hpk_tag, nonce
+      _delete_item nonce
       logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
     end
   end
@@ -122,8 +153,7 @@ class Mailbox
     _resetCount()
     runMbxTransaction(@hpk, 'delete list') do
       nonce_list.each do |nonce|
-        rds.del msg_tag nonce
-        rds.hdel hpk_tag, nonce
+        _delete_item nonce
         logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
       end
     end

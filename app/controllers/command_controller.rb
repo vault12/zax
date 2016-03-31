@@ -3,6 +3,7 @@
 
 class CommandController < ApplicationController
   public
+  attr_reader :body
 
   def process_cmd
     @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
@@ -31,9 +32,10 @@ class CommandController < ApplicationController
 
       # Ctext of private messages or plain text payload
       msg = data[:payload]['ctext'] || data[:payload]
-      mbx.store @hpk, msg_nonce, msg
-      logger.info "#{INFO_GOOD} stored item #{dumpHex msg_nonce} mbx '#{dumpHex @hpk}' => h'#{dumpHex hpkto}'"
-      render nothing: true, status: :ok
+
+      res = mbx.store @hpk, msg_nonce, msg
+      logger.info "#{INFO_GOOD} stored item #{dumpHex msg_nonce} mbx '#{dumpHex @hpk}' => '#{dumpHex hpkto}'"
+      render text: "#{b64enc res[:storage_token]}", status: :ok
 
     when 'count'
       enc_nonce = b64enc rsp_nonce
@@ -52,6 +54,11 @@ class CommandController < ApplicationController
       enc_payload = encrypt_data rsp_nonce, payload
       logger.info "#{INFO_GOOD} downloading #{count} mbx '#{dumpHex @hpk}'"
       render text: "#{enc_nonce}\r\n#{enc_payload}", status: :ok
+
+    when 'message_status'
+      storage_token = b64dec data[:token]
+      ttl = mailbox.check_msg_status storage_token
+      render text: "#{ttl}", status: :ok
 
     when 'delete'
       render nothing: true, status: :ok unless data[:payload]
@@ -126,7 +133,7 @@ class CommandController < ApplicationController
   end
 
   def check_command(data)
-    all = %w(count upload download delete)
+    all = %w(count upload download delete message_status)
 
     fail ReportError.new self, msg: 'command_controller: missing command' unless data[:cmd]
     fail ReportError.new self, msg: "command_controller: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
@@ -136,6 +143,10 @@ class CommandController < ApplicationController
       hpk_dec = b64dec data[:to]
       _check_hpk hpk_dec
       fail ReportError.new self, msg: 'command_controller: no payload in upload' unless data[:payload]
+    end
+
+    if data[:cmd] == 'message_status'
+      fail ReportError.new self, msg: 'command_controller: bad/missing storage token in message_status' unless data[:token] and data[:token].length == TOKEN_B64
     end
 
     if data[:cmd] == 'delete'

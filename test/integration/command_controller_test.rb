@@ -5,24 +5,28 @@ require 'test_helper'
 class CommandControllerTest < ActionDispatch::IntegrationTest
 
   test 'process command 01 count' do
-    ### Show that you are simulating hpk correctly
-    @chk_key = RbNaCl::PrivateKey.generate
-    h2chk = h2(@chk_key.public_key)
-    assert_equal(h2chk.length, 32)
-
-    hpk = h2(rand_bytes 32)
-    assert_equal(hpk.length, 32)
+    ### Use hpk to upload, check and delete message
+    key = RbNaCl::PrivateKey.generate
+    hpk = h2(key.public_key)
     _setup_keys hpk
 
-    to_hpk = RbNaCl::Random.random_bytes(32)
-    to_hpk = b64enc to_hpk
+    to_key = RbNaCl::PrivateKey.generate
+    to_hpk = h2(to_key.public_key)
 
     ### Upload
-
-    data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
+    msg_nonce = b64enc(rand_bytes 24)
+    msg_data = {
+      cmd: 'upload',
+      to: b64enc(to_hpk),
+      payload: {
+        ctext: 'hello world 0',
+        nonce: msg_nonce
+      }
+    }
     n = _make_nonce
-    _post '/command', hpk, n, _client_encrypt_data(n, data)
-    _success_response_empty
+    _post '/command', hpk, n, _client_encrypt_data(n, msg_data)
+    msg_token = b64dec _success_response # 32 byte storage token for the message
+    assert_equal(32, msg_token.length)
 
     ### Count
 
@@ -58,12 +62,28 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil data
     assert_equal data.length, 0
 
-    ### Delete
+    ### Message status
 
-    data = {cmd: 'delete', payload: []}
+    data = { cmd: 'message_status', token: b64enc(msg_token) }
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
+    r = _success_response
+    assert_operator r.to_i, :>, 0
+
+    ### Delete
+    _setup_keys to_hpk  # Now a session for dest mailbox
+    data = { cmd: 'delete', payload: [msg_nonce]}
+    n = _make_nonce
+    _post '/command', to_hpk, n, _client_encrypt_data(n, data)
     _success_response
+
+    ### Message is now deleted
+    _setup_keys hpk
+    data = { cmd: 'message_status', token: b64enc(msg_token) }
+    n = _make_nonce
+    _post '/command', hpk, n, _client_encrypt_data(n, data)
+    r = _success_response
+    assert_equal r,'-2'  # -2 is redis missing key
   end
 
   test 'process command guards' do

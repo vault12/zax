@@ -74,6 +74,12 @@ To bring up Zax run this command:
 rails s -p 8080
 ```
 
+To make Zax accept connections from all hosts:
+
+```Shell
+rails s -p 8080 --binding=0.0.0.0
+```
+
 #### Testing Zax
 
 To test groups of tests you can run any of these commands:
@@ -108,6 +114,25 @@ For other platforms than OSX, please consult:
 (http://www.nokogiri.org/tutorials/installing_nokogiri.html)
 for further instructions.
 
+#### Example Command Line Utilities
+
+```Shell
+cd zax
+mkdir tools
+echo "*" > tools/.gitignore
+echo "rvm gemset use zax" > tools/init
+echo "# empty; prevent saving to disk" > tools/redis.conf
+echo "redis-server ./tools/redis.conf" > tools/redis
+echo "rails s -p 8080 --binding=0.0.0.0" > tools/relay
+```
+
+Then you can do e.g.:
+```Shell
+cd zax
+. tools/init
+. tools/relay
+. tools/redis # new console window
+```
 ## Demo
 To see Glow and Zax in action, check out the [Live Demo](https://zax_test.vault12.com). This is a test project included in Zax called [Zax-Dash](https://github.com/vault12/zax-dash).
 

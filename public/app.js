@@ -82,105 +82,101 @@
     }
 
     RelayService.prototype.messageCount = function(mailbox) {
-      return this._defer((function(_this) {
+      return mailbox.connectToRelay(this.relay).then((function(_this) {
         return function() {
-          return mailbox.connectToRelay(_this.relay);
-        };
-      })(this)).then((function(_this) {
-        return function() {
-          return _this._defer(function() {
-            return mailbox.relayCount();
+          return mailbox.relayCount(_this.relay).then(function(count) {
+            mailbox.messageCount = count;
+            return count;
           });
         };
       })(this));
     };
 
     RelayService.prototype.getMessages = function(mailbox) {
-      return this._defer((function(_this) {
-        return function() {
-          return mailbox.getRelayMessages(_this.relay);
-        };
-      })(this));
+      return mailbox.getRelayMessages(this.relay);
     };
 
-    RelayService.prototype.deleteMessages = function(mailbox, messagesToDelete) {
-      if (messagesToDelete == null) {
-        messagesToDelete = null;
-      }
-      if (!messagesToDelete) {
-        messagesToDelete = mailbox.relayNonceList();
-      }
-      return this._defer((function(_this) {
+    RelayService.prototype.deleteMessages = function(mailbox, noncesToDelete) {
+      return mailbox.connectToRelay(this.relay).then((function(_this) {
         return function() {
-          return mailbox.connectToRelay(_this.relay);
-        };
-      })(this)).then((function(_this) {
-        return function() {
-          return _this._defer(function() {
-            return mailbox.relayDelete(messagesToDelete);
-          });
+          return mailbox.relayDelete(noncesToDelete, _this.relay);
         };
       })(this));
     };
 
     RelayService.prototype.newMailbox = function(mailboxName, options) {
-      var mailbox, mbx, name, ref;
-      if (mailboxName == null) {
-        mailboxName = "";
-      }
+      var next;
       if (options == null) {
         options = {};
       }
       if (options.secret) {
-        mailbox = new this.CryptoService.Mailbox.fromSecKey(options.secret.fromBase64(), mailboxName);
-        console.log("created mailbox " + mailboxName + ":" + options.secret + " from secret");
-      } else if (options.seed) {
-        mailbox = new this.CryptoService.Mailbox.fromSeed(options.seed, mailboxName);
-        console.log("created mailbox " + mailboxName + ":" + options.seed + " from seed");
-      } else {
-        mailbox = new this.CryptoService.Mailbox(mailboxName);
-        console.log("created mailbox " + mailboxName + " from scratch");
-      }
-      ref = this.mailboxes;
-      for (name in ref) {
-        mbx = ref[name];
-        mbx.keyRing.addGuest(mailbox.identity, mailbox.getPubCommKey());
-        mailbox.keyRing.addGuest(mbx.identity, mbx.getPubCommKey());
-      }
-      if (mailbox.identity) {
-        return this.mailboxes[mailbox.identity] = mailbox;
-      }
-    };
-
-    RelayService.prototype.destroyMailbox = function(mailbox) {
-      var mbx, name, ref, results;
-      ref = this.mailboxes;
-      results = [];
-      for (name in ref) {
-        mbx = ref[name];
-        if (mailbox.keyRing.storage.root === mbx.keyRing.storage.root) {
-          mailbox.selfDestruct(true);
-          results.push(delete this.mailboxes[name]);
-        } else {
-          results.push(void 0);
+        if (!mailboxName) {
+          mailboxName = this._randomString();
         }
+        next = this.CryptoService.Mailbox.fromSecKey(options.secret.fromBase64(), mailboxName).then((function(_this) {
+          return function(mailbox) {
+            console.log("created mailbox " + mailboxName + ":" + options.secret + " from secret");
+            return mailbox;
+          };
+        })(this));
+      } else if (options.seed) {
+        next = this.CryptoService.Mailbox.fromSeed(options.seed, mailboxName).then((function(_this) {
+          return function(mailbox) {
+            console.log("created mailbox " + mailboxName + ":" + options.seed + " from seed");
+            return mailbox;
+          };
+        })(this));
+      } else {
+        next = this.CryptoService.Mailbox["new"](mailboxName).then((function(_this) {
+          return function(mailbox) {
+            console.log("created mailbox " + mailboxName + " from scratch");
+            return mailbox;
+          };
+        })(this));
       }
-      return results;
-    };
-
-    RelayService.prototype.sendToVia = function(recipient, mailbox, message) {
-      return this._defer((function(_this) {
-        return function() {
-          return mailbox.sendToVia(recipient, _this.relay, message);
+      return next.then((function(_this) {
+        return function(mailbox) {
+          return _this.messageCount(mailbox).then(function() {
+            var mbx, name, ref, tasks;
+            tasks = [];
+            ref = _this.mailboxes;
+            for (name in ref) {
+              mbx = ref[name];
+              tasks.push(mbx.keyRing.addGuest(mailbox.identity, mailbox.getPubCommKey()).then(function() {
+                return mailbox.keyRing.addGuest(mbx.identity, mbx.getPubCommKey());
+              }));
+            }
+            return _this.$q.all(tasks).then(function() {
+              _this.mailboxes[mailbox.identity] = mailbox;
+              return mailbox;
+            });
+          });
         };
       })(this));
     };
 
-    RelayService.prototype._defer = function(fnToDefer) {
-      var deffered;
-      deffered = this.$q.defer();
-      deffered.resolve(fnToDefer());
-      return deffered.promise;
+    RelayService.prototype.destroyMailbox = function(mailbox) {
+      var mbx, name, ref, tasks;
+      tasks = [];
+      ref = this.mailboxes;
+      for (name in ref) {
+        mbx = ref[name];
+        if (mailbox.keyRing.storage.root === mbx.keyRing.storage.root) {
+          ((function(_this) {
+            return function(mailbox, name) {
+              return tasks.push(mailbox.selfDestruct(true).then(function() {
+                console.log('deleting ' + name);
+                return delete _this.mailboxes[name];
+              }));
+            };
+          })(this))(mailbox, name);
+        }
+      }
+      return this.$q.all(tasks);
+    };
+
+    RelayService.prototype.sendToVia = function(recipient, mailbox, message) {
+      return mailbox.sendToVia(recipient, this.relay, message);
     };
 
     RelayService.prototype._newRelay = function() {
@@ -227,8 +223,8 @@
   RequestPaneController = (function() {
     RequestPaneController.prototype.mailboxPrefix = "_mailbox";
 
-    function RequestPaneController(RelayService, $scope) {
-      var first_names, i, j, k, key, l, len, len1, name, ref;
+    function RequestPaneController(RelayService, $scope, $q) {
+      var first_names, i, j, k, key, l, len, len1, name, next, ref;
       $('#key-confirmation').hide();
       $('#send-confirmation').hide();
       first_names = ["Alice", "Bob", "Charlie", "Chuck", "Dave", "Erin", "Eve", "Faith", "Frank", "Mallory", "Oscar", "Peggy", "Pat", "Sam", "Sally", "Sybil", "Trent", "Trudy", "Victor", "Walter", "Wendy"].sort(function() {
@@ -252,51 +248,48 @@
       $scope.addMailboxVisible = true;
       $scope.quantity = 3;
       $scope.messageCount = function(mailbox) {
-        return RelayService.messageCount(mailbox).then(function(data) {
-          return mailbox.messageCount = "" + $scope.relay.result;
+        return RelayService.messageCount(mailbox).then(function() {
+          return $scope.$apply();
         });
       };
       $scope.getMessages = function(mailbox) {
         return RelayService.getMessages(mailbox).then(function(data) {
-          var l, len1, msg, ref, results;
+          var l, len1, msg;
           if (!mailbox.messages) {
             mailbox.messages = [];
             mailbox.messagesNonces = [];
           }
-          ref = mailbox.lastDownload;
-          results = [];
-          for (l = 0, len1 = ref.length; l < len1; l++) {
-            msg = ref[l];
+          for (l = 0, len1 = data.length; l < len1; l++) {
+            msg = data[l];
             if (mailbox.messagesNonces.indexOf(msg.nonce) === -1) {
               console.log("incoming message:", msg);
               mailbox.messagesNonces.push(msg.nonce);
-              results.push(mailbox.messages.push(msg));
-            } else {
-              results.push(void 0);
+              mailbox.messages.push(msg);
             }
           }
-          return results;
+          return $scope.$apply();
         });
       };
       $scope.deleteMessages = function(mailbox, messagesToDelete) {
+        var noncesToDelete;
         if (messagesToDelete == null) {
-          messagesToDelete = [];
+          messagesToDelete = null;
         }
-        return RelayService.deleteMessages(mailbox, messagesToDelete).then(function() {
-          var index, l, len1, msg, results;
-          if (messagesToDelete.length === 0) {
+        noncesToDelete = messagesToDelete || mailbox.messagesNonces || [];
+        return RelayService.deleteMessages(mailbox, noncesToDelete).then(function() {
+          var index, l, len1, msg;
+          if (noncesToDelete.length === 0) {
             mailbox.messages = [];
-            return mailbox.messagesNonces = [];
+            mailbox.messagesNonces = [];
           } else {
-            results = [];
-            for (l = 0, len1 = messagesToDelete.length; l < len1; l++) {
-              msg = messagesToDelete[l];
+            for (l = 0, len1 = noncesToDelete.length; l < len1; l++) {
+              msg = noncesToDelete[l];
               index = mailbox.messagesNonces.indexOf(msg);
               mailbox.messagesNonces.splice(index, 1);
-              results.push(mailbox.messages.splice(index, 1));
+              mailbox.messages.splice(index, 1);
             }
-            return results;
           }
+          return $scope.$apply();
         });
       };
       $scope.sendMessage = (function(_this) {
@@ -313,8 +306,9 @@
       $scope.deleteMailbox = (function(_this) {
         return function(mailbox) {
           name = mailbox.identity;
-          RelayService.destroyMailbox(mailbox);
-          return localStorage.removeItem(_this.mailboxPrefix + "." + name);
+          return RelayService.destroyMailbox(mailbox).then(function() {
+            return localStorage.removeItem(_this.mailboxPrefix + "." + name);
+          });
         };
       })(this);
       $scope.selectMailbox = function(mailbox) {
@@ -322,12 +316,10 @@
       };
       $scope.addMailbox = (function(_this) {
         return function(name, options) {
-          if (localStorage.setItem(_this.mailboxPrefix + "." + name, RelayService.newMailbox(name, options).identity)) {
-            return $scope.newMailbox = {
-              name: "",
-              options: null
-            };
-          }
+          return RelayService.newMailbox(name, options).then(function(mailbox) {
+            localStorage.setItem(_this.mailboxPrefix + "." + name, mailbox.identity);
+            return $scope.newMailbox = mailbox;
+          });
         };
       })(this);
       $scope.addMailboxes = (function(_this) {
@@ -351,20 +343,26 @@
           }
         };
       })(this);
+      next = $q.all();
       ref = Object.keys(localStorage);
       for (l = 0, len1 = ref.length; l < len1; l++) {
         key = ref[l];
         if (key.indexOf(this.mailboxPrefix) === 0) {
-          $scope.addMailbox(localStorage.getItem(key));
+          (function(key) {
+            return next = next.then(function() {
+              return $scope.addMailbox(localStorage.getItem(key));
+            });
+          })(key);
         }
       }
+      next;
     }
 
     return RequestPaneController;
 
   })();
 
-  angular.module('app').controller('RequestPaneController', ["RelayService", "$scope", RequestPaneController]);
+  angular.module('app').controller('RequestPaneController', ['RelayService', '$scope', '$q', RequestPaneController]);
 
 }).call(this);
 

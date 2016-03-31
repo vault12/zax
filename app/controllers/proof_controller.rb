@@ -3,6 +3,7 @@
 
 class ProofController < ApplicationController
   PROVE_CIPHER_B64 = 256
+  attr_reader :body
 
   # POST /prove - prove client ownership of a secret key for HPK
   def prove_hpk
@@ -12,8 +13,8 @@ class ProofController < ApplicationController
     # 3: nonce_outter: timestamped nonce
     # 4: crypto_box(JSON, nonce_inner, relay_session_pk, client_temp_sk): Outer crypto-text
 
-    body = request.body.read PROVE_BODY
-    l1, l2, l3, l4 = _check_body_lines body, 4, 'prove hpk'
+    @body = request.body.read PROVE_BODY
+    l1, l2, l3, l4 = _check_body_lines @body, 4, 'prove hpk'
 
     # check and decrypt h2(client_token)
     @h2_ct = _check_client_token l1
