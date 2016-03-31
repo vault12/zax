@@ -109,6 +109,7 @@
       if (options == null) {
         options = {};
       }
+      next = null;
       if (options.secret) {
         if (!mailboxName) {
           mailboxName = this._randomString();
@@ -137,14 +138,17 @@
       return next.then((function(_this) {
         return function(mailbox) {
           return _this.messageCount(mailbox).then(function() {
-            var mbx, name, ref, tasks;
+            var fn, mbx, name, ref, tasks;
             tasks = [];
             ref = _this.mailboxes;
-            for (name in ref) {
-              mbx = ref[name];
-              tasks.push(mbx.keyRing.addGuest(mailbox.identity, mailbox.getPubCommKey()).then(function() {
+            fn = function(name, mbx) {
+              return tasks.push(mbx.keyRing.addGuest(mailbox.identity, mailbox.getPubCommKey()).then(function() {
                 return mailbox.keyRing.addGuest(mbx.identity, mbx.getPubCommKey());
               }));
+            };
+            for (name in ref) {
+              mbx = ref[name];
+              fn(name, mbx);
             }
             return _this.$q.all(tasks).then(function() {
               _this.mailboxes[mailbox.identity] = mailbox;
@@ -324,12 +328,16 @@
       })(this);
       $scope.addMailboxes = (function(_this) {
         return function(quantityToAdd) {
-          var l, ref;
-          for (i = l = 1, ref = quantityToAdd; 1 <= ref ? l <= ref : l >= ref; i = 1 <= ref ? ++l : --l) {
-            $scope.addMailbox(_this.names[1]);
-            _this.names.splice(0, 1);
-          }
-          return quantityToAdd = 0;
+          var l, results;
+          return (function() {
+            results = [];
+            for (var l = 1; 1 <= quantityToAdd ? l <= quantityToAdd : l >= quantityToAdd; 1 <= quantityToAdd ? l++ : l--){ results.push(l); }
+            return results;
+          }).apply(this).reduce((function(prev, i) {
+            return prev.then(function() {
+              return $scope.addMailbox(_this.names.shift());
+            });
+          }), $q.all());
         };
       })(this);
       $scope.addPublicKey = (function(_this) {
