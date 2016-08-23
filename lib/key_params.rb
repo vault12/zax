@@ -18,7 +18,6 @@ module KeyParams
 
   OUTER_BOX = 256
 
-  MAX_COMMAND_BODY = 10 * 1024 # 10kb
   MAX_ITEMS        = 100
 
   SESSION_START_BODY  = TOKEN_B64
@@ -26,7 +25,7 @@ module KeyParams
   PROVE_BODY          = TOKEN_B64 + 2 + TOKEN_B64 + 2 +
                         NONCE_B64 + 2 + OUTER_BOX
   COMMAND_BODY_PREAMBLE = TOKEN_B64 + 2 + NONCE_B64 + 2
-  COMMAND_BODY          = MAX_COMMAND_BODY
+  MAX_COMMAND_BODY      = 1000 * 1024 # 1Mb command body at most
 
   # Log file prefix codes.
   #

@@ -11,7 +11,7 @@ class CommandController < ApplicationController
     @hpk = _get_hpk lines[0]
     nonce = _check_nonce b64dec lines[1]
 
-    @body = request.body.read COMMAND_BODY
+    @body = request.body.read MAX_COMMAND_BODY
     lines = check_body_command_lines @body
     ctext = b64dec lines[0]
     load_keys
