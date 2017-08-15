@@ -16,7 +16,7 @@ Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays a
 - **Private nodes**: Power users have the option to deploy their own personal relay nodes and have the ability to add them into the configuration of mobile applications that are reliant on this kind of p2p network.
 
 ## Test Dashboard
-Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dash) app, that uses [Glow](https://github.com/vault12/glow) to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://zax_test.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
+Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dash) app, that uses [Glow](https://github.com/vault12/glow) to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://z.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
 
 ## Getting Started
 #### Redis
