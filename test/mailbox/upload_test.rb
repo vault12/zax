@@ -18,9 +18,8 @@ class MailboxUploadTest < ProveTestHelper
 
   def uploadMessage
     ary = getHpks
-    # see readme in this directory for more details on _get_random_pair
     pairary = _get_random_pair(@config[:number_of_mailboxes] - 1)
-    hpk = b64dec ary[pairary[0]]
+    hpk = ary[pairary[0]].from_b64
     to_hpk = ary[pairary[1]]
     data = { cmd: 'upload', to: to_hpk, payload: 'hello world 0' }
     n = _make_nonce
@@ -29,7 +28,7 @@ class MailboxUploadTest < ProveTestHelper
 
     skpk = @session_key.public_key
     skpk = b64enc skpk
-    ckpk = b64enc @client_key
+    ckpk = @client_key.to_b64
 
     _post '/command', hpk, n, _client_encrypt_data(n, data)
   end
@@ -69,8 +68,7 @@ class MailboxUploadTest < ProveTestHelper
     cleanup
     for i in 0..@config[:number_of_mailboxes] - 1
       hpk = setup_prove
-      hpk_b64 = b64enc hpk
-      rds.sadd(@config[:hpkey], hpk_b64)
+      rds.sadd(@config[:hpkey], hpk.to_b64)
     end
   end
 
@@ -104,8 +102,4 @@ class MailboxUploadTest < ProveTestHelper
     rds.del(@config[:number_of_iterations])
   end
 
-  # the redis client
-  def rds
-    Redis.current
-  end
 end

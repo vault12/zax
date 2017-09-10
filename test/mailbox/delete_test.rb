@@ -56,7 +56,7 @@ class MailboxDeleteTest < ProveTestHelper
     ary = getHpks
     # see the readme in this directory for more details on _get_random_pair
     pairary = _get_random_pair(@config[:number_of_mailboxes] - 1)
-    hpk = b64dec ary[pairary[0]]
+    hpk = ary[pairary[0]].from_b64
     to_hpk = ary[pairary[1]]
     data = { cmd: 'upload', to: to_hpk, payload: 'hello world 0' }
     n = _make_nonce
@@ -72,7 +72,7 @@ class MailboxDeleteTest < ProveTestHelper
   def downloadMessages
     ary = getHpks
     pairary = _get_random_pair(@config[:number_of_mailboxes] - 1)
-    hpk = b64dec ary[pairary[0]]
+    hpk = ary[pairary[0]].from_b64
     to_hpk = ary[pairary[1]]
     data = { cmd: 'download' }
     n = _make_nonce
@@ -88,8 +88,8 @@ class MailboxDeleteTest < ProveTestHelper
     # now lets check and make sure we got the correct number of messages
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
-    rn = b64dec lines[0]
-    rct = b64dec lines[1]
+    rn = lines[0].from_b64
+    rct = lines[1].from_b64
     data = _client_decrypt_data rn, rct
     mbxcount = countMessage(hpk)
     mbxcount = MAX_ITEMS if mbxcount >= MAX_ITEMS
@@ -102,7 +102,7 @@ class MailboxDeleteTest < ProveTestHelper
     halfdelete = _getHalfOfNumber(msgin.length)
     half = halfdelete - 1
     0.upto(half) do |i|
-      nonce = msgin[i]['nonce']
+      nonce = msgin[i][:nonce]
       deleteMessage(hpk, nonce)
     end
     halfdelete
@@ -117,8 +117,8 @@ class MailboxDeleteTest < ProveTestHelper
     _success_response
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
-    rn = b64dec lines[0]
-    rct = b64dec lines[1]
+    rn = lines[0].from_b64
+    rct = lines[1].from_b64
     count = _client_decrypt_data rn, rct
     assert_not_nil count
     count
@@ -212,7 +212,7 @@ class MailboxDeleteTest < ProveTestHelper
   end
 
   def _compare_mbx_hash(mbx_hash_before, mbx_hash_after, hpk, numofmessages_delete)
-    hpk = b64enc(hpk)
+    hpk = hpk.to_b64
     mbxkey = 'mbx_' + hpk
     mbx_hash_before.each do |key, value_before|
       value_after = mbx_hash_after[key]
@@ -238,9 +238,5 @@ class MailboxDeleteTest < ProveTestHelper
     rds.del(@config[:hpkey])
     rds.del(@config[:number_of_iterations])
     rds.del(@config[:total_number_of_messages])
-  end
-
-  def rds
-    Redis.current
   end
 end

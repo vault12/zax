@@ -2,65 +2,71 @@
 # MIT License https://opensource.org/licenses/MIT
 
 class SessionController < ApplicationController
-  before_filter :preamble
+  include TransactionHelper
+
+  before_action :preamble
 
   # POST /start_session - start handshake
   def start_session_token
-    # ready only the number of bytes we expect
-    @body = request.body.read SESSION_START_BODY
+    reportCommonErrors("start_session_token error ") do
+      # ready only the number of bytes we expect
+      @body = request.body.read SESSION_START_BODY
 
-    # we expect 1 line to be start session
-    lines = _check_body_lines @body, 1, 'start session'
+      # we expect 1 line to be start session
+      lines = _check_body_lines @body, 1, 'start session'
 
-    # check that the client token is valid
-    @client_token = _check_client_token lines[0]
+      # check that the client token is valid
+      @client_token = _check_client_token lines[0]
 
-    # lets make the relay token to initiate handshake
-    @relay_token  = make_relay_token
+      # lets make the relay token to initiate handshake
+      @relay_token  = make_relay_token
 
-    # save both tokens to redis
-    cache_tokens
+      # save both tokens to redis
+      cache_tokens
 
-    diff = Rails.configuration.x.relay.difficulty
+      diff = get_diff(false)
 
-    # Send back our token in a base64 response body
-    render text: "#{b64enc(@relay_token)}\r\n#{diff}"
+      # Send back our token in a base64 response body
+      render plain: "#{@relay_token.to_b64}\r\n#{diff}"
 
-    rescue ZAXError => e # handle known protocol errors
-      e.http_fail
-    rescue => e # handle other errors: encoding, etc.
-      ZAXError.new(self).report 'start_session_token error', e
+      adjust_difficulty
+    end
   end
 
   # POST /verify_session - verify started handshake
   def verify_session_token
-    # read only the bytes we expect for verification
-    @body = request.body.read SESSION_VERIFY_BODY
+    reportCommonErrors("verify_session_token error ") do
+      # read only the bytes we expect for verification
+      @body = request.body.read SESSION_VERIFY_BODY
 
-    # original token and signature in 2 lines
-    lines = _check_body_lines @body, 2, 'verify session'
+      # original token and signature in 2 lines
+      lines = _check_body_lines @body, 2, 'verify session'
 
-    # check that client token line is valid
-    _check_client_token lines[0]
+      # check that client token line is valid
+      _check_client_token lines[0]
 
-    # decode and check both lines
-    decode = decode_lines lines
+      # decode and check both lines
+      decode = decode_lines lines
 
-    # check handshake or throw error
-    # returns client_token and its h2() from cache
-    ct, h2_ct = verify_handshake(decode)
+      # check handshake or throw error
+      # returns client_token and its h2() from cache
+      ct, h2_ct = verify_handshake(decode)
 
-    # signature is valid, lets make temp keys
-    session_key = make_session_key h2_ct
+      # signature is valid, lets make temp keys
+      session_key = make_session_key h2_ct
 
-    # resond with relay temp key for this session
-    # masked by client token
-    render text: "#{b64enc(session_key.public_key.to_bytes)}"
+      # resond with relay temp key for this session
+      # masked by client token
+      render plain: "#{session_key.public_key.to_bytes.to_b64}"
 
-    rescue ZAXError => e # handle known protocol errors
-      e.http_fail
-    rescue => e # handle other errors: encoding, etc.
-      ZAXError.new(self).report 'verify_session_token error', e
+      adjust_difficulty
+    end
+  end
+
+  # Missing routes, mostly triggered by spammers
+  def missing_route
+    logger.warn "#{SPAM} Spammers scan for: #{request.path}"
+    head :service_unavailable # Let's pretend we are dead
   end
 
   # === Private helper functions ===
@@ -98,7 +104,7 @@ class SessionController < ApplicationController
   def decode_lines(lines)
     lines.map do |l|
       if l.length == TOKEN_B64
-        b64dec l
+        l.from_b64
       else
         fail ReportError.new self,
           msg:"verify_session lines wrong size, expecting #{TOKEN_B64}"
@@ -140,8 +146,24 @@ class SessionController < ApplicationController
         msg: 'handshake mismatch: wrong client token'
     end
 
-    diff = Rails.configuration.x.relay.difficulty
-    if  diff == 0
+    # With difficulty throttling we keep a short window for
+    # older nonces to validate using older diff setting
+    # Window closes when ZAX_TEMP_DIFF expires in redis
+    diff = get_diff
+    unless static_diff?
+      diff2 = get_diff(true)  # Old value if present
+      if diff != diff2 # There was a recent change
+        if diff == 0 or diff2 == 0 # Special case of changing to/from 0 diff
+          correct_sign = h2(ct + rt) # Check if client uses 0 diff algorithm
+          diff = 0 if h2_client_sign.eql? correct_sign
+        else
+          # Use easier one to confirm
+          diff = [diff,diff2].min
+        end
+      end
+    end
+
+    if diff == 0
       correct_sign = h2(ct + rt)
       unless h2_client_sign.eql? correct_sign
         fail ClientTokenError.new self,
@@ -149,9 +171,9 @@ class SessionController < ApplicationController
           msg: 'handshake: wrong hash for 0 difficulty'
       end
     else
-      nounce = h2_client_sign
-      hash = h2(ct + rt + nounce).bytes
-      unless array_zero_bits?(hash,diff)
+      nonce = h2_client_sign
+      hash = h2(ct + rt + nonce).bytes
+      unless array_zero_bits?(hash, diff)
         fail ClientTokenError.new self,
           client_token: dumpHex(ct),
           msg: "handshake: wrong nonce for difficulty #{diff}"
@@ -177,5 +199,22 @@ class SessionController < ApplicationController
       session_key,
       expires_in: Rails.configuration.x.relay.session_timeout )
     session_key
+  end
+
+  def adjust_difficulty
+    return if static_diff? # Throttling disabled if period not set
+    period = Rails.configuration.x.relay.period
+    rds.incr "ZAX_session_counter_#{ DateTime.now.minute / period }"
+    unless rds.exists ZAX_DIFF_JOB_UP
+      # begining of next period
+      job_time = start_diff_period(period, 1)
+      ttl = job_time.to_i - DateTime.now.to_i
+      rds.set ZAX_DIFF_JOB_UP, 1, { ex: ttl }
+      DiffAdjustJob.set(wait_until: job_time).perform_later()
+
+      # If traffic spike is over reset to normal difficulty
+      cleanup_time = start_diff_period(period, ZAX_DIFF_LENGTH)
+      DiffAdjustJob.set(wait_until: cleanup_time).perform_later()
+    end
   end
 end

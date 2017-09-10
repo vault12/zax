@@ -4,6 +4,7 @@ require 'errors/zax_error'
 module Errors
   class SevereRandomError < ZAXError
     def http_fail
+      @response_code = :internal_server_error
       super
       severe_error 'NaCl error - random(32)'
     end

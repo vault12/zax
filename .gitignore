@@ -10,4 +10,13 @@
 !/log/.keep
 /tmp
 # /config/secrets.yml
+
+# temp files created by puma and redis
+/shared/pids/*
+/shared/sockets/*
+/shared/log/*
+/shared/uploads/*
+dump.rdb
+
+# editor settings
 .idea

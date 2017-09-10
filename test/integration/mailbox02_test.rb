@@ -6,7 +6,7 @@ require 'mailbox'
 class Mailbox02Test < ActionDispatch::IntegrationTest
   test 'mailbox with random hpk' do
     hpk = RbNaCl::Random.random_bytes 32
-    mbx = Mailbox.new hpk
+    mbx = Mailbox.new b64enc hpk
     assert_not_nil mbx.hpk
     hpkey = "mbx_#{mbx.hpk}"
 

@@ -1,24 +1,22 @@
 source 'https://rubygems.org'
-ruby "2.2.3"
+ruby "2.4.1"
 
-gem 'rails', '4.2.1'
-gem 'rails-api'
+gem 'rails', '5.1.3'
 
-group :development do
+gem 'puma'
+
+group :development, :test do
   gem 'spring'
   gem 'minitest-reporters'
 end
 
-group :production do
-  gem 'puma'
-end
-
 gem 'kgio'
-gem 'unicorn'
 
 gem 'rbnacl-libsodium'
 gem 'redis'
 gem 'redis-rails'
+
+gem 'base32'
 
 # To use bundle install
 # gem install bundler

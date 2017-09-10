@@ -6,7 +6,7 @@ module Errors
   class HPKError < ZAXError
     def http_fail
       super
-      warn "#{INFO_NEG} hpk error: #{@data[:msg]} #{dumpHex @data[:hpk]}"
+      warn "#{INFO_NEG} hpk error: #{@data[:msg]} #{dump @data[:hpk]}"
     end
   end
 end

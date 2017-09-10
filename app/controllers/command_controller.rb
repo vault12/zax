@@ -1,86 +1,105 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
+require 'commands/message_commands'
+require 'commands/file_commands'
 
 class CommandController < ApplicationController
   public
+  include TransactionHelper
   attr_reader :body
 
+  ALL_COMMANDS = %w(
+    count upload download delete messageStatus
+    startFileUpload fileStatus deleteFile
+    uploadFileChunk downloadFileChunk
+    getEntropy)
+
   def process_cmd
-    @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
-    lines = check_body_preamble_command_lines @body_preamble
-    @hpk = _get_hpk lines[0]
-    nonce = _check_nonce b64dec lines[1]
+    reportCommonErrors("process command error => ") do
+      @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
+      lines = check_body_preamble_command_lines @body_preamble
+      @hpk = _get_hpk lines[0]
+      nonce = _check_nonce lines[1].from_b64
 
-    @body = request.body.read MAX_COMMAND_BODY
-    lines = check_body_command_lines @body
-    ctext = b64dec lines[0]
-    load_keys
-    data = decrypt_data nonce, ctext
-    mailbox = Mailbox.new @hpk
-    rsp_nonce = _make_nonce
-    # === Process command ===
-    case data[:cmd]
-    when 'upload'
-      hpkto = b64dec data[:to]
+      @body = request.body.read MAX_COMMAND_BODY
+      lines = check_body_command_lines @body
+      ctext = lines[0].from_b64
+      load_keys
 
-      # Nonce is included for A->B private messages
-      msg_nonce = b64dec data[:payload]['nonce'] if data[:payload]['nonce']
+      data = decrypt_data nonce, ctext
+      data[:ctext] = lines[1] if lines[1] # extra line on uploadFileChunk
+      check_command data
+      mailbox = Mailbox.new @hpk.to_b64
+      rsp_nonce = _make_nonce
+      @cmd = data[:cmd]
 
-      # Make one if payload is a plain text message
-      msg_nonce = _make_nonce unless msg_nonce
-      mbx = Mailbox.new hpkto
+      # === Process command ===
+      logger.info "#{CMD}#{GREEN}#{@cmd}#{ENDCLR}"
+      case @cmd
 
-      # Ctext of private messages or plain text payload
-      msg = data[:payload]['ctext'] || data[:payload]
+      # ===   Messaging commands ===
+      when 'upload'     # === ⌘ Upload ===
+        res = UploadCmd.new(@hpk,mailbox).process(data)[:storage_token].to_b64
+        render plain: "#{res}", status: :ok
 
-      res = mbx.store @hpk, msg_nonce, msg
-      logger.info "#{INFO_GOOD} stored item #{dumpHex msg_nonce} mbx '#{dumpHex @hpk}' => '#{dumpHex hpkto}'"
-      render text: "#{b64enc res[:storage_token]}", status: :ok
+      when 'count'      # === ⌘ Count ===
+        render_encrypted rsp_nonce, CountCmd.new(@hpk,mailbox).process(data)
 
-    when 'count'
-      enc_nonce = b64enc rsp_nonce
-      cnt = mailbox.count
-      enc_data = encrypt_data rsp_nonce, cnt
-      logger.info "#{INFO} #{cnt} items in mbx #{dumpHex @hpk}"
-      render text: "#{enc_nonce}\r\n#{enc_data}", status: :ok
+      when 'download'   # === ⌘ Download ===
+        render_encrypted rsp_nonce, DownloadCmd.new(@hpk,mailbox).process(data)
 
-    when 'download'
-      count = data[:count] || mailbox.count > MAX_ITEMS ? MAX_ITEMS : mailbox.count
-      start = data[:start] || 0
-      fail ReportError.new self, msg: 'Bad download start position' unless start >= 0 || start < mailbox.count
-      payload = mailbox.read_all start, count
-      payload = process_payload(payload)
-      enc_nonce = b64enc rsp_nonce
-      enc_payload = encrypt_data rsp_nonce, payload
-      logger.info "#{INFO_GOOD} downloading #{count} mbx '#{dumpHex @hpk}'"
-      render text: "#{enc_nonce}\r\n#{enc_payload}", status: :ok
+      when 'messageStatus' # === ⌘ Message Status ===
+        ttl = StatusCmd.new(@hpk,mailbox).process(data)
+        render plain: "#{ttl}", status: :ok
 
-    when 'message_status'
-      storage_token = b64dec data[:token]
-      ttl = mailbox.check_msg_status storage_token
-      render text: "#{ttl}", status: :ok
+      when 'delete'     # === ⌘ Delete ===
+        render nothing: true, status: :ok unless data[:payload]
+        res = DeleteCmd.new(@hpk,mailbox).process(data)
+        render plain: "#{res}", status: :ok
 
-    when 'delete'
-      render nothing: true, status: :ok unless data[:payload]
-      mailbox.delete_list data[:payload]
-      logger.info "#{INFO_GOOD} deleting from mbx '#{dumpHex @hpk}'"
-      render text: "#{mailbox.count}", status: :ok
+      # ===   File commands ===
+      when 'startFileUpload'  # === ⌘ startFileUpload ===
+        # full error check in check_errors
+        return unless check_filemanager
+        payload = StartFileUploadCmd.new(@hpk,mailbox,self).process(data)
+        render_encrypted rsp_nonce,payload.to_json
+
+      when 'fileStatus'       # === ⌘ fileStatus ===
+        return unless check_filemanager
+        file_info = FileStatusCmd.new(@hpk,mailbox,self).process(data)
+        render_encrypted rsp_nonce,file_info.to_json
+
+      when 'uploadFileChunk'  # === ⌘ uploadFileChunk ===
+        return unless check_filemanager
+        payload = UploadFileCmd.new(@hpk,mailbox,self).process(data)
+        payload ||= { status: :NOT_FOUND }
+        render_encrypted rsp_nonce, payload.to_json
+
+      when 'downloadFileChunk'  # === ⌘ downloadFileChunk ===
+        return unless check_filemanager
+        payload, file = DownloadFileCmd.new(@hpk,mailbox,self).process(data)
+        payload ||= { status: :NOT_FOUND }
+        render_encrypted rsp_nonce, payload.to_json, file
+
+      when 'deleteFile'         # === ⌘ deleteFile ===
+        return unless check_filemanager
+        payload = DeleteFileCmd.new(@hpk,mailbox,self).process(data)
+        render_encrypted rsp_nonce, payload.to_json
+
+      # === Misc commands ===
+      when 'getEntropy'         # === ⌘ getEntropy ===
+        payload = { entropy: rand_bytes(data[:size]).to_b64 }
+        render plain: payload.to_json.to_b64, status: :ok
+      end
     end
-
-    # === Error handling ===
-    rescue RbNaCl::CryptoError => e
-      ZAXError.new(self).NaCl_error e
-    rescue ZAXError => e
-      e.http_fail
-    rescue => e
-      ZAXError.new(self).report "process_cmd error",e
   end
+
 
   # === Private helpers ===
   private
 
   def load_keys
-    logger.info "#{INFO_GOOD} Reading client session key for hpk #{dumpHex @hpk}"
+    logger.info "#{INFO_GOOD} Reading client session key for hpk #{MAGENTA}#{dumpHex @hpk}#{ENDCLR}"
     @session_key = Rails.cache.read("session_key_#{@hpk}")
     @client_key = Rails.cache.read("client_key_#{@hpk}")
     fail HPK_keys.new(self, {hpk: @hpk, msg: 'No cached session key'}) unless @session_key
@@ -104,7 +123,7 @@ class CommandController < ApplicationController
   def check_body_command_lines(body)
     lines = check_body_break_lines body
     pl = lines ? lines.count : 0
-    unless lines && lines.count == 1
+    unless lines && (lines.count == 1 or lines.count == 2)
       fail BodyError.new self, msg: "wrong number of lines in command body, #{pl} line(s)", lines: pl
     end
     lines
@@ -118,55 +137,83 @@ class CommandController < ApplicationController
 
   def decrypt_data(nonce, ctext)
     box = RbNaCl::Box.new(@client_key, @session_key)
-    d = JSON.parse box.decrypt(nonce, ctext)
-    d = d.reduce({}) { |h, (k, v)| h[k.to_sym] = v; h }
-    check_command d
+    d = JSON.parse box.decrypt(nonce, ctext).force_encoding('utf-8'),symbolize_names: true
   end
 
   def encrypt_data(nonce, data)
     box = RbNaCl::Box.new(@client_key, @session_key)
-    b64enc box.encrypt(nonce, data.to_json)
+    box.encrypt(nonce, data.to_json).to_b64
   end
 
-  def rand_str(min, size)
-    (b64enc rand_bytes min + rand(size)).delete('=')
+  def render_encrypted(nonce,data,extra_line = nil)
+    enc_payload = encrypt_data(nonce, data)
+    enc_payload +="\r\n#{extra_line}" if extra_line
+    render plain: "#{nonce.to_b64}\r\n#{enc_payload}", status: :ok
   end
 
   def check_command(data)
-    all = %w(count upload download delete message_status)
+    all = ALL_COMMANDS
 
     fail ReportError.new self, msg: 'command_controller: missing command' unless data[:cmd]
     fail ReportError.new self, msg: "command_controller: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
 
+    # === Message commands error checks
     if data[:cmd] == 'upload'
       fail ReportError.new self, msg: 'command_controller: no destination HPK in upload' unless data[:to]
-      hpk_dec = b64dec data[:to]
+      hpk_dec = data[:to].from_b64
       _check_hpk hpk_dec
       fail ReportError.new self, msg: 'command_controller: no payload in upload' unless data[:payload]
     end
 
-    if data[:cmd] == 'message_status'
-      fail ReportError.new self, msg: 'command_controller: bad/missing storage token in message_status' unless data[:token] and data[:token].length == TOKEN_B64
+    if data[:cmd] == 'messageStatus'
+      fail ReportError.new self, msg: 'command_controller: bad/missing storage token in messageStatus' unless data[:token] and data[:token].length == TOKEN_B64
     end
 
     if data[:cmd] == 'delete'
       fail ReportError.new self, msg: 'command_controller: no ids to delete' unless data[:payload]
     end
 
-    data
+    # === File commands error checks
+    if data[:cmd] == 'startFileUpload'
+      fail ReportError.new self, msg: 'startFileUpload: hpk :to required' unless data[:to] and data[:to].length >= HPK_B64
+      fail ReportError.new self, msg: 'startFileUpload: Upload file size is over 1Gb limit' unless data[:file_size] and data[:file_size] < 1*1024*1024*1024 # 1 Gb as sanity limit
+      fail ReportError.new self, msg: 'startFileUpload: Metadata missing' unless data[:metadata]
+      fail ReportError.new self, msg: 'startFileUpload: Metadata ctext missing' unless data[:metadata][:ctext]
+      fail ReportError.new self, msg: 'startFileUpload: Metadata nonce missing' unless data[:metadata][:nonce] and data[:metadata][:nonce].length >= NONCE_B64
+    end
+
+    if data[:cmd] == 'fileStatus'
+      fail ReportError.new self, msg: "fileStatus: missing uploadID" unless data[:uploadID]
+    end
+
+    if data[:cmd] == 'uploadFileChunk'
+      %i(uploadID part nonce ctext).each do |f|
+        fail ReportError.new self, msg: "uploadFileChunk: missing #{f}" unless data[f]
+      end
+    end
+
+     if data[:cmd] == 'downloadFileChunk'
+      %i(uploadID part).each do |f|
+        fail ReportError.new self, msg: "downloadFileChunk: missing #{f}" unless data[f]
+      end
+     end
+
+    if data[:cmd] == 'deleteFile'
+      fail ReportError.new self, msg: "missing uploadID" unless data[:uploadID]
+    end
+
+    if data[:getEntropy] == 'getEntropy'
+      max_size = Rails.configuration.x.relay.file_store[:max_chunk_size]
+      fail ReportError.new self, msg: "getEntropy: missing size" unless data[:size]
+      fail ReportError.new self, msg: "getEntropy: Request for #{data[:size]} while max_size is set to #{max_size}" if data[:size]>max_size
+    end
+
+    return data
   end
 
-  def process_payload(messages)
-    payload_ary = []
-    messages.each do |message|
-      payload = {}
-      payload[:data] = message[:data]
-      payload[:time] = message[:time]
-      payload[:from] = b64enc message[:from]
-      payload[:nonce] = b64enc message[:nonce]
-      payload_ary.push payload
-    end
-    payload_ary
+  def check_filemanager
+    head :method_not_allowed unless FileManager.is_enabled?
+    return FileManager.is_enabled?
   end
 
 end

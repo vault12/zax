@@ -11,10 +11,7 @@ Minitest::Reporters.use!
 
 class ActiveSupport::TestCase
   include ResponseHelper
-
-  def rds
-    Redis.current
-  end
+  include TransactionHelper
 
   def redisup
     begin
@@ -44,17 +41,32 @@ class ActiveSupport::TestCase
     response.body
   end
 
+  def decrypt_2_lines(lines)
+    assert_equal(2, lines.length)
+    response_nonce = lines[0].from_b64
+    response_ctext = lines[1].from_b64
+    _client_decrypt_data response_nonce, response_ctext
+  end
+
+  # Special case for downloadFileChunk: extra line with file contents
+  def decrypt_3_lines(lines)
+    assert_equal(3, lines.length)
+    response_nonce = lines[0].from_b64
+    response_ctext = lines[1].from_b64
+    [_client_decrypt_data(response_nonce, response_ctext), lines[2]]
+  end
+
   def _encode_lines(lines)
-    lines.reduce('') { |s,l| s+="#{b64enc l}\r\n" }
+    lines.reduce('') { |s,l| s+="#{l.to_b64}\r\n" }
   end
 
   def _raw_post(action, params, *lines)
     @request.env['RAW_POST_DATA'] = _encode_lines lines
-    post action, params
+    post action, params: params
   end
 
   def _post(route, *lines)
-    post route, _encode_lines(lines)
+    post route, params: _encode_lines(lines)
   end
 
   def _corrupt_str(str, minor = true)
@@ -99,13 +111,18 @@ class ActiveSupport::TestCase
 #      Used for testing the CommandController
 #--------------------------------------------------
 
-  def _setup_keys hpk
+  def _setup_keys(hpk)
     @session_key = RbNaCl::PrivateKey.generate
     _client_key = RbNaCl::PrivateKey.generate
     @client_key = _client_key.public_key
 
     Rails.cache.write("session_key_#{hpk}",@session_key, :expires_in => @tmout)
     Rails.cache.write("client_key_#{hpk}",@client_key, :expires_in => @tmout)
+  end
+
+  def _delete_keys(hpk)
+    Rails.cache.delete("session_key_#{hpk}")
+    Rails.cache.delete("client_key_#{hpk}")
   end
 
   def _send_command(hpk,data)
@@ -122,9 +139,19 @@ class ActiveSupport::TestCase
   def _client_decrypt_data(nonce,data)
     box = RbNaCl::Box.new(@client_key, @session_key)
     ptext = box.decrypt(nonce,data)
-    JSON.parse ptext
+    # Sometimes box.decrypt returns plain text string inside quites "...", that trhows off first run of JSON.parse
+
+    ret = JSON.parse ptext, symbolize_names:true
+    ret = JSON.parse ret, symbolize_names:true if ret.class==String
+    return ret
     # Strict JSON parsing does not accept plain text numbers
     rescue JSON::ParserError
       ptext ? ptext.to_i : nil
+  end
+
+  def _check_response(body)
+    fail BodyError.new self, msg: 'No request body' if body.nil?
+    nl = body.include?("\r\n") ? "\r\n" : "\n"
+    return body.split nl
   end
 end

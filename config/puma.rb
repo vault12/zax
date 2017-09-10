@@ -1,17 +1,25 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-#
-# Change to match your CPU core count
-workers 12
 
-# Min and Max threads per worker
-threads 1, 6
+# Default to production
+rails_env = ENV['RAILS_ENV'] || 'production'
+
+if rails_env == 'production'
+  # Change to match your CPU core count
+  workers 12
+
+  # Min and Max threads per worker
+  threads 1, 6
+end
+
+if rails_env == 'development'
+  workers 2
+  threads 1, 2
+end
 
 app_dir = File.expand_path("../..", __FILE__)
 shared_dir = "#{app_dir}/shared"
 
-# Default to production
-rails_env = ENV['RAILS_ENV'] || 'production'
 environment rails_env
 
 # Set up socket location

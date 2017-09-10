@@ -18,7 +18,7 @@ module HPKHelper
 
   def _get_hpk(h)
     raise HPKError.new(self, { hpk: h, msg: "_get_hpk: Missing HPK" } ) unless h
-    hpk = b64dec h  # correct base64?
+    hpk = h.from_b64  # correct base64?
     _check_hpk hpk
     return hpk # good hpk (hashed public key)
     rescue => e # wrap errors of b64 decode

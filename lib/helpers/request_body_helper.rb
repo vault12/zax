@@ -21,7 +21,7 @@ module RequestBodyHelper
     unless lines and lines.count == numoflines
       fail BodyError.new self,
         msg: "#{m}: wrong number of lines in BODY",
-        body: "#{body[0...8]}...",
+        body: dumpHex(body),
         lines: lines.count
     end
     return lines

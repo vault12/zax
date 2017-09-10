@@ -4,6 +4,7 @@ require 'errors/zax_error'
 module Errors
   class SessionKeyError < ZAXError
     def http_fail
+      @response_code = :unauthorized
       super
       warn "#{INFO_NEG} Bad session_key/relay_token/client_token in prove_hpk\n"\
       "session_key #{dump @data[:session_key]}, "\

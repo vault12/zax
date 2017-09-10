@@ -62,7 +62,7 @@ test 'prove_hpk' do
     nonce: nonce_inner,
     pub_key: client_comm_sk.public_key.to_s,
     ctext: ctext }
-    .map { |k,v| [k,b64enc(v)] }
+    .map { |k,v| [k,v.to_b64] }
   ]
 
   # Client encrypts JSON object with
@@ -74,10 +74,10 @@ test 'prove_hpk' do
 
   outer = box_outer.encrypt(nonce_outer, inner.to_json)
 
-  p1 = "#{b64enc h2_client_token}"
-  p2 = "#{b64enc client_temp_pk}"
-  p3 = "#{b64enc nonce_outer}"
-  p4 = "#{b64enc outer}"
+  p1 = "#{h2_client_token.to_b64}"
+  p2 = "#{client_temp_pk.to_b64}"
+  p3 = "#{nonce_outer.to_b64}"
+  p4 = "#{outer.to_b64}"
 
   assert_equal(p1.length, 44)
   assert_equal(p2.length, 44)

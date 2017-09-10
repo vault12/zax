@@ -20,7 +20,7 @@ module NonceHelper
   # check nonce uniqueness within the specified expiration time window
   # if outside the expiration window, nonce will always fail the timestamp check
   def _check_nonce_unique(nonce)
-    nonce_b64 = b64enc(nonce)
+    nonce_b64 = nonce.to_b64
     result = Rails.cache.read("nonce_#{nonce_b64}")
     unless result.nil?
       fail NonceError.new self, {nonce: result, msg: 'Nonce Not Unique'}
@@ -40,7 +40,7 @@ module NonceHelper
     return nonce
   end
 
-  # Create new nonce with timestamp. First 8 bytes is timestamp,
+  # Create new NaCl nonce with timestamp. First 8 bytes is timestamp,
   # the following 16 bytes are random.
   def _make_nonce(tnow = Time.now.to_i)
     nonce = (rand_bytes NONCE_LEN).unpack "C#{NONCE_LEN}"

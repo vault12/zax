@@ -5,6 +5,35 @@ Rails.application.configure do
 
   # --- Relay default configuration START ---
   config.x.relay.difficulty                 = 4 # 1...255 : require number of leading 0 bits in handshake
+
+  # If present, set restart_window to return true when redis/nginx
+  # or other dependent components are scheduled for restart.
+  # Relay will sleep on requests until window is past and returns false.
+  # Example: restart components at hour boundary with @hourly cron job
+  # config.x.relay.restart_window = lambda {
+  #   t = DateTime.now
+  #   t.minute == 0 and t.second<4
+  # }
+  # config.x.relay.restart_window_max_seconds = 5
+
+  # === Dynamic session handshake difficulty throttling
+  # Period in minutes. Measure # of requests per period and adjust next period
+  # config.x.relay.period = 5 # 1 to test, 15 for production
+
+  # # Minimal number of requests. Thorttling wont trigger under this limit per period
+  # config.x.relay.min_requests = 1000 # 20 for test. 1000 for production
+
+  # # Change factor leading to increase/decrease of difficulty
+  # # Factor of 2 means that for doubling of requests per period
+  # # from min_request level difficultiy will increase by one increment
+  # config.x.relay.overload_factor = 2
+
+  # # Difficulty increase/decrease increment. Each unit is one bit of
+  # # zero leading handshake string. Setting say factor of 2 and increment
+  # # to 3 means that each doubling of traffic will require 3 extra zero-leading
+  # # bits in session handshake proof of work
+  # config.x.relay.diff_increase = 1
+
   # --- Relay default configuration END   ---
 
   # Code is not reloaded between requests.
@@ -28,7 +57,7 @@ Rails.application.configure do
 
   # Disable serving static files from the `/public` folder by default since
   # Apache or NGINX already handles this.
-  config.serve_static_files = ENV['RAILS_SERVE_STATIC_FILES'].present?
+  config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   # Compress JavaScripts and CSS.
   config.assets.js_compressor = :uglifier
@@ -82,5 +111,4 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   # config.active_record.dump_schema_after_migration = false
-
 end
