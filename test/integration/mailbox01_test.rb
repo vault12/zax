@@ -11,7 +11,7 @@ class Mailbox01Test < ActionDispatch::IntegrationTest
     options[:mbx_expire] = 20.seconds.to_i
     options[:msg_expire] = 10.seconds.to_i
 
-    mbx = Mailbox.new hpk, options
+    mbx = Mailbox.new hpk.to_b64, options
 
     assert_not_nil mbx.hpk
     hpkey = "mbx_#{mbx.hpk}"
@@ -30,13 +30,13 @@ class Mailbox01Test < ActionDispatch::IntegrationTest
   # download all of the messages stored above
   # and then test the delete command
   def cleanup(hpk)
-    mbx = Mailbox.new hpk
+    mbx = Mailbox.new hpk.to_b64
     results = mbx.read_all
     return unless results
     results_count = results.length
     count = results_count - 1
     results.each do |item|
-      mbx.delete b64enc item[:nonce]
+      mbx.delete item[:nonce].to_b64
       assert_equal(mbx.count, count)
       count -= 1
     end

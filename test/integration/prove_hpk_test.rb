@@ -15,7 +15,7 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
     lines = _check_body(body)
 
     # get the relay token from the response body
-    @relay_token = b64dec lines[0]
+    @relay_token = lines[0].from_b64
 
     # hash the client token
     h2_client_token = h2(@client_token)
@@ -28,7 +28,7 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
 
     body = response.body
     lines = _check_body(body)
-    @session_key = b64dec lines[0]
+    @session_key = lines[0].from_b64
 
     ### --------------------------------------------------
     ### Start set up of /prove
@@ -74,7 +74,7 @@ class ProveHpkTest < ActionDispatch::IntegrationTest
       nonce: nonce_inner,
       pub_key: client_comm_sk.public_key.to_s,
       ctext: ctext }
-      .map { |k,v| [k,b64enc(v)] }
+      .map { |k,v| [k,v.to_b64] }
     ]
 
     # Client encrypts JSON object with

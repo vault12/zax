@@ -29,45 +29,52 @@ module Errors
     def initialize(ctrl, data = nil)
       @controller = ctrl
       @data = data
+      @response_code = :bad_request
     end
 
     def http_fail
-      @controller.expires_now
-      err_msg = ''
-      err_msg = @data[:msg] if @data and @data.is_a?(Hash) and @data[:msg]
-      warn "#{INFO_NEG} #{err_msg}"
-
       # No information about the relay state is sent back to the client for known error conditions
-      @controller.head :bad_request,
-        x_error_details: 'Your request can not be completed.'
-    end
+      if @controller and @controller.class < ApplicationController
+        @controller.expires_now
+        xerr = @response_code != :internal_server_error ? 'Your request can not be completed.' : 'Something is wrong with this relay. Try again later.'
+        @controller.head @response_code, x_error_details: xerr
+      end
+      @err_msg = ( @data and @data.is_a?(Hash) and @data[:msg] ) ? @data[:msg] : ''
+      warn "#{INFO_NEG} #{@err_msg}"
 
-    def _log_exception(icon, note, excpt)
-      warn "#{icon} #{note}:\n#{EXPT} \xE2\x94\x8C#{excpt} \xE2\x94\x90"
-      warn excpt.backtrace[0..3].reduce("") { |s,x|
-        s += "#{EXPT} \xE2\x94\x9C#{x}\n" } +
-      "#{EXPT} \xE2\x94\x94#{BAR*25}\xE2\x94\x98"
+      # Discard any set redis WATCH
+      if Thread.current[:redis]
+        begin
+          rds = Thread.current[:redis]
+          rds.discard if rds.connected?
+        rescue
+          # Ignore any redis issues since we already
+          # dealing with some error
+        end
+      end
     end
 
     # Used when the relay's internal integrity is in doubt
-    def severe_error(note =null)
-      @controller.expires_now
-      head :internal_server_error,
-        x_error_details: 'Something is wrong with this relay. Try again later.'
-      error "#{ERROR} #{note}: #{@data[:msg]}"
+    def severe_error(note ="", excpt)
+      if @controller and @controller.class < ApplicationController
+        @controller.expires_now
+        @controller.head :internal_server_error,
+          x_error_details: 'Something is wrong with this relay. Try again later.'
+      end
+      _log_exception ERROR,note,excpt
     end
 
     # This is used to log general non-ZAX exceptions
     def report(note, excpt)
       # handle non-ZAX errors, such as encoding, etc.
-      @controller.head :bad_request,
+      @controller.expires_now
+      @controller.head @response_code,
         x_error_details: 'Your request can not be completed.'
       _log_exception WARN,note,excpt
     end
 
     # This is used to log RbNaCl errors
     def NaCl_error(e)
-      # warn e.backtrace[0..5]
       e1 = e.is_a?(RbNaCl::BadAuthenticatorError) ? 'The authenticator was forged or otherwise corrupt' : ''
       e2 = e.is_a?(RbNaCl::BadSignatureError) ? 'The signature was forged or otherwise corrupt' : ''
       error "#{ERROR} Decryption error for packet:\n"\
@@ -75,26 +82,35 @@ module Errors
         "#{@controller.body}"
       _log_exception ERROR, "Stack trace", e
 
-      @controller.head :bad_request,
+      @controller.head @response_code,
         x_error_details: 'Your request can not be completed.'
     end
 
     # === Exception loging functions ===
+    def _log_exception(icon, note, excpt)
+      warn "#{icon} #{note}:\n#{EXPT} \xE2\x94\x8C#{excpt} \xE2\x94\x90"
+      warn excpt.backtrace[0..7].reduce("") { |s,x|
+        s += "#{EXPT} \xE2\x94\x9C#{x}\n" } +
+      "#{EXPT} \xE2\x94\x94#{BAR*25}\xE2\x94\x98"
+    end
+
     def log_message(m)
       #  "#{m}:\n#{dumpHex @data}:\n#{EXPT} #{self}\n---"
       "#{m}"
     end
 
     def info(m)
-      @controller.logger.info log_message m
+      Rails.logger.info log_message m
+      # @controller.logger.info log_message m
     end
 
     def warn(m)
-      @controller.logger.warn log_message m
+      Rails.logger.warn log_message m
+      # @controller.logger.warn log_message m
     end
 
     def error(m)
-      @controller.logger.error log_message m
+      Rails.logger.error log_message m
     end
   end
 end

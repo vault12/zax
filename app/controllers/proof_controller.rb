@@ -7,67 +7,62 @@ class ProofController < ApplicationController
 
   # POST /prove - prove client ownership of a secret key for HPK
   def prove_hpk
-    # We expect 4 lines, base64 each:
-    # 1: h₂(client_token): client_token used to receive a relay session pk
-    # 2: a_temp_pk : client temp session key
-    # 3: nonce_outter: timestamped nonce
-    # 4: crypto_box(JSON, nonce_inner, relay_session_pk, client_temp_sk): Outer crypto-text
+    reportCommonErrors("prove_hpk error") do
+      # We expect 4 lines, base64 each:
+      # 1: h₂(client_token): client_token used to receive a relay session pk
+      # 2: a_temp_pk : client temp session key
+      # 3: nonce_outter: timestamped nonce
+      # 4: crypto_box(JSON, nonce_inner, relay_session_pk, client_temp_sk): Outer crypto-text
 
-    @body = request.body.read PROVE_BODY
-    l1, l2, l3, l4 = _check_body_lines @body, 4, 'prove hpk'
+      @body = request.body.read PROVE_BODY
+      l1, l2, l3, l4 = _check_body_lines @body, 4, 'prove hpk'
 
-    # check and decrypt h2(client_token)
-    @h2_ct = _check_client_token l1
+      # check and decrypt h2(client_token)
+      @h2_ct = _check_client_token l1
 
-    # load @client_token, @relay_token, @session_key from redis
-    check_session_state
+      # load @client_token, @relay_token, @session_key from redis
+      check_session_state
 
-    # client_temp_pk
-    @client_temp_pk = b64dec l2
+      # client_temp_pk
+      @client_temp_pk = l2.from_b64
 
-    # check that nonce timestamp is within range
-    nonce_outer = _check_nonce b64dec l3
+      # check that nonce timestamp is within range
+      nonce_outer = _check_nonce l3.from_b64
 
-    # decode outter cyphertext
-    ctext = b64dec l4
+      # decode outter cyphertext
+      ctext = l4.from_b64
 
-    # decypher it
-    outer_box = RbNaCl::Box.new(@client_temp_pk, @session_key)
-    inner = JSON.parse outer_box.decrypt(nonce_outer, ctext)
+      # decypher it
+      outer_box = RbNaCl::Box.new(@client_temp_pk, @session_key)
+      inner = JSON.parse outer_box.decrypt(nonce_outer, ctext)
 
-    # decode values from base64 and make keys symbols
-    inner = Hash[inner.map { |k, v| [k.to_sym, b64dec(v)] }]
+      # decode values from base64 and make keys symbols
+      inner = Hash[inner.map { |k, v| [k.to_sym, v.from_b64] }]
 
-    # check inner nonce timestamp
-    _check_nonce inner[:nonce]
+      # check inner nonce timestamp
+      _check_nonce inner[:nonce]
 
-    # inner[:pub_key] is the key that is supposed to hash into hpk
-    # dechypher inner ctext
-    inner_box = RbNaCl::Box.new(inner[:pub_key], @session_key)
-    sign = inner_box.decrypt(inner[:nonce], inner[:ctext])
+      # inner[:pub_key] is the key that is supposed to hash into hpk
+      # dechypher inner ctext
+      inner_box = RbNaCl::Box.new(inner[:pub_key], @session_key)
+      sign = inner_box.decrypt(inner[:nonce], inner[:ctext])
 
-    # construct the hash that depends on the session
-    # token pair and on the temp key client sent
-    proof_sign = h2(@client_temp_pk + @relay_token + @client_token)
+      # construct the hash that depends on the session
+      # token pair and on the temp key client sent
+      proof_sign = h2(@client_temp_pk + @relay_token + @client_token)
 
-    fail HPKError.new(self, msg:'HPK prove: Signature mismatch') unless sign &&
-      proof_sign && proof_sign.length == TOKEN_LEN && sign.eql?(proof_sign)
+      fail HPKError.new(self, msg:'HPK prove: Signature mismatch') unless sign &&
+        proof_sign && proof_sign.length == TOKEN_LEN && sign.eql?(proof_sign)
 
-    # Set HPK to the hash of idenitity key we just decrypted with
-    @hpk = h2(inner[:pub_key])
+      # Set HPK to the hash of idenitity key we just decrypted with
+      @hpk = h2(inner[:pub_key])
 
-    # --- No exceptions so far - now it is the proof success path ---
-    save_hpk_session
-    delete_handshake_keys
-    mailbox = Mailbox.new @hpk
-    render text: "#{mailbox.count}", status: :ok
-
-  rescue RbNaCl::CryptoError => e
-    ZAXError.new(self).NaCl_error e
-  rescue ZAXError => e
-    e.http_fail
-  rescue => e
-    ZAXError.new(self).report 'prove_hpk error', e
+      # --- No exceptions so far - now it is the proof success path ---
+      save_hpk_session
+      delete_handshake_keys
+      mailbox = Mailbox.new @hpk.to_b64
+      render plain: "#{mailbox.count}", status: :ok
+    end
   end
 
   # === Private helper functions ===
@@ -85,9 +80,9 @@ class ProofController < ApplicationController
        @relay_token.nil? || @relay_token.length != TOKEN_LEN ||
        @client_token.nil? || @client_token.length != TOKEN_LEN
       fail SessionKeyError.new self,
-        session_key: @session_key.to_bytes[0..3],
-        relay_token: @relay_token[0..3],
-        client_token: @client_token[0..3]
+        session_key: @session_key ? @session_key.to_bytes[0..3] : nil,
+        relay_token: @relay_token ? @relay_token[0..3] : nil,
+        client_token: @relay_token ? @client_token[0..3] : nil
     end
   end
 
@@ -106,7 +101,7 @@ class ProofController < ApplicationController
 
   # decocde the client line from base64, then de-mask by applying a specific pad
   def unmask_line(line, mask)
-    xor_str b64dec(line), mask
+    xor_str line.from_b64, mask
   end
 
   # Once hpk ownership is proven, increase client/relay key storage
@@ -116,7 +111,7 @@ class ProofController < ApplicationController
     tmout = Rails.configuration.x.relay.session_timeout
     Rails.cache.write("session_key_#{@hpk}", @session_key, expires_in: tmout)
     Rails.cache.write("client_key_#{@hpk}", @client_temp_pk, expires_in: tmout)
-    logger.info "#{INFO_GOOD} Saved client and session key for hpk #{dumpHex @hpk}"
+    logger.info "#{INFO_GOOD} Saved client and session key for hpk #{MAGENTA}#{dumpHex @hpk}#{ENDCLR}"
   end
 
   # Delete handshake tokens. We delete the session key as well since it is now

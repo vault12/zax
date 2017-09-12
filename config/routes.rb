@@ -11,4 +11,10 @@ Rails.application.routes.draw do
 
   # issue commands for mailbox of given hpk
   post    'command' => 'command#process_cmd'
+
+  # receive file upload from nginx-upload-module
+  # match 'upload_complete', to: 'command#upload_preflight', via: [:options, :get]
+  # post  'upload_complete' => 'command#upload_complete'
+
+  match "*path", to: "session#missing_route", via: :all
 end

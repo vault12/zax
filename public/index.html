@@ -18,7 +18,7 @@
       <!-- Use this section to provide information about your relay -->
       <div class="panel panel-primary info-pane" ng-hide="infoVisible">
         <div class="panel-heading">
-          <h3 class="panel-title">INFO: This is a <i>'Zax Test'</i> instance at <b><span id="hostblock">https://zax_test.vault12.com</span></b>
+          <h3 class="panel-title">INFO: This is a <i>Zax</i> instance at <b><span id="hostblock"></span></b>
             <i class="glyphicon glyphicon-remove pull-right" ng-click="infoVisible = !infoVisible"></i>
           </h3>
         </div>
@@ -80,10 +80,10 @@
       div.overflow-box:hover {
         overflow: visible;
         background: #fff;
-        margin: auto
+        margin: auto;
         font-size: 1.2em;
         width: 500px;
-        text-align: center
+        text-align: center;
         height: 30px;
         z-index: 1000;
         position: relative;
@@ -107,6 +107,9 @@
     <script src="nacl_factory.js"></script>
     <script src="theglow.js"></script>
 
+    <!-- axios -->
+    <script src="axios.min.js"></script>
+
     <!--  angularjs-->
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular-route.min.js"></script>
@@ -115,9 +118,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 
     <!--  include our app code last-->
-    <script type="text/javascript" src="app.js"></script>
-    <script type="text/javascript" src="templates.js"></script>
-    <script type="text/javascript">
+    <script src="app.js"></script>
+    <script src="templates.js"></script>
+    <script>
       $( document ).ready(function() {
         $('#hostblock').html(window.location.origin);
       });

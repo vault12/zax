@@ -9,28 +9,63 @@ class Mailbox
   # --- HPK and redis storage tags
   attr_reader :hpk
 
+  # redis hash of all messages to given hpk
   def hpk_tag
     "mbx_#{@hpk}"
   end
 
+  # redis key for specific message to hpk
   def msg_tag(b64_nonce)
     "msg_#{@hpk}_#{b64_nonce}"
   end
 
+  # message storage token that can be inspected
+  # later by sender
   def token_tag(token)
-    "token_#{b64enc token}"
+    "token_#{token.to_b64}"
+  end
+
+  # redish hash of all file info messages sent to/from hpk
+  def file_index_to
+    "file_idx_to_#{@hpk}"
+  end
+
+  def file_index_from(hpk_from)
+    "file_idx_from_#{hpk_from}"
+  end
+
+  def storage_tag(storage_name)
+    "#{STORAGE_PREFIX}#{storage_name}"
+  end
+
+  def file_lock_tag(storage_id)
+    "file_lock_#{storage_id.to_b64}"
   end
 
   # --- create Mailbox for the given HPK with options to override timeouts
-  def initialize( hpk, options = {})
-    fail HPKError.new self, msg: 'Mailbox: wrong hpk format' unless hpk and hpk.length==HPK_LEN
+  def initialize( hpk_b64, options = {})
+    unless hpk_b64 and hpk_b64.length == HPK_B64
+      fail HPKErr        msg: 'Mailbox: wrong hpk format',
+        hpk: hpk_b64
+    end
 
     @tmout_mbx = options[:mbx_expire] || Rails.configuration.x.relay.mailbox_timeout
     @tmout_msg = options[:msg_expire] || Rails.configuration.x.relay.message_timeout
     fail ReportError.new self, msg: 'Mailbox expire must be greater than or equal to Message expire' if @tmout_msg > @tmout_mbx
 
-    @hpk = b64enc hpk
+    @tmout_files = options[:files_expiration] || Rails.configuration.x.relay.file_store[:files_expiration]
+    if FileManager.is_enabled? and not @tmout_files
+      @tmout_files = 7.days.seconds.to_i
+      logger.warn "#{WARN} Missing config setting: FileManager is enabled, yet :files_expiration is not set. Defaulting to #{@tmout_files}"
+    end
+
+    @hpk = hpk_b64
     @lastCount = nil
+  end
+
+  def timeout(kind)
+    return @tmout_msg if kind == :message
+    return @tmout_files if kind == :file
   end
 
   # number of messages for this mailbox in redis
@@ -47,19 +82,16 @@ class Mailbox
   # Store message for this mailbox. Message sender
   # provides the nonce used in encryption which due to
   # nonce uniqueness is also used as the message id.
-  def store(from, nonce, data)
-    fail ReportError.new self, msg: 'mailbox.store() : wrong params' unless data and
-      from and from.length == HPK_LEN
+  def store(from, nonce, data, kind = :message, extra = {})
+    _check_preconditions(from,nonce,data,kind)
 
-    b64_from = b64enc from
-    b64_nonce = b64enc nonce
-    b64_data = b64enc data
-
+    b64_nonce = nonce.to_b64
     item = {
-      from: b64_from,   # hpk of mailbox sending this message
-      nonce: b64_nonce, # the nonce originator used for his encryption
-      data: b64_data,   # encrypted payload
-      time: Time.new.to_f # time message is received by relay
+      from: from.to_b64,        # hpk of mailbox sending this message
+      nonce: b64_nonce,         # the nonce originator used for his encryption
+      data: data.to_b64,        # encrypted payload
+      time: Time.new.to_f,      # time message is received by relay
+      kind: kind.to_s.to_b64   # type of data: message or file
     }
 
     # Using storage record token sender can check
@@ -71,20 +103,52 @@ class Mailbox
     storage_token = h2 "#{@hpk}#{b64_nonce}"
 
     _resetCount()
-    res = runMbxTransaction(@hpk, 'store') do
+    tmout = timeout(kind)
+    file_info = nil
+    storage_id = nil
+
+    res = runRedisTransaction(hpk_tag, @hpk, 'store') do
+      # by default everytihing in mailbox will expire in 3 days
+      # files will expire in 7 days
+
       # store message itself on the msg_hpk_nonce tag
       rds.set(msg_tag(b64_nonce), item.to_json)
-      rds.expire(msg_tag(b64_nonce), @tmout_msg)
-      # by default everytihing in mailbox will expire in 3 days
+      rds.expire(msg_tag(b64_nonce), tmout)
 
-      # mbx_hpk is used as index hash
-      rds.hset(hpk_tag, b64_nonce, Time.new + @tmout_msg)
-      rds.expire(hpk_tag, @tmout_mbx)
+      # mbx_hpk is used as index hash of all messages to @hpk
+      rds.hset(hpk_tag, b64_nonce, Time.new + tmout)
+      rds.expire(hpk_tag, tmout)
 
       # store unique storage token for that item
+      # visible to sender (hpk_from) when stored or deleted by @hpk
       rds.set(token_tag(storage_token), storage_record.to_json)
-      rds.expire(token_tag(storage_token), @tmout_msg)
+      rds.expire(token_tag(storage_token), tmout)
+
+      # :file message is same as other messages handled by relays,
+      # which additionally passes to hpk_to 'uploadID' that it can
+      # use to issue file commands to relay.
+      if kind == :file
+        # Relay can easily re-create storage_id from uploadID (kept
+        # only by client) and FileManeger @seed, but relay can not
+        # restore uploadID from various saved storage_id's
+        storage_id = extra[:storage_id]
+        storage_name = extra[:storage_name]
+        file_info = {
+          status: :START,
+          parts: [],
+          file_size: extra[:file_size],
+          bytes_stored: 0,
+          hpk_to: @hpk,
+          hpk_from: extra[:hpk_from].to_b64,
+          total_chunks: 0 # Nothing received yet
+        }
+
+        # file_index to/from hpk is used as index hash of all files
+        save_file_info(file_info, extra[:hpk_from], storage_id) if file_info and kind == :file
+        save_file_tracking_info(storage_name, tmout)
+      end
     end
+
     return { opResult: res, storage_token: storage_token }
   end
 
@@ -93,9 +157,59 @@ class Mailbox
     tag = token_tag storage_token
     storage_item = parse rds.get tag
     return "-2" unless storage_item # following redis TTL codes
-    mbx = Mailbox.new storage_item[:hpk]
-    ttl = rds.ttl mbx.msg_tag b64enc storage_item[:nonce]
+    mbx = Mailbox.new storage_item[:hpk].to_b64
+    ttl = rds.ttl mbx.msg_tag storage_item[:nonce].to_b64
     return "#{ttl}"
+  end
+
+  def file_status_from_uid(uploadID, file_manager)
+    file_status file_manager.storage_from_upload(uploadID).to_b64
+  end
+
+  def file_status(storage_id_b64)
+    # logger.info "file_index_to: #{MAGENTA}#{file_index_to}#{ENDCLR}"
+    # logger.info "file_index_from: #{MAGENTA}#{file_index_from(@hpk)}#{ENDCLR}"
+
+    # File might be sent by @hpk or from @hpk - checking both
+    res = rds.hget file_index_to, storage_id_b64
+    res = rds.hget file_index_from(@hpk), storage_id_b64 unless res
+    res = res ? JSON.parse(res, symbolize_names: true) : nil
+    res = { status: :NOT_FOUND, bytes_stored: 0, parts: [] } unless res
+    return res
+  end
+
+  def save_file_info(file_info, hpk_from, storage_id)
+    file_info_js = file_info.to_json
+    tmout = timeout(:file)
+
+    # file_index to/from hpk is used as index hash of all files
+    rds.hset(file_index_to, storage_id.to_b64, file_info_js)
+    rds.expire(file_index_to, tmout)
+
+    fidx_from = file_index_from(hpk_from.to_b64)
+    rds.hset(fidx_from, storage_id.to_b64, file_info_js)
+    rds.expire(fidx_from, tmout)
+  end
+
+  def save_file_tracking_info(storage_name,tmout)
+    # global index is used by workers to clear out expired files
+    rds.sadd(ZAX_GLOBAL_FILES, storage_tag(storage_name))
+
+    # When storage tag expires but still present
+    # in persitent GLOBAL worker will delete the file
+    # and remove from GLOBAL set
+    rds.set(storage_tag(storage_name), 1)
+    rds.expire(storage_tag(storage_name), tmout)
+
+    cleanup = DateTime.now + timeout(:file).seconds + 10.minutes
+    FilesCleanupJob.set(wait_until: cleanup).perform_later
+  end
+
+  def delete_file_info(hpk_from, storage_id)
+    rds.hdel(file_index_to, storage_id.to_b64)
+
+    fidx_from = file_index_from(hpk_from.to_b64)
+    rds.hdel(fidx_from, storage_id.to_b64)
   end
 
   # read all or subset of messages in mailbox
@@ -110,7 +224,7 @@ class Mailbox
     limit = start+size <= nonces.length ? start + size : nonces.length
 
     # read all messages requested in atomic transaction
-    res = runMbxTransaction(@hpk, 'read_all') do
+    res = runRedisTransaction(hpk_tag, @hpk, 'read_all') do
       for i in (start...limit)
         rds.get msg_tag nonces[i]
       end
@@ -130,7 +244,7 @@ class Mailbox
   def parse(item)
     return nil if item.nil?
     msg = JSON.parse(item.to_s)
-    return Hash[msg.map { |k, v| [ k.to_sym, k != "time" ? b64dec(v) : v ] }]
+    return Hash[msg.map { |k, v| [ k.to_sym, k != "time" ? v.from_b64.force_encoding('utf-8') : v ] }]
   end
 
   def _delete_item(nonce)
@@ -142,24 +256,35 @@ class Mailbox
   # Delete one message by nonce
   def delete(nonce)
     _resetCount()
-    runMbxTransaction(@hpk, 'delete') do
+    runRedisTransaction(hpk_tag, @hpk, 'delete') do
       _delete_item nonce
-      logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
+      logger.info "#{INFO} #{RED}deleting #{GREEN}#{dumpHex nonce.from_b64}#{ENDCLR} in mbx #{MAGENTA}#{dumpHex @hpk.from_b64}#{ENDCLR}"
     end
   end
 
   # Delete list of messages by list of nonces
   def delete_list(nonce_list)
     _resetCount()
-    runMbxTransaction(@hpk, 'delete list') do
+    runRedisTransaction(hpk_tag, @hpk, 'delete list') do
       nonce_list.each do |nonce|
         _delete_item nonce
-        logger.info "#{INFO} deleting #{dumpHex b64dec nonce} in mbx #{dumpHex b64dec @hpk}"
+        logger.info "#{INFO} #{RED}deleting #{GREEN}#{dumpHex nonce.from_b64}#{ENDCLR} in mbx #{MAGENTA}#{dumpHex @hpk.from_b64}#{ENDCLR}"
       end
     end
   end
 
   private
+
+  def _check_preconditions(from, nonce, data, kind)
+    unless data and from and from.length == HPK_LEN and nonce and
+      (kind == :message or kind == :file)
+      fail ReportError.new self, msg: 'mailbox.store() : wrong params'
+    end
+
+    if kind == :file and not FileManager.is_enabled?
+      fail ReportError.new self, msg: 'Mailbox receives file command while FileManager is not enabled'
+    end
+  end
 
   # messages expire independently of hashed index. we update index
   # and remove nonces for messages that already expired
@@ -171,7 +296,7 @@ class Mailbox
     # delete all these nonces from hash index
     unless toDel.empty?
       _resetCount()
-      runMbxTransaction(@hpk, 'compact') { toDel.each { |n| rds.hdel hpk_tag, n } }
+      runRedisTransaction(hpk_tag, @hpk, 'compact') { toDel.each { |n| rds.hdel hpk_tag, n } }
     end
   end
 
@@ -179,7 +304,4 @@ class Mailbox
     @lastCount = nil
   end
 
-  def rds
-    Redis.current
-  end
 end

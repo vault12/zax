@@ -59,7 +59,7 @@ test 'prove_hpk guard conditions' do
     nonce: nonce_inner,
     pub_key: client_comm_sk.public_key.to_s,
     ctext: ctext }
-    .map { |k,v| [k,b64enc(v)] }
+    .map { |k,v| [k,v.to_b64] }
   ]
 
   # Client encrypts JSON object with
@@ -72,35 +72,35 @@ test 'prove_hpk guard conditions' do
 
   lines = process_lines "#{b64enc client_temp_pk}",
                         "#{b64enc nonce_outer}"
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _fail_response :bad_request # missing outer
 
 
   lines = process_lines "#{b64enc h2_client_token}",
                         "#{b64enc client_temp_pk}",
                         "#{b64enc nonce_outer}"
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _fail_response :bad_request # missing outer
 
 
   lines = process_lines "#{b64enc h2_client_token}",
                         "#{b64enc nonce_outer}",
                         "#{b64enc outer}"
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _fail_response :bad_request # missing outer
 
 
   lines = process_lines "#{b64enc h2_client_token}",
                         "#{b64enc client_temp_pk}",
                         "#{b64enc outer}"
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _fail_response :bad_request # missing outer
 
 
   lines = process_lines "#{b64enc h2_client_token}",
                         "#{b64enc client_temp_pk}",
                         "#{b64enc nonce_outer}"
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _fail_response :bad_request # missing outer
 
 
@@ -109,7 +109,7 @@ test 'prove_hpk guard conditions' do
                         "#{b64enc nonce_outer}",
                         "#{b64enc outer}"
 
-  post :prove_hpk, lines
+  post :prove_hpk, body: lines
   _success_response
 end
 

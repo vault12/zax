@@ -26,7 +26,7 @@
     function CryptoService($window) {
       this.$window = $window;
       this.glow = this.$window.glow;
-      this.nacl = this.$window.nacl_factory.instantiate();
+      this.nacl = this.$window.nacl_factory.instantiate(function() {});
       this.Mailbox = this.glow.MailBox;
       this.Relay = this.glow.Relay;
       this.KeyRing = this.glow.KeyRing;
@@ -34,9 +34,9 @@
       this.CryptoStorage = this.glow.CryptoStorage;
       this.CryptoStorage.startStorageSystem(new this.glow.SimpleStorageDriver(this.relayUrl()));
       this.glow.Utils.setAjaxImpl(function(url, data) {
-        return $.ajax({
-          method: 'POST',
+        return axios({
           url: url,
+          method: 'post',
           headers: {
             'Accept': 'text/plain',
             'Content-Type': 'text/plain'
@@ -45,7 +45,7 @@
           responseType: 'text',
           timeout: 2000
         }).then(function(response) {
-          return response;
+          return response.data;
         });
       });
     }

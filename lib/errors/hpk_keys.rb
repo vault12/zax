@@ -8,6 +8,7 @@ require 'errors/zax_error'
 module Errors
   class HPK_keys < ZAXError
     def http_fail
+      @response_code = :unauthorized
       super
       warn "#{WARN} key/client_key not found for process command - hpk: #{dumpHex @data[:hpk]}"
     end

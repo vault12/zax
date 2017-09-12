@@ -4,6 +4,8 @@ require 'test_helper'
 require 'mailbox'
 
 class MailboxExpireTest < ActionDispatch::IntegrationTest
+  include TransactionHelper
+
   test 'expiring messages' do
     @debug = false
     @config = getConfig
@@ -32,16 +34,15 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
 
   def uploadMessage
     ary = getHpks
-    # see the readme in this directory for more details on _get_random_pair
     pairary = _get_random_pair(@config[:number_of_mailboxes] - 1)
-    hpk = b64dec ary[pairary[0]]
-    from = b64dec ary[pairary[1]]
+    hpk_b64 = ary[pairary[0]]
+    from = ary[pairary[1]].from_b64
 
     options = {}
     options[:mbx_expire] = 20.seconds.to_i
     options[:msg_expire] = Random.new.rand(10..15)
 
-    mbx = Mailbox.new hpk, options
+    mbx = Mailbox.new hpk_b64, options
     assert_not_nil mbx.hpk
     nonce = h2(rand_bytes(16))
     mbx.store from, nonce, "hello from #{ary[pairary[1]]}"
@@ -55,7 +56,6 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
     total = 0
     ary = getHpks
     ary.each do |hpk|
-      hpk = b64dec hpk
       mbx = Mailbox.new hpk
       count = mbx.count
       total += count
@@ -72,7 +72,6 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
     ary = getHpks
     total = 0
     ary.each do |hpk|
-      hpk = b64dec hpk
       mbx = Mailbox.new hpk
       download = mbx.read_all
       total += download.length
@@ -151,8 +150,4 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
     print "#{msg} = #{value}"; puts
   end
 
-  # the redis client
-  def rds
-    Redis.current
-  end
 end

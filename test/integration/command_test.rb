@@ -8,25 +8,25 @@ class CommandTest < ProveTestHelper
     hpk = setup_prove
     _setup_keys hpk
     to_hpk = RbNaCl::Random.random_bytes(32)
-    to_hpk = b64enc to_hpk
+    to_hpk = to_hpk.to_b64
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 0'}
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
     r = _success_response # 32 byte storage token for the message
-    assert_equal(32, b64dec(r).length)
+    assert_equal(32, r.from_b64.length)
   end
 
   test 'nonce repeat rejection' do
     hpk = setup_prove
     _setup_keys hpk
     to_hpk = RbNaCl::Random.random_bytes(32)
-    to_hpk = b64enc to_hpk
+    to_hpk = to_hpk.to_b64
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 1'}
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
 
     r = _success_response # 32 byte storage token for the message
-    assert_equal(32, b64dec(r).length)
+    assert_equal(32, r.from_b64.length)
 
     data = {cmd: 'upload', to: to_hpk, payload: 'hello world 2'}
     _post '/command', hpk, n, _client_encrypt_data(n, data) # nonce re-used

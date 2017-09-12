@@ -5,6 +5,7 @@ require 'errors/zax_error'
 module Errors
   class ClientTokenError < ZAXError
     def http_fail
+      @response_code = :unauthorized
       super
       warn "#{INFO_NEG} bad client token\n"\
         "#{@data[:msg]}, client_token = #{dump @data[:client_token]}"

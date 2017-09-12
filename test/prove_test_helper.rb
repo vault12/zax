@@ -3,6 +3,8 @@
 require 'test_helper'
 
 class ProveTestHelper < ActionDispatch::IntegrationTest
+  include TransactionHelper
+
   def setup_prove
       @client_token = RbNaCl::Random.random_bytes 32
       _post "/start_session", @client_token
@@ -10,7 +12,7 @@ class ProveTestHelper < ActionDispatch::IntegrationTest
 
       body = response.body
       lines = _check_body(body)
-      @relay_token = b64dec lines[0]
+      @relay_token = lines[0].from_b64
       h2_client_token = h2(@client_token)
 
       client_relay = @client_token + @relay_token
@@ -21,7 +23,7 @@ class ProveTestHelper < ActionDispatch::IntegrationTest
 
       body = response.body
       lines = _check_body(body)
-      @session_key = b64dec lines[0]
+      @session_key = lines[0].from_b64
 
       h2_client_token = h2(@client_token)
       h2_relay_token = h2(@relay_token)
@@ -48,7 +50,7 @@ class ProveTestHelper < ActionDispatch::IntegrationTest
         nonce: nonce_inner,
         pub_key: client_comm_sk.public_key.to_s,
         ctext: ctext }
-        .map { |k,v| [k,b64enc(v)] }
+        .map { |k,v| [k,v.to_b64] }
       ]
 
       box_outer = RbNaCl::Box.new(@session_key, client_temp_sk)

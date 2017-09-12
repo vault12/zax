@@ -19,4 +19,4 @@
 # Using secret_token for rails3 compatibility. Change to secret_key_base
 # to avoid deprecation warning.
 # Can be safely removed in a rails3 api-only application.
-Zax::Application.config.secret_token = '4767df3b7f81eb616dad6038d4ae20a1a0ec5c2b4e534c5de5d4d6ba62bbc9ceefcd1254f51c3e9c77b2375d9638879398e8b37e9a0d266a85804268498b3c82'
+Zax::Application.config.secret_token = 'a6317c8c9e7da13b0e400fd562985bfff8cb8007281dd6fb04829050aea76add246e808dddb9596bb5c42890793dc15204c8248fda9d05535029af443dc7a37e'

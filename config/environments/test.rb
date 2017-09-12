@@ -9,7 +9,13 @@ Rails.application.configure do
   # and recreated between test runs. Don't rely on the data there!
 
   # --- Relay default configuration START ---
-  config.x.relay.difficulty                 = 0 # 1...255 : require number of leading 0 bits in handshake
+  config.x.relay.difficulty                = 0 # 1...255 : require number of leading 0 bits in handshake
+  config.x.relay.token_timeout             = 1
+  config.x.relay.session_timeout           = 1
+  config.x.relay.max_nonce_diff            = 30
+  # config.x.relay.period                  = 1
+
+  config.x.relay.restart_window = nil
   # --- Relay default configuration END ---
 
   config.cache_classes = true
@@ -20,8 +26,8 @@ Rails.application.configure do
   config.eager_load = false
 
   # Configure static file server for tests with Cache-Control for performance.
-  config.serve_static_files   = true
-  config.static_cache_control = 'public, max-age=3600'
+  config.public_file_server.enabled = true
+  config.public_file_server.headers = { 'Cache-Control' => 'public, max-age=3600' }
 
   # Show full error reports and disable caching.
   config.consider_all_requests_local       = true
@@ -48,9 +54,4 @@ Rails.application.configure do
   # config.action_view.raise_on_missing_translations = true
 
   config.log_level = :debug
-
-  # --- Relay configuration ---
-  config.x.relay.token_timeout             = 1
-  config.x.relay.session_timeout           = 1
-  config.x.relay.max_nonce_diff            = 30
 end

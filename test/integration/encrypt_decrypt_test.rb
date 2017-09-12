@@ -18,7 +18,7 @@ class EncryptDecryptTest < ActionDispatch::IntegrationTest
     @bobpk = @bobsk.public_key
 
     hpk = RbNaCl::Random.random_bytes 32
-    mbx = Mailbox.new hpk
+    mbx = Mailbox.new hpk.to_b64
     assert_not_nil mbx.hpk
     hpkey = "mbx_#{mbx.hpk}"
 
@@ -38,16 +38,13 @@ class EncryptDecryptTest < ActionDispatch::IntegrationTest
     hpkto = RbNaCl::Random.random_bytes(32)
 
     data = {}
-    data[:hpkto] = b64enc hpkto
+    data[:hpkto] = hpkto.to_b64
 
     nonce = _make_nonce
-    # this step is critical for _encrypt_data to work
-    enc_nonce = b64enc nonce
-    data[:nonce] = enc_nonce
+    data[:nonce] = nonce.to_b64
 
     encrypt_data = _encrypt_data nonce, data
-
-    ciphertext = b64dec encrypt_data
+    ciphertext = encrypt_data.from_b64
     decrypt_data = _decrypt_data nonce, ciphertext
     assert_equal(data[:hpkto], decrypt_data["hpkto"])
   end
@@ -55,7 +52,7 @@ class EncryptDecryptTest < ActionDispatch::IntegrationTest
   def _encrypt_data(nonce, data)
     # send bob's public key to alice
     box = RbNaCl::Box.new(@alicepk, @bobsk)
-    b64enc box.encrypt(nonce, data.to_json)
+    box.encrypt(nonce, data.to_json).to_b64
   end
 
   def _decrypt_data(nonce, ctext)

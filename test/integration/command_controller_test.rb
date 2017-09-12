@@ -4,7 +4,7 @@ require 'test_helper'
 
 class CommandControllerTest < ActionDispatch::IntegrationTest
 
-  test 'process command 01 count' do
+  test 'process basic commands' do
     ### Use hpk to upload, check and delete message
     key = RbNaCl::PrivateKey.generate
     hpk = h2(key.public_key)
@@ -14,10 +14,10 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     to_hpk = h2(to_key.public_key)
 
     ### Upload
-    msg_nonce = b64enc(rand_bytes 24)
+    msg_nonce = rand_bytes(24).to_b64
     msg_data = {
       cmd: 'upload',
-      to: b64enc(to_hpk),
+      to: to_hpk.to_b64,
       payload: {
         ctext: 'hello world 0',
         nonce: msg_nonce
@@ -38,8 +38,8 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
 
-    rn = b64dec lines[0]
-    rct = b64dec lines[1]
+    rn = lines[0].from_b64
+    rct = lines[1].from_b64
     data = _client_decrypt_data rn, rct
 
     assert_not_nil data
@@ -55,8 +55,8 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     lines = _check_response(response.body)
     assert_equal(2, lines.length)
 
-    rn = b64dec lines[0]
-    rct = b64dec lines[1]
+    rn = lines[0].from_b64
+    rct = lines[1].from_b64
     data = _client_decrypt_data rn, rct
 
     assert_not_nil data
@@ -64,7 +64,7 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
 
     ### Message status
 
-    data = { cmd: 'message_status', token: b64enc(msg_token) }
+    data = { cmd: 'messageStatus', token: msg_token.to_b64 }
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
     r = _success_response
@@ -79,15 +79,23 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
 
     ### Message is now deleted
     _setup_keys hpk
-    data = { cmd: 'message_status', token: b64enc(msg_token) }
+    data = { cmd: 'messageStatus', token: msg_token.to_b64 }
     n = _make_nonce
     _post '/command', hpk, n, _client_encrypt_data(n, data)
     r = _success_response
     assert_equal r,'-2'  # -2 is redis missing key
+
+    ### Misc commands: entropy
+    data = { cmd: 'getEntropy', size: 1000 }
+    n = _make_nonce
+    _post '/command', hpk, n, _client_encrypt_data(n, data)
+    data = JSON.parse _success_response.from_b64, symbolize_names:true
+    assert_not_nil data
+    assert_not_nil data[:entropy]
+    assert_equal 1000, data[:entropy].from_b64.length
   end
 
   test 'process command guards' do
-
     hpk = h2(rand_bytes 32)
     assert_equal(hpk.length,32)
     _setup_keys hpk
@@ -118,9 +126,34 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     _fail_response :bad_request # corrupt ciphertext
   end
 
-  def _check_response(body)
-    fail BodyError.new self, msg: 'No request body' if body.nil?
-    nl = body.include?("\r\n") ? "\r\n" : "\n"
-    return body.split nl
+  test 'loosing session keys results in HTTP 401' do
+    key = RbNaCl::PrivateKey.generate
+    hpk = h2(key.public_key)
+    _setup_keys hpk
+
+    to_key = RbNaCl::PrivateKey.generate
+    to_hpk = h2(to_key.public_key)
+
+    ### Upload
+    msg_nonce = rand_bytes(24).to_b64
+    msg_data = {
+      cmd: 'upload',
+      to: to_hpk.to_b64,
+      payload: {
+        ctext: 'hello world HTTP 401 test',
+        nonce: msg_nonce
+      }
+    }
+    n = _make_nonce
+    _post '/command', hpk, n, _client_encrypt_data(n, msg_data)
+    msg_token = b64dec _success_response # 32 byte storage token for the message
+    assert_equal(32, msg_token.length) # Works as expected
+
+    ### Redis restart lost all keys
+    _delete_keys hpk
+    n = _make_nonce
+    _post '/command', hpk, n, _client_encrypt_data(n, msg_data)
+    _fail_response :unauthorized # Keys are lost => 401 Unauthorized
   end
+
 end
