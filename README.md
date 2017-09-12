@@ -4,7 +4,7 @@ Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vau
 
 Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
 
-**Zax v2.0 Update** summary is [here](#zax20)
+**Zax v2.0 Update** summary is [here](#-version-20-updates)
 
 ![Zax Infographics](https://bit.ly/zax_relay)
 
