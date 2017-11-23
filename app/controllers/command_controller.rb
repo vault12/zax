@@ -62,29 +62,29 @@ class CommandController < ApplicationController
         # full error check in check_errors
         return unless check_filemanager
         payload = StartFileUploadCmd.new(@hpk,mailbox,self).process(data)
-        render_encrypted rsp_nonce,payload.to_json
+        render_encrypted rsp_nonce,payload
 
       when 'fileStatus'       # === ⌘ fileStatus ===
         return unless check_filemanager
         file_info = FileStatusCmd.new(@hpk,mailbox,self).process(data)
-        render_encrypted rsp_nonce,file_info.to_json
+        render_encrypted rsp_nonce,file_info
 
       when 'uploadFileChunk'  # === ⌘ uploadFileChunk ===
         return unless check_filemanager
         payload = UploadFileCmd.new(@hpk,mailbox,self).process(data)
         payload ||= { status: :NOT_FOUND }
-        render_encrypted rsp_nonce, payload.to_json
+        render_encrypted rsp_nonce, payload
 
       when 'downloadFileChunk'  # === ⌘ downloadFileChunk ===
         return unless check_filemanager
         payload, file = DownloadFileCmd.new(@hpk,mailbox,self).process(data)
         payload ||= { status: :NOT_FOUND }
-        render_encrypted rsp_nonce, payload.to_json, file
+        render_encrypted rsp_nonce, payload, file
 
       when 'deleteFile'         # === ⌘ deleteFile ===
         return unless check_filemanager
         payload = DeleteFileCmd.new(@hpk,mailbox,self).process(data)
-        render_encrypted rsp_nonce, payload.to_json
+        render_encrypted rsp_nonce, payload
 
       # === Misc commands ===
       when 'getEntropy'         # === ⌘ getEntropy ===
