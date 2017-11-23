@@ -45,8 +45,8 @@ module Zax
     # Various expiration timers in seconds, passed in
     # API calls to Redis
 
-    config.x.relay.token_timeout              = 1.minutes
-    config.x.relay.session_timeout            = 5.minutes
+    config.x.relay.token_timeout              = 5.minutes
+    config.x.relay.session_timeout            = 20.minutes
     config.x.relay.max_nonce_diff             = 1.minutes
 
     config.x.relay.nonce_timeout              = 10.minutes.seconds.to_i

@@ -5,7 +5,6 @@ Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vau
 Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
 
 **Zax v2.0 Update** summary is [here](#-version-20-updates)
-
 ![Zax Infographics](https://bit.ly/zax_relay)
 
 ## Features
@@ -41,6 +40,28 @@ In Zax 2.0 we provide numerous stability and performance updates to the core cod
 - Improvements and optimizing for multi-worker/multi-threading access to Redis
 - New logging details and easier to read color-coded logs
 - Many performance improvements and bug fixes
+
+#### <a name=“zax21”></a> 2.1 Updates
+
+- *h2()* hash function zero-pad prefix increased to 64 bytes to match sha256 block
+- Double JSON encoding removed in file commands
+- Default session timeout increased to 20 minutes
+- Client [Glow](https://github.com/vault12/glow) now supports command line interface
+
+```
+glow download [options] relay_url guest_public_key
+  Options:
+    -c, --count                  show number of messages without downloading them
+    -d, --directory <directory>  directory to write downloaded file
+    -f, --file <file>            file name to use instead of the original one
+    -i, --interactive            interactive mode
+    -k, --key                    set private key
+    -n, --number <number>        max. number of files to download ("all" to download all)
+    -p, --public                 show public key
+    --silent                     silent mode
+    --stdout                     stream output to stdout
+    -h, --help                   output usage information
+```
 
 ### File Exchange Cryptography
 [File commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) API leverages the existing anonymous message exchange mechanism of Zax relays to bootstrap file exchange metadata and key exchange. After parties have exchanged information about the file, new commands allow for the bulk content of an encrypted file to be exchanged.

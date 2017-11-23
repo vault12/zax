@@ -1557,6 +1557,7 @@ MailBox = (function(superClass) {
               emsg = JSON.parse(emsg.data);
               return _this.decodeMessage(tag, emsg.nonce, emsg.ctext).then(function(msg) {
                 msg.uploadID = emsg.uploadID;
+                msg.nonce = emsg.nonce;
                 return msg;
               });
             } else {
@@ -2008,9 +2009,9 @@ Nacl = (function() {
     if (Utils.type(str) === 'String') {
       str = str.toUint8ArrayRaw();
     }
-    tmp = new Uint8Array(32 + str.length);
+    tmp = new Uint8Array(64 + str.length);
     tmp.fillWith(0);
-    tmp.set(str, 32);
+    tmp.set(str, 64);
     return this.sha256(tmp).then((function(_this) {
       return function(sha) {
         return _this.sha256(sha);
@@ -2515,7 +2516,6 @@ Relay = (function(superClass) {
       ctext = datain[1];
       return mbx.decodeMessage(this.relayId(), nonce, ctext, true).then((function(_this) {
         return function(response) {
-          response = JSON.parse(response);
           response.ctext = datain[2];
           return response;
         };
@@ -2526,15 +2526,7 @@ Relay = (function(superClass) {
     }
     nonce = datain[0];
     ctext = datain[1];
-    if (cmd === 'startFileUpload' || cmd === 'fileStatus' || cmd === 'uploadFileChunk' || cmd === 'deleteFile') {
-      return mbx.decodeMessage(this.relayId(), nonce, ctext, true).then((function(_this) {
-        return function(response) {
-          return JSON.parse(response);
-        };
-      })(this));
-    } else {
-      return mbx.decodeMessage(this.relayId(), nonce, ctext, true);
-    }
+    return mbx.decodeMessage(this.relayId(), nonce, ctext, true);
   };
 
   Relay.prototype._processData = function(d) {

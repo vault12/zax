@@ -116,8 +116,8 @@ test 'storage name' do
   fm = FileManager.new
 
   # this works with bad hpks because name is derived from hash
-  assert_equal fm.create_storage_token("hpk1","hpk2","123",0)[:storage_name],
-    "dg5e7tytoo3ucyzrb5o342jj3n3xuta52r35fphrqcyqdw3zb2ka"
+  assert_equal "orn4mxjceonlkemkctmtzcbizs72ab63sjeizjdpqoy2cvetaxyq", fm.create_storage_token("hpk1","hpk2","123",0)[:storage_name]
+
 end
 
 end

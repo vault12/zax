@@ -18,12 +18,12 @@ module Utils
     end
   end
 
-  # h2(m) = sha256(sha256(32x0 + m))
+  # h2(m) = sha256(sha256(64x0 + m))
   # Zero out initial sha256 block, and double hash 0-padded message
   # http://cs.nyu.edu/~dodis/ps/h-of-h.pdf
   def h2(msg)
     fail Errors::ReportError.new self, msg: 'util: can not h2 nil' if msg.nil?
-    RbNaCl::Hash.sha256 RbNaCl::Hash.sha256 "\0" * 32 + msg
+    RbNaCl::Hash.sha256 RbNaCl::Hash.sha256 "\0" * 64 + msg
   end
 
   def rand_bytes(count)
