@@ -4,7 +4,8 @@ Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vau
 
 Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
 
-**Zax v2.0 Update** summary is [here](#-version-20-updates)
+**Zax v2.0 Update** summary is [here](#-version-20-updates).
+
 ![Zax Infographics](https://bit.ly/zax_relay)
 
 ## Features
@@ -17,7 +18,7 @@ Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays a
 - **Private nodes**: Power users have the option to deploy their own personal relay nodes and have the ability to add them into the configuration of mobile applications that are reliant on this kind of p2p network.
 
 ## Test Dashboard
-Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dash) app, that uses [Glow](https://github.com/vault12/glow) to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://zax-test.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
+Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dash) app, that uses [Glow](https://github.com/vault12/glow) client library to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://zax-test.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
 
 ### Device-to-Device Messaging
 Any device can communicate with any other device via Zax relays. The address space is global, and each device uses a hash of a long-term identity public key as the “address” in the global network of relays. Devices can generate as many keys as they need and implement [communication ratchet](https://github.com/vault12/glow/blob/master/src/rachetbox.coffee) protocols on the client level.
@@ -46,21 +47,14 @@ In Zax 2.0 we provide numerous stability and performance updates to the core cod
 - *h2()* hash function zero-pad prefix increased to 64 bytes to match sha256 block
 - Double JSON encoding removed in file commands
 - Default session timeout increased to 20 minutes
-- Client [Glow](https://github.com/vault12/glow) now supports command line interface
+- [Glow](https://github.com/vault12/glow) now supports command line interface:
 
 ```
-glow download [options] relay_url guest_public_key
-  Options:
-    -c, --count                  show number of messages without downloading them
-    -d, --directory <directory>  directory to write downloaded file
-    -f, --file <file>            file name to use instead of the original one
-    -i, --interactive            interactive mode
-    -k, --key                    set private key
-    -n, --number <number>        max. number of files to download ("all" to download all)
-    -p, --public                 show public key
-    --silent                     silent mode
-    --stdout                     stream output to stdout
-    -h, --help                   output usage information
+glow clean <relay_url> <guest_public_key>                delete all files in mailbox on the relay
+glow count <relay_url> <guest_public_key> [options]      show number of pending files on the relay
+glow download <relay_url> <guest_public_key> [options]   download file(s) from the relay
+glow key [options]                                       show public key or h2(pk), set/update private key
+glow help [cmd]                                          display help for [cmd]
 ```
 
 ### File Exchange Cryptography
@@ -126,7 +120,7 @@ gem install bundler
 bundle install
 ```
 
-If the 'bundle install' command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
+If `bundle install` command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
 
 #### Running Zax
 
@@ -171,10 +165,7 @@ brew install libxml2
 bundle config build.nokogiri --use-system-libraries
 ```
 
-For other platforms than OSX, please consult:
-[Installing Nokogiri]
-(http://www.nokogiri.org/tutorials/installing_nokogiri.html)
-for further instructions.
+For other platforms than OS X, please consult [Installing Nokogiri](http://www.nokogiri.org/tutorials/installing_nokogiri.html) for further instructions.
 
 #### Example Command Line Utilities
 
