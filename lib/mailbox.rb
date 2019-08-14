@@ -84,6 +84,7 @@ class Mailbox
   # nonce uniqueness is also used as the message id.
   def store(from, nonce, data, kind = :message, extra = {})
     _check_preconditions(from,nonce,data,kind)
+    data.force_encoding 'utf-8'
 
     b64_nonce = nonce.to_b64
     item = {

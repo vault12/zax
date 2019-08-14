@@ -11,8 +11,8 @@ test 'new session token' do
   _fail_response :bad_request
 
   # fail: wrong encoding
-  @request.env['RAW_POST_DATA'] = "\xCF:D\x15\xD8\xE3!\xD5{\x17\xF6\xADL$\xD7\xAB\x13\xEC\xF3r\xE4\x8A\xC3\x95v\x02\x9E\xB2\xC4N\xF3h"
-  post :start_session_token, params: {}
+  post :start_session_token, params: {},
+       body: "\xCF:D\x15\xD8\xE3!\xD5{\x17\xF6\xADL$\xD7\xAB\x13\xEC\xF3r\xE4\x8A\xC3\x95v\x02\x9E\xB2\xC4N\xF3h"
   _fail_response :unauthorized
 
   # fail: 24 instead of 32 bytes
@@ -34,8 +34,7 @@ test 'verify session token' do
   _fail_response :bad_request
 
   # fail: wrong encoding
-  @request.env['RAW_POST_DATA'] = "#{rand_bytes 32}\r\n#{rand_bytes 32}"
-  post :verify_session_token
+  post :verify_session_token, body: "#{rand_bytes 32}\r\n#{rand_bytes 32}"
   _fail_response :unauthorized
 
   # fail test - just 1 line
@@ -58,10 +57,10 @@ test 'verify session token' do
   _fail_response :unauthorized
 
   # fail test - corrupt base64
-  @request.env['RAW_POST_DATA'] =
+  raw_post =
     "#{_corrupt_str(rand_bytes(32).to_b64,false)}\r\n"\
     "#{rand_bytes(32).to_b64}\r\n"
-  post :verify_session_token,{}
+  post :verify_session_token, body: raw_post
   _fail_response :bad_request
 
   # fail test - random response

@@ -56,15 +56,15 @@ module Zax
     # Retry count on mailbox and file storage redis transactions
     config.x.relay.mailbox_retry              = 5 # times
 
-    # If present, set restart_window to return true when redis/nginx
-    # or other dependent components are scheduled for restart.
+    # If present, set restart_window to return TRUE when redis/nginx
+    # or any other dependent components are scheduled for restart.
     # Relay will sleep on requests until window is past and returns false.
     # Example: restart some components at hour boundary with @hourly cron job
     # config.x.relay.restart_window = lambda {
     #   t = DateTime.now
     #   t.minute == 0 and t.second<4
     # }
-    # config.x.relay.restart_window_max_seconds = 5
+    config.x.relay.restart_window_max_seconds = 5
 
     # === Dynamic session handshake difficulty throttling
     # Set period to 0 or omit to disable

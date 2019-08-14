@@ -61,8 +61,9 @@ class ActiveSupport::TestCase
   end
 
   def _raw_post(action, params, *lines)
-    @request.env['RAW_POST_DATA'] = _encode_lines lines
-    post action, params: params
+    # @request.env['RAW_POST_DATA'] = _encode_lines lines # Older version how to provide POST body
+    logger.info params
+    post action, params: params, body: (_encode_lines lines)
   end
 
   def _post(route, *lines)

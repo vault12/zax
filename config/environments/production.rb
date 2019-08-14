@@ -4,35 +4,35 @@ Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
   # --- Relay default configuration START ---
-  config.x.relay.difficulty                 = 4 # 1...255 : require number of leading 0 bits in handshake
+  config.x.relay.difficulty                 = 2 # 1...255 : require number of leading 0 bits in handshake
 
   # If present, set restart_window to return true when redis/nginx
   # or other dependent components are scheduled for restart.
   # Relay will sleep on requests until window is past and returns false.
   # Example: restart components at hour boundary with @hourly cron job
-  # config.x.relay.restart_window = lambda {
-  #   t = DateTime.now
-  #   t.minute == 0 and t.second<4
-  # }
-  # config.x.relay.restart_window_max_seconds = 5
+  config.x.relay.restart_window = lambda {
+    t = DateTime.now
+    t.minute == 0 and t.second<4
+  }
+  config.x.relay.restart_window_max_seconds = 4
 
   # === Dynamic session handshake difficulty throttling
   # Period in minutes. Measure # of requests per period and adjust next period
-  # config.x.relay.period = 5 # 1 to test, 15 for production
+  config.x.relay.period = 15 # 1 to test, 15 for production
 
-  # # Minimal number of requests. Thorttling wont trigger under this limit per period
-  # config.x.relay.min_requests = 1000 # 20 for test. 1000 for production
+  # Minimal number of requests. Thorttling wont trigger under this limit per period
+  config.x.relay.min_requests = 1000 # 20 for test. 1000 for production
 
-  # # Change factor leading to increase/decrease of difficulty
-  # # Factor of 2 means that for doubling of requests per period
-  # # from min_request level difficultiy will increase by one increment
-  # config.x.relay.overload_factor = 2
+  # Change factor leading to increase/decrease of difficulty
+  # Factor of 2 means that for doubling of requests per period
+  # from min_request level difficultiy will increase by one increment
+  config.x.relay.overload_factor = 2
 
-  # # Difficulty increase/decrease increment. Each unit is one bit of
-  # # zero leading handshake string. Setting say factor of 2 and increment
-  # # to 3 means that each doubling of traffic will require 3 extra zero-leading
-  # # bits in session handshake proof of work
-  # config.x.relay.diff_increase = 1
+  # Difficulty increase/decrease increment. Each unit is one bit of
+  # zero leading handshake string. Setting say factor of 2 and increment
+  # to 3 means that each doubling of traffic will require 3 extra zero-leading
+  # bits in session handshake proof of work
+  config.x.relay.diff_increase = 1
 
   # --- Relay default configuration END   ---
 
@@ -81,7 +81,7 @@ Rails.application.configure do
 
   # Use the lowest log level to ensure availability of diagnostic information
   # when problems arise.
-  config.log_level = :warn
+  config.log_level = :info
 
   # Prepend all log lines with the following tags.
   # config.log_tags = [ :subdomain, :uuid ]

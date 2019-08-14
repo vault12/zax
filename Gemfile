@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
-ruby "~> 2.4.1"
+ruby "2.6.3"
 
-gem 'rails', '5.1.3'
+gem 'rails', '5.2.3'
 
 gem 'puma'
 
@@ -12,9 +12,10 @@ end
 
 gem 'kgio'
 
-gem 'rbnacl-libsodium'
 gem 'redis'
 gem 'redis-rails'
+
+gem 'rbnacl'
 
 gem 'base32'
 

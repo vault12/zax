@@ -11,7 +11,7 @@ class ApplicationController < ActionController::API
   def check_restart_window
     rw = Rails.configuration.x.relay.restart_window
     return unless rw
-    counter = Rails.configuration.x.relay.restart_window_max_seconds || 30
+    counter = Rails.configuration.x.relay.restart_window_max_seconds || 10
     while rw.call and counter > 0
       sleep 1
       counter -= 1
