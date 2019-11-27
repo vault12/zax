@@ -21,6 +21,7 @@ class ApplicationController < ActionController::API
   def allow_origin
     headers['Access-Control-Allow-Origin'] = '*'
     headers['Access-Control-Allow-Headers'] = 'Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Session-ID,Content-Type,Content-Range,Content-Disposition';
+    headers['Cache-Control'] = "no-transform," + ( headers['Cache-Control'] || "")
   end
 
   protected

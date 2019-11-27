@@ -50,8 +50,8 @@ module Zax
     config.x.relay.max_nonce_diff             = 1.minutes
 
     config.x.relay.nonce_timeout              = 10.minutes.seconds.to_i
-    config.x.relay.mailbox_timeout            = 3.days.seconds.to_i
-    config.x.relay.message_timeout            = 3.days.seconds.to_i
+    config.x.relay.mailbox_timeout            = 5.days.seconds.to_i
+    config.x.relay.message_timeout            = 5.days.seconds.to_i
 
     # Retry count on mailbox and file storage redis transactions
     config.x.relay.mailbox_retry              = 5 # times

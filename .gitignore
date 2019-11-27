@@ -12,10 +12,7 @@
 # /config/secrets.yml
 
 # temp files created by puma and redis
-/shared/pids/*
-/shared/sockets/*
-/shared/log/*
-/shared/uploads/*
+/shared
 dump.rdb
 
 # editor settings

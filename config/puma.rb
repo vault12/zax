@@ -6,10 +6,10 @@ rails_env = ENV['RAILS_ENV'] || 'production'
 
 if rails_env == 'production'
   # Change to match your CPU core count
-  workers 12
+  workers Integer(ENV["ZAX_WORKERS"] || 12)
 
   # Min and Max threads per worker
-  threads 1, 6
+  threads 1, Integer(ENV["ZAX_THREADS"] || 6)
 end
 
 if rails_env == 'development'
