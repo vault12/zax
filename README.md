@@ -118,6 +118,8 @@ rvm gemset use zax
 # run the installation script
 gem install bundler
 bundle install
+mkdir -p shared/logs
+mkdir -p shared/pids
 ```
 
 If `bundle install` command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
