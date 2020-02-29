@@ -104,7 +104,7 @@ GEM
       method_source
       rake (>= 0.8.7)
       thor (>= 0.19.0, < 2.0)
-    rake (12.3.2)
+    rake (13.0.1)
     rbnacl (7.0.0)
       ffi
     redis (4.1.2)
