@@ -195,8 +195,8 @@ To see Glow and Zax in action, check out the [Live Demo](https://zax-test.vault1
 ## Contributing
 We encourage you to contribute to Zax using [pull requests](https://github.com/vault12/zax/pulls)! Please check out the [Contributing to Zax Guide](CONTRIBUTING.md) for guidelines about how to proceed.
 
-## Slack Community [![Slack Status](https://slack.vault12.com/badge.svg)](https://slack.vault12.com)
-We've set up a public slack community [Vault12 Dwellers](https://vault12dwellers.slack.com/). Request an invite by clicking [here](https://slack.vault12.com/).
+## Community 
+We've set up a public community [Vault12](https://t.me/Vault12). 
 
 ## License
 Zax is released under the [MIT License](http://opensource.org/licenses/MIT).
