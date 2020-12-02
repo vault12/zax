@@ -93,7 +93,7 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
   def checkClean
     ary = getHpks
     ary.each do |hpk|
-      result_mbx = rds.exists("mbx_#{hpk}")
+      result_mbx = rds.exists?("mbx_#{hpk}")
       assert_equal(result_mbx, false)
       result_msg = rds.keys("msg_#{hpk}_*")
       assert_equal(result_msg, [])
@@ -105,11 +105,11 @@ class MailboxExpireTest < ActionDispatch::IntegrationTest
   def cleanup
     ary = getHpks
     ary.each do |hpk|
-      result_mbx = rds.exists("mbx_#{hpk}")
+      result_mbx = rds.exists?("mbx_#{hpk}")
       rds.del("mbx_#{hpk}")
       msg_keys = rds.keys("msg_#{hpk}_*")
       msg_keys.each do |key|
-        rds.del(key) if rds.exists(key)
+        rds.del(key) if rds.exists?(key)
       end
     end
     rds.del(@config[:hpkey])

@@ -1,9 +1,12 @@
 language: ruby
 
 rvm:
-  - 2.6.3
+  - 2.7.2
 
 gemfile: "Gemfile"
+
+before_install:
+  - sudo apt-get install libsodium-dev -y
 
 sudo: false
 

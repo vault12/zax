@@ -74,7 +74,7 @@ class Mailbox
     # @lastCount may over-report just expired items
     # but they will be skipped in read_all
     return @lastCount if @lastCount
-    return 0 unless rds.exists hpk_tag
+    return 0 unless rds.exists? hpk_tag
     _compact
     @lastCount = rds.hlen(hpk_tag).to_i
   end
@@ -217,7 +217,7 @@ class Mailbox
   def read_all(start = 0, size = -1)
     a = []
     size = count - start if size == -1
-    result = rds.exists hpk_tag
+    result = rds.exists? hpk_tag
     return a unless result and size > 0
 
     # read all nonces as list
@@ -292,7 +292,7 @@ class Mailbox
   def _compact
     nonces = rds.hkeys hpk_tag
     # select all nonces that no longer have corresponding message stored
-    toDel = nonces.select { |n| not rds.exists msg_tag n }
+    toDel = nonces.select { |n| not rds.exists? msg_tag n }
 
     # delete all these nonces from hash index
     unless toDel.empty?

@@ -13,7 +13,7 @@ class DiffAdjustJob < ApplicationJob
     period = Rails.configuration.x.relay.period
     # Did we just run a job for this period?
     period_marker = "ZAX_difficulty_last_job_#{ t.minute / period }"
-    return if rds.exists period_marker
+    return if rds.exists? period_marker
     rds.set period_marker, 1, { ex: period * 60 }
 
     min_diff = Redis.current.get(ZAX_ORIGINAL_DIFF).to_i

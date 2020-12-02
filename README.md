@@ -83,13 +83,16 @@ or
 - [Build](https://github.com/antirez/redis#building-redis) Redis
 - [Run](https://github.com/antirez/redis#running-redis) Redis
 
+#### Sodium
+- brew install libsodium
+
 #### RVM
 We suggest that you use the [Ruby Version Manager (RVM)](https://rvm.io/) to install Ruby and to build and install the gems you need to run Zax.
 
 If you don't already have RVM installed, install it from [here](https://rvm.io).
 
 #### Ruby
-Zax requires at least version 2.4.1 of [Ruby](https://www.ruby-lang.org/) to run.
+Zax requires at least version 2.7.2 of [Ruby](https://www.ruby-lang.org/) and version 1.29.10 of RVM to run.
 
 To check your Ruby version, type the following in a terminal:
 
@@ -97,9 +100,9 @@ To check your Ruby version, type the following in a terminal:
 ruby -v
 ```
 
-If you do not have version 2.4.1 or higher, then type the following in a terminal:
+If you do not have version 2.7.2 or higher, then type the following in a terminal:
 ```Shell
-rvm install 2.4.1
+rvm install 2.7.2
 ```
 
 #### Installation
@@ -111,14 +114,14 @@ git clone git@github.com:vault12/zax.git
 
 # create the gemset
 cd zax
-rvm use ruby-2.4.1
+rvm use ruby-2.7.2
 rvm gemset create zax
 rvm gemset use zax
 
 # run the installation script
 gem install bundler
 bundle install
-mkdir -p shared/logs
+mkdir -p shared/log
 mkdir -p shared/pids
 ```
 
@@ -195,8 +198,8 @@ To see Glow and Zax in action, check out the [Live Demo](https://zax-test.vault1
 ## Contributing
 We encourage you to contribute to Zax using [pull requests](https://github.com/vault12/zax/pulls)! Please check out the [Contributing to Zax Guide](CONTRIBUTING.md) for guidelines about how to proceed.
 
-## Community 
-We've set up a public community [Vault12](https://t.me/Vault12). 
+## Telegram Community
+We've set up a public Telegram community [Vault12 Dwellers](https://t.me/Vault12).
 
 ## License
 Zax is released under the [MIT License](http://opensource.org/licenses/MIT).

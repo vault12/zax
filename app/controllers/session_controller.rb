@@ -205,7 +205,7 @@ class SessionController < ApplicationController
     return if static_diff? # Throttling disabled if period not set
     period = Rails.configuration.x.relay.period
     rds.incr "ZAX_session_counter_#{ DateTime.now.minute / period }"
-    unless rds.exists ZAX_DIFF_JOB_UP
+    unless rds.exists? ZAX_DIFF_JOB_UP
       # begining of next period
       job_time = start_diff_period(period, 1)
       ttl = job_time.to_i - DateTime.now.to_i

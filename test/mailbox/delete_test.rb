@@ -228,11 +228,11 @@ class MailboxDeleteTest < ProveTestHelper
   def cleanup
     ary = getHpks
     ary.each do |hpk|
-      result_mbx = rds.exists("mbx_#{hpk}")
+      result_mbx = rds.exists?("mbx_#{hpk}")
       rds.del("mbx_#{hpk}")
       msg_keys = rds.keys("msg_#{hpk}_*")
       msg_keys.each do |key|
-        rds.del(key) if rds.exists(key)
+        rds.del(key) if rds.exists?(key)
       end
     end
     rds.del(@config[:hpkey])
