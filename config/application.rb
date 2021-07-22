@@ -132,7 +132,7 @@ module Zax
       # supported by this relay. Chunk size can not be bigger then
       # MAX_COMMAND_BODY in key_params.rb
       # Also used as max entropy size for getEntropy command
-      max_chunk_size: 100 * 1024, # 100kb default
+      max_chunk_size: 500 * 1024, # 500kb default
 
       # Default: files expire after 7 days
       files_expiration: 7.days.seconds.to_i,

@@ -123,6 +123,7 @@ gem install bundler
 bundle install
 mkdir -p shared/log
 mkdir -p shared/pids
+mkdir -p shared/sockets
 ```
 
 If `bundle install` command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
