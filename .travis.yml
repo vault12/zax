@@ -9,9 +9,6 @@ env:
   global:
   - VERBOSE=true
   - TIMEOUT=1
-branches:
-  only:
-  - master
 services:
 - redis-server
 notifications:
