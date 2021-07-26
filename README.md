@@ -1,4 +1,4 @@
-# Zax [![Build Status](https://travis-ci.org/vault12/zax.svg?branch=master)](https://travis-ci.org/vault12/zax)
+# Zax [![Build Status](https://travis-ci.com/vault12/zax.svg?branch=master)](https://travis-ci.com/vault12/zax)
 
 Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
 
@@ -123,6 +123,7 @@ gem install bundler
 bundle install
 mkdir -p shared/log
 mkdir -p shared/pids
+mkdir -p shared/sockets
 ```
 
 If `bundle install` command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
