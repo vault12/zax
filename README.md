@@ -1,7 +1,29 @@
-# Zax [![Build Status](https://travis-ci.com/vault12/zax.svg?branch=master)](https://travis-ci.com/vault12/zax)
+# Zax
 
-Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/1370944/126783800-df5bcc0f-11c1-45c5-8e62-a960e787b111.jpg"
+    alt="Zax">
+</p>
 
+<p align="center">
+  <a href="https://travis-ci.com/vault12/zax">
+    <img src="https://travis-ci.com/vault12/zax.svg?branch=master" alt="Travis Build Status" />
+  </a>
+  <a href="https://vault12.github.io/zax-dashboard/">
+    <img src="https://img.shields.io/badge/demo-online-orange" alt="Demo Online" />
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" />
+  </a>
+  <a href="http://makeapullrequest.com">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome" />
+  </a>
+  <a href="https://twitter.com/_Vault12_">
+    <img src="https://img.shields.io/twitter/follow/_Vault12_?label=Follow&style=social" alt="Follow" />
+  </a>
+</p>
+
+Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow.ts) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
 Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
 
 **Zax v2.0 Update** summary is [here](#-version-20-updates).
@@ -18,7 +40,7 @@ Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays a
 - **Private nodes**: Power users have the option to deploy their own personal relay nodes and have the ability to add them into the configuration of mobile applications that are reliant on this kind of p2p network.
 
 ## Test Dashboard
-Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dashboard) app, that uses [Glow](https://github.com/vault12/glow) client library to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://zax-test.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
+Each Zax deployment includes (via `/public`) a test [Dashboard](https://github.com/vault12/zax-dashboard) app, that uses [Glow](https://github.com/vault12/glow.ts) client library to provide user-friend access point to given relay internal mailboxes. We maintain live [Test Server](https://zt.vault12.com) that runs our latest build. For testing purposes expiration on that relay is set for 30 minutes.
 
 ### Device-to-Device Messaging
 Any device can communicate with any other device via Zax relays. The address space is global, and each device uses a hash of a long-term identity public key as the “address” in the global network of relays. Devices can generate as many keys as they need and implement [communication ratchet](https://github.com/vault12/glow/blob/master/src/rachetbox.coffee) protocols on the client level.
@@ -27,7 +49,7 @@ Clients start by sending a POST request to `/start_session` with a random token.
 
 After answering the challenge to `/verify_session`, clients receive temporary session keys, and can start posting commands to `/command`. The command to relay is encrypted with session keys, while payload of command is usually encrypted with recipient public key, and is inaccessible to the relay. Using `upload`, `messageStatus`, `download` and `delete` commands, client devices can start sending end-to-end encrypted messages to each other.
 
-Details of the protocol can be found in the [full technical spec](http://bit.ly/nacl_relay_spec). The full client library for messaging commands is implemented in the [Glow](https://github.com/vault12/glow/) library.
+Details of the protocol can be found in the [full technical spec](http://bit.ly/nacl_relay_spec). The full client library for messaging commands is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
 
 
 ## <a name=“zax20”></a> Version 2.0 Updates
@@ -36,7 +58,7 @@ In Zax 2.0 we provide numerous stability and performance updates to the core cod
 - Codebase upgraded to `Ruby 2.4.1` and `Rails 5.1.3`
 - New set of [commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) for device-to-device exchange of large files
 - Dynamic throttling option: when on, the relay session handshake “proof of work” function will grow harder with increased server load
-- The companion [Glow](https://github.com/vault12/glow/) library detects failing relays and will pause connecting to them for a few hours
+- The companion [Glow](https://github.com/vault12/glow.ts) library detects failing relays and will pause connecting to them for a few hours
 - Restart time window: optionally config time periods when supporting services are restarting, all workers will sleep during that window
 - Improvements and optimizing for multi-worker/multi-threading access to Redis
 - New logging details and easier to read color-coded logs
@@ -72,7 +94,7 @@ Sending a file from Alice to Bob follows the following protocol:
 -   **Status**: Either party can check information about files currently on the relay using their `uploadID` and `fileStatus` command. If the relay deletes or refreshes `secret_seed.txt` present during initial `startFileUpload`, all requests for the old `uploadID` will fail.
 -   **Delete**: Either party can delete the file using `uploadID` and the `deleteFile` command.
 -   **Data pruning**: All Redis information about the files expires, with the default set to one week. If a file is not removed with the `deleteFile` command, after Redis expiration, the relay will delete old files via a cleanup job. The cleanup job will also delete files that have lost association with their storage id, which is the case if the `secret_seed.txt` is changed or deleted.
-The full client library of [file commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) is implemented in the [Glow](https://github.com/vault12/glow/) library.
+The full client library of [file commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
 
 ## Getting Started
 #### Redis
@@ -194,10 +216,18 @@ cd zax
 ```
 
 ## Demo
-To see Glow and Zax in action, check out the [Live Demo](https://zax-test.vault12.com). This is a test project included in Zax called [Zax-Dash](https://github.com/vault12/zax-dash).
+To see Glow and Zax in action, check out the [Live Demo](https://zt.vault12.com). This is a test project included in Zax called [Zax Dashboard](https://github.com/vault12/zax-dashboard).
 
 ## Contributing
 We encourage you to contribute to Zax using [pull requests](https://github.com/vault12/zax/pulls)! Please check out the [Contributing to Zax Guide](CONTRIBUTING.md) for guidelines about how to proceed.
+
+## Ecosystem
+
+Project | Description
+--- | ---
+[Glow](https://github.com/vault12/glow.ts) | Client library for interacting with Zax Cryptographic Relay
+[Zax Dashboard](https://github.com/vault12/zax-dashboard) | Sample dashboard app for Zax Cryptographic Relay
+[TrueEntropy](https://github.com/vault12/TrueEntropy) | High volume thermal entropy generator
 
 ## Telegram Community
 We've set up a public Telegram community [Vault12 Dwellers](https://t.me/Vault12).
