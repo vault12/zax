@@ -5,8 +5,7 @@ rvm:
 - 2.7.2
 gemfile: Gemfile
 before_install:
-- apt-get install libsodium-dev -y
-sudo: false
+- sudo apt-get install libsodium-dev -y
 env:
   global:
   - VERBOSE=true
