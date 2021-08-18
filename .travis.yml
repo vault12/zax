@@ -2,7 +2,7 @@ language: ruby
 os: linux
 dist: xenial
 rvm:
-- 2.7.2
+- 2.7.4
 gemfile: Gemfile
 before_install:
 - sudo apt-get install libsodium-dev -y
