@@ -6,11 +6,10 @@ class ApplicationController < ActionController::API
   before_action :check_restart_window
   before_action :allow_origin
 
-  public
-
   def check_restart_window
     rw = Rails.configuration.x.relay.restart_window
     return unless rw
+
     counter = Rails.configuration.x.relay.restart_window_max_seconds || 10
     while rw.call and counter > 0
       sleep 1
@@ -27,10 +26,11 @@ class ApplicationController < ActionController::API
   protected
 
   def add_error_context(l)
-    l =  "#{RED}#{l}#{ENDCLR}"
-    l += " #{CMD}#{GREEN}#{@cmd}#{ENDCLR}" if @cmd
-    l += " hpk: #{MAGENTA}'#{dumpHex @hpk}'#{ENDCLR}" if @hpk
-    return l
+    l.tap do |obj|
+      obj =  "#{RED}#{l}#{ENDCLR}"
+      obj += " #{CMD}#{GREEN}#{@cmd}#{ENDCLR}" if @cmd
+      obj + " hpk: #{MAGENTA}'#{dumpHex @hpk}'#{ENDCLR}" if @hpk
+    end
   end
 
   def reportCommonErrors(context_label)

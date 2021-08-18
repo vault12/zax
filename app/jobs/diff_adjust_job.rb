@@ -3,10 +3,10 @@ class DiffAdjustJob < ApplicationJob
   queue_as :default
 
   def perform(*args)
-    # Omiting period or setting it to 0 signals no dynamic difficulty adjustments
+    # Omitting period or setting it to 0 signals no dynamic difficulty adjustments
     return if static_diff?
 
-    # Immidiately open lock for the next job to be scheduled if needed
+    # Immediately open lock for the next job to be scheduled if needed
     rds.del ZAX_DIFF_JOB_UP
 
     t = DateTime.now

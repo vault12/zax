@@ -3,7 +3,7 @@ class FilesCleanupJob < ApplicationJob
 
   def perform(*args)
     return unless FileManager.is_enabled?
-    fm = FileManager.new
-    fm.delete_expired_all
+
+    FileManager.new.delete_expired_all
   end
 end
