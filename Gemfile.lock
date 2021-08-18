@@ -182,7 +182,7 @@ DEPENDENCIES
   spring
 
 RUBY VERSION
-   ruby 3.0.2p107
+   ruby 2.7.4p191
 
 BUNDLED WITH
-   2.2.22
+   2.2.23
