@@ -14,4 +14,5 @@ gem 'base32'
 group :development, :test do
   gem 'spring'
   gem 'minitest-reporters'
+  gem 'pry-rails'
 end
