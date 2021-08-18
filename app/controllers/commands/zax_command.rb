@@ -13,7 +13,7 @@ class ZAXCommand
   end
 
   # All commands should implement process(data)
-  # All implemetnations should call super(data) first
+  # All implementations should call super(data) first
   def process(data)
   end
 end
