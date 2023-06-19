@@ -1,0 +1,49 @@
+name: build status
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    name: build status
+    runs-on: ubuntu-latest
+
+    env:
+      # Force colored output in Github Actions logs
+      FORCE_COLOR: "1"
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+
+      - name: Install libsodium
+        run: sudo apt-get install libsodium-dev -y
+
+      - name: Set up Ruby 💎
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7.2
+          bundler-cache: true
+
+      - name: Install dependencies 📦
+        run: bundle install --jobs=3 --retry=3 --deployment
+
+      - name: Start Redis 🚀
+        uses: supercharge/redis-github-action@1.5.0
+
+      - name: Run tests
+        run: bundle exec rake
+
+      - name: Send Slack message 🔔
+        # Trigger even if the job fails
+        if: always()
+        # See https://github.com/marketplace/actions/slack-notify for configuration options
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: Github Actions
+          SLACK_ICON: https://avatars.githubusercontent.com/u/11186132?s=200&v=4
+          SLACK_FOOTER: ""
+          SLACK_COLOR: ${{ job.status }}
+          MSG_MINIMAL: commit,actions url
+          SLACK_TITLE: "${{ github.event_name == 'push' && 'Pushed into' || 'Running PR' }} `${{ github.ref_name }}`"
+          SLACK_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title }}
