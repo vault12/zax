@@ -128,12 +128,12 @@ module Utils
       # Global setting
 
       ttl = start_diff_period(period, ZAX_DIFF_LENGTH).to_i - DateTime.now.to_i
-      Redis.current.set ZAX_CUR_DIFF, new_diff, { ex: ttl}
+      Redis.current.set ZAX_CUR_DIFF, new_diff, **{ ex: ttl}
 
       # Save old difficulty for maximum amount of time old handshake nonces will be valid
       if new_diff != old_diff
         Redis.current.set ZAX_TEMP_DIFF, old_diff,
-          { ex: Rails.configuration.x.relay.max_nonce_diff.seconds.to_i + 5 }
+          **{ ex: Rails.configuration.x.relay.max_nonce_diff.seconds.to_i + 5 }
         logger.info "#{INFO} Caching diff: #{RED}#{old_diff}#{ENDCLR} => #{RED}#{new_diff}#{ENDCLR}"
       end
     end

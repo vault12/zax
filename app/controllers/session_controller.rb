@@ -209,7 +209,7 @@ class SessionController < ApplicationController
       # begining of next period
       job_time = start_diff_period(period, 1)
       ttl = job_time.to_i - DateTime.now.to_i
-      rds.set ZAX_DIFF_JOB_UP, 1, { ex: ttl }
+      rds.set ZAX_DIFF_JOB_UP, 1, **{ ex: ttl }
       DiffAdjustJob.set(wait_until: job_time).perform_later()
 
       # If traffic spike is over reset to normal difficulty
