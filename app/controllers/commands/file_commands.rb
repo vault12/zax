@@ -103,7 +103,7 @@ class UploadFileCmd < FileCmd
        @mailbox.file_status_from_uid uploadID, @fm
     }) do | file_info | # DATA WRITE BLOCK
       # set 2 sec lock to any random value
-      rds.set lock_name, rand_str(24), { ex: 2 }
+      rds.set lock_name, rand_str(24), **{ ex: 2 }
       # Record new part
       new_part = {
         index: part_idx,
