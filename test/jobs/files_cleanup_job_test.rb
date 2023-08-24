@@ -38,7 +38,7 @@ class FilesCleanupJobTest < ActiveJob::TestCase
     for uploadID in @uids
       storage_name = @fm.storage_name_from_id @fm.storage_from_upload uploadID
       for part in (0...10) do
-        assert File.exists? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
+        assert File.exist? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
       end
     end
   end
@@ -55,7 +55,7 @@ class FilesCleanupJobTest < ActiveJob::TestCase
     for uploadID in @uids
       storage_name = @fm.storage_name_from_id @fm.storage_from_upload uploadID
       for part in (0...10) do
-        assert_not File.exists? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
+        assert_not File.exist? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
       end
     end
   end
@@ -73,7 +73,7 @@ class FilesCleanupJobTest < ActiveJob::TestCase
     for uploadID in @uids
       storage_name = @fm.storage_name_from_id @fm.storage_from_upload uploadID
       for part in (0...10) do
-        assert_not File.exists? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
+        assert_not File.exist? "#{@fm.storage_path}#{storage_name}.#{part}.bin"
       end
     end
   end

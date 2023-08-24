@@ -3,7 +3,7 @@
 require "errors/zax_error"
 
 module Errors
-  class NonceError < ZAXError
+  class NonceError < ZaxError
     def http_fail
       super
       warn "#{INFO_NEG} Nonce error: \n"\

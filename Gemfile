@@ -8,6 +8,7 @@ gem 'puma'
 group :development, :test do
   gem 'spring'
   gem 'minitest-reporters'
+  gem 'pry', '~> 0.14.2'
 end
 
 gem 'kgio'

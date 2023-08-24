@@ -2,7 +2,7 @@
 # MIT License https://opensource.org/licenses/MIT
 require 'errors/zax_error'
 module Errors
-  class SessionKeyError < ZAXError
+  class SessionKeyError < ZaxError
     def http_fail
       @response_code = :unauthorized
       super

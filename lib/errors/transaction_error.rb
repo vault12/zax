@@ -1,6 +1,6 @@
 require 'errors/zax_error'
 module Errors
-  class TransactionError < ZAXError
+  class TransactionError < ZaxError
     def http_fail
       @response_code = :internal_server_error
       warn "#{INFO_NEG} Redis transaction error, hpk #{MAGENTA}#{dumpHex @data[:hpk]}#{ENDCLR}"

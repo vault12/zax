@@ -1,6 +1,5 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-require 'errors/all'
 require 'helpers/request_body_helper'
 require 'helpers/client_token_helper'
 require 'helpers/hpk_helper'

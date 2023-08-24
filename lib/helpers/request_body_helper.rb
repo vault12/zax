@@ -1,6 +1,6 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-require 'errors/body_err'
+require 'errors/body_error'
 
 # --- Request BODY checks ---
 module RequestBodyHelper

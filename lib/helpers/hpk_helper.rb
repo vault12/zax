@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
 require 'utils'
-require 'errors/hpk'
+require 'errors/hpk_error'
 
 # --- HPK checks ---
 module HPKHelper

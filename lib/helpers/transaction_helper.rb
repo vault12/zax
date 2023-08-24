@@ -1,5 +1,5 @@
 require 'utils'
-require 'errors/transaction'
+require 'errors/transaction_error'
 
 module TransactionHelper
   include Utils
@@ -33,12 +33,14 @@ module TransactionHelper
     limit = Rails.configuration.x.relay.mailbox_retry
     count, res = 0, nil
     label = hpk ? "mailbox #{dumpHex(hpk.from_b64)}," : "key #{watch_key}"
+
     while count < limit and res.nil?
       rds.watch watch_key if watch_key
       read_data = read_proc.call() if read_proc
-      rds.multi
-      yield(read_data)
-      res = rds.exec
+      res = rds.multi do |transaction|
+        yield(read_data, transaction)
+      end
+
       if res.nil?
         count += 1
         sleep 0.1 + rand() * 0.1 # let other mbx writes complete
@@ -58,7 +60,7 @@ module TransactionHelper
   # Every web worker thread gets its own Redis connection,
   # so any multithreading conflicts are resolved by Redis transactions
   def rds
-    Thread.current[:redis] ||= Redis.new host: 'localhost', port: 6379
+    $redis
   end
 
 end

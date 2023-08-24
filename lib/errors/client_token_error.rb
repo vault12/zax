@@ -3,7 +3,7 @@
 require 'errors/zax_error'
 
 module Errors
-  class ClientTokenError < ZAXError
+  class ClientTokenError < ZaxError
     def http_fail
       @response_code = :unauthorized
       super
