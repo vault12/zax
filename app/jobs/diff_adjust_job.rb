@@ -16,7 +16,7 @@ class DiffAdjustJob < ApplicationJob
     return if rds.exists? period_marker
     rds.set period_marker, 1, **{ ex: period * 60 }
 
-    min_diff = Redis.current.get(ZAX_ORIGINAL_DIFF).to_i
+    min_diff = $redis.get(ZAX_ORIGINAL_DIFF).to_i
     diff = get_diff
 
     factor = Rails.configuration.x.relay.overload_factor || 2.0
@@ -59,7 +59,7 @@ class DiffAdjustJob < ApplicationJob
   end
 
   def timeblock_counter(block)
-    v = Redis.current.get "ZAX_session_counter_#{block}"
+    v = $redis.get "ZAX_session_counter_#{block}"
     v ? v.to_i : 0
   end
 
