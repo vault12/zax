@@ -31,7 +31,7 @@ module Zax
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
-    config.eager_load_paths += [Rails.root.join("lib"), Rails.root.join("app/jobs")]
+    config.eager_load_paths += [Rails.root.join("lib"), Rails.root.join("app/jobs"), Rails.root.join("app/services")]
 
     # --- Relay default configuration START ---
     config.x.relay.difficulty                 = 0 # 1...255 : require number of leading 0 bits in handshake

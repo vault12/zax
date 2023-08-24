@@ -1,9 +1,7 @@
 # Copyright (c) 2017 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
 
-require 'utils'
-
-class ZAXCommand
+class ZaxCommand
   include Utils
   include NonceHelper
 
