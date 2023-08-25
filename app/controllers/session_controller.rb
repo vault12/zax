@@ -2,7 +2,7 @@
 # MIT License https://opensource.org/licenses/MIT
 
 class SessionController < ApplicationController
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   before_action :preamble
 

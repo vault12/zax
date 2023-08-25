@@ -3,7 +3,7 @@
 
 class CommandController < ApplicationController
   public
-  include TransactionHelper
+  include Helpers::TransactionHelper
   attr_reader :body
 
   ALL_COMMANDS = %w(

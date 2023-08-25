@@ -4,7 +4,7 @@ require 'test_helper'
 require 'mailbox'
 
 class MailboxExpireTest < ActionDispatch::IntegrationTest
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   test 'expiring messages' do
     @debug = false

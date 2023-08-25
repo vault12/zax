@@ -5,7 +5,7 @@ require 'base32'
 class FileManager
   include Utils
   include Errors
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   STATUS_CODES = %i(NOT_FOUND START UPLOADING COMPLETE)
 

@@ -2,7 +2,7 @@
 # MIT License https://opensource.org/licenses/MIT
 
 class Commands::UploadFileCmd < Commands::FileCmd
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   def process(data)
     uploadID, storage_id, part_idx, ctext, chunk_size = unpack_file_request_data(data)

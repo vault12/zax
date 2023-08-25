@@ -1,5 +1,5 @@
 class DiffAdjustJob < ApplicationJob
-  include TransactionHelper
+  include Helpers::TransactionHelper
   queue_as :default
 
   def perform(*args)

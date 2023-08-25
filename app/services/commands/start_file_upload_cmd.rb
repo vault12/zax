@@ -2,7 +2,7 @@
 # MIT License https://opensource.org/licenses/MIT
 
 class Commands::StartFileUploadCmd < Commands::FileCmd
-  include HPKHelper
+  include Helpers::HpkHelper
 
   def process(data)
     super data

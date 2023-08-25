@@ -4,7 +4,7 @@ require 'json'
 
 class Mailbox
   include Utils
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   # --- HPK and redis storage tags
   attr_reader :hpk

@@ -3,7 +3,7 @@
 require 'test_helper'
 
 class DiffAdjustJobTest < ActiveJob::TestCase
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   ZAXs = 'ZAX_session_counter_'
 

@@ -4,7 +4,7 @@ require 'test_helper'
 require 'mailbox'
 
 class MailboxBasicTest < ActionDispatch::IntegrationTest
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   test 'basic functionality upload count download delete' do
     @config = getConfig

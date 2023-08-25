@@ -3,7 +3,7 @@
 
 class ZaxCommand
   include Utils
-  include NonceHelper
+  include Helpers::NonceHelper
 
   def initialize(hpk,mailbox)
     @hpk = hpk
