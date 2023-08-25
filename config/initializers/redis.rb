@@ -17,6 +17,7 @@ uri = URI.parse(ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" })
 $redis = Redis.new(
   host: uri.host,
   port: uri.port,
+  db: 1,
   password: uri.password,
   timeout: 1,
   ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }

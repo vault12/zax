@@ -131,14 +131,10 @@ module Zax
       # Default: files expire after 7 days
       files_expiration: 7.days.seconds.to_i,
     }
-
-    config.cache_store = :redis_store, {
-      :host => 'localhost',
-      :port => 6379,
-      :db => 1,
-#     :password => 'mysecret',
-      :namespace => 'cache',
-      :expires_in => 10.minutes }
+    config.cache_store = :redis_cache_store, {
+      url: ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" },
+      expires_in: 10.minutes
+    }
 
     # --- Relay default configuration END ---
   end
