@@ -13,13 +13,8 @@ https://groups.google.com/forum/#!topic/redis-db/T7JzYqYEAqk
 require 'key_params'
 include KeyParams
 
-uri = URI.parse(ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" })
 $redis = Redis.new(
-  host: uri.host,
-  port: uri.port,
-  db: 1,
-  password: uri.password,
-  timeout: 1,
+  url: ENV.fetch("REDIS_URL") { "redis://localhost:6379/0" },
   ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }
 )
 
