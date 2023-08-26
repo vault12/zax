@@ -1,3 +1,6 @@
+# Copyright (c) 2015 Vault12, Inc.
+# MIT License https://opensource.org/licenses/MIT
+
 # Load the Rails application.
 require_relative "application"
 

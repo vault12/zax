@@ -1,3 +1,6 @@
+# Copyright (c) 2015 Vault12, Inc.
+# MIT License https://opensource.org/licenses/MIT
+
 require_relative "boot"
 
 require "rails"

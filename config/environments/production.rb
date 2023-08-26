@@ -1,3 +1,6 @@
+# Copyright (c) 2015 Vault12, Inc.
+# MIT License https://opensource.org/licenses/MIT
+
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do

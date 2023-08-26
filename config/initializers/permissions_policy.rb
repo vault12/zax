@@ -1,3 +1,6 @@
+# Copyright (c) 2015 Vault12, Inc.
+# MIT License https://opensource.org/licenses/MIT
+
 # Define an application-wide HTTP permissions policy. For further
 # information see https://developers.google.com/web/updates/2018/06/feature-policy
 #
