@@ -5,10 +5,10 @@ module Errors
 
   # Root class for our internal ZAX errors
   #
-  # Relay internal errors will inherit from ZAXError.
+  # Relay internal errors will inherit from ZaxError.
   # Catch block handles 3 types of errors:
   # - RbNaCl::CryptoError for encryption
-  # - ZAXError of relay own error conditions
+  # - ZaxError of relay own error conditions
   # - general errors from other libraries
   #
   # All known relay errors related to the protocol will return :bad_request.
@@ -23,7 +23,7 @@ module Errors
   # Clients get a response with :internal_server_error code so that
   # they may avoid using given relay for the time being.
 
-  class ZAXError < StandardError
+  class ZaxError < StandardError
     include Utils
 
     def initialize(ctrl, data = nil)

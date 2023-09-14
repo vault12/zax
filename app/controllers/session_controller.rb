@@ -2,7 +2,7 @@
 # MIT License https://opensource.org/licenses/MIT
 
 class SessionController < ApplicationController
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   before_action :preamble
 
@@ -82,7 +82,7 @@ class SessionController < ApplicationController
 
     # Sanity check server-side RNG
     if !relay_token || relay_token.length != TOKEN_LEN
-      fail SevereRandomError.new
+      fail SeverRandomError.new
     end
     relay_token
   end
@@ -190,7 +190,7 @@ class SessionController < ApplicationController
 
     # report errors with keys if any
     if session_key.nil? || session_key.public_key.to_bytes.length != KEY_LEN
-      fail SevereKeyError.new(self, msg: 'New session key: generation failed or too short')
+      fail SeverKeyError.new(self, msg: 'New session key: generation failed or too short')
     end
 
     # store session key on the h₂(client_token) tag in redis

@@ -112,12 +112,12 @@ module Utils
 
     # Temp value if difficulty just changed
     if check_temp_diff
-      tdiff = Redis.current.get ZAX_TEMP_DIFF
+      tdiff = $redis.get ZAX_TEMP_DIFF
       return tdiff.to_i unless tdiff.nil?
     end
 
     # Dynamic value from redis if set
-    rdiff = Redis.current.get ZAX_CUR_DIFF
+    rdiff = $redis.get ZAX_CUR_DIFF
     return rdiff.nil? ? diff : rdiff.to_i
   end
 
@@ -128,11 +128,11 @@ module Utils
       # Global setting
 
       ttl = start_diff_period(period, ZAX_DIFF_LENGTH).to_i - DateTime.now.to_i
-      Redis.current.set ZAX_CUR_DIFF, new_diff, **{ ex: ttl}
+      $redis.set ZAX_CUR_DIFF, new_diff, **{ ex: ttl}
 
       # Save old difficulty for maximum amount of time old handshake nonces will be valid
       if new_diff != old_diff
-        Redis.current.set ZAX_TEMP_DIFF, old_diff,
+        $redis.set ZAX_TEMP_DIFF, old_diff,
           **{ ex: Rails.configuration.x.relay.max_nonce_diff.seconds.to_i + 5 }
         logger.info "#{INFO} Caching diff: #{RED}#{old_diff}#{ENDCLR} => #{RED}#{new_diff}#{ENDCLR}"
       end

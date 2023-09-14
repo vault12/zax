@@ -17,3 +17,5 @@ dump.rdb
 
 # editor settings
 .idea
+
+/node_modules

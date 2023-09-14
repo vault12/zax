@@ -2,7 +2,6 @@
 # MIT License https://opensource.org/licenses/MIT
 require 'test_helper'
 
-require 'errors/all'
 include Errors
 
 class FileIOTest < ActionController::TestCase
@@ -47,7 +46,7 @@ test 'file storage path' do
 end
 
 test 'create storage dir' do
-  # assert_raises(Errors::ZAXError) { fm = FileManager.new }
+  # assert_raises(Errors::ZaxError) { fm = FileManager.new }
 
   fm = FileManager.new
   # always a storage dir after constructor
@@ -87,14 +86,14 @@ test 'secret seed' do
   # seed created if there is no config, no file
   Rails.configuration.x.relay.file_store[:secret_seed] = ""
 
-  FileUtils.mv seed_path,seed_path2 if File.exists?(seed_path)
-  assert_not File.exists?(seed_path)
+  FileUtils.mv seed_path,seed_path2 if File.exist?(seed_path)
+  assert_not File.exist?(seed_path)
 
   fm = FileManager.new
   assert_not_nil fm.seed
   assert fm.seed.length>32
 
-  if File.exists?(seed_path2)
+  if File.exist?(seed_path2)
     FileUtils.rm seed_path
     FileUtils.mv seed_path2,seed_path
   end

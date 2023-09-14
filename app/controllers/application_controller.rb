@@ -37,19 +37,19 @@ class ApplicationController < ActionController::API
     yield
     rescue RbNaCl::CryptoError => e
       logger.error add_error_context(context_label)
-      ZAXError.new(self).NaCl_error e
+      ZaxError.new(self).NaCl_error e
     rescue Redis::CommandError => e
       logger.error add_error_context(context_label)
       TransactionError.new(self,
         { hpk: @hpk,
           msg: "#{RED}Redis error:#{ENDCLR} #{e}"
         }).http_fail
-    rescue ZAXError => e
+    rescue ZaxError => e
       logger.error add_error_context(context_label)
       e.http_fail
     rescue ArgumentError => e
       ReportError.new(self).report add_error_context(context_label), e
     rescue => e
-      ZAXError.new(self).severe_error add_error_context(context_label),e
+      ZaxError.new(self).severe_error add_error_context(context_label),e
   end
 end

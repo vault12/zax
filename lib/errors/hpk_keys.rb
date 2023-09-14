@@ -6,7 +6,7 @@ require 'errors/zax_error'
 # Client should prove HPK ownership to establish these keys
 
 module Errors
-  class HPK_keys < ZAXError
+  class HpkKeys < ZaxError
     def http_fail
       @response_code = :unauthorized
       super

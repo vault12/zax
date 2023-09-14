@@ -3,7 +3,7 @@
 require 'errors/zax_error'
 
 module Errors
-  class BodyError < ZAXError
+  class BodyError < ZaxError
     def http_fail
       super
       warn "#{INFO_NEG} bad request body\n"\

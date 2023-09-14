@@ -3,7 +3,7 @@
 require 'test_helper'
 
 class ProveTestHelper < ActionDispatch::IntegrationTest
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   def setup_prove
       @client_token = RbNaCl::Random.random_bytes 32

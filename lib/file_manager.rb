@@ -1,12 +1,11 @@
 # Copyright (c) 2017 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-require 'errors/all'
 require 'base32'
 
 class FileManager
   include Utils
   include Errors
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   STATUS_CODES = %i(NOT_FOUND START UPLOADING COMPLETE)
 
@@ -102,7 +101,7 @@ class FileManager
   def delete_data(uploadID, part)
     file_name = storage_name_from_id(storage_from_upload(uploadID), part)
     full = "#{storage_path}#{file_name}"
-    File.exists?(full) ? File.delete(full) : nil
+    File.exist?(full) ? File.delete(full) : nil
   end
 
   def delete_expired_all

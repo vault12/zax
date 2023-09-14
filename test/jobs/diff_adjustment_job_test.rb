@@ -3,7 +3,7 @@
 require 'test_helper'
 
 class DiffAdjustJobTest < ActiveJob::TestCase
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   ZAXs = 'ZAX_session_counter_'
 
@@ -11,12 +11,12 @@ class DiffAdjustJobTest < ActiveJob::TestCase
     # Avoid tests on minute edge: our setup may split over 2 blocks
     sleep(2.5) if DateTime.now.second > 57
 
-    @save_min_diff = Redis.current.get(ZAX_ORIGINAL_DIFF).to_i
+    @save_min_diff = $redis.get(ZAX_ORIGINAL_DIFF).to_i
     @save_diff = get_diff
 
     set_diff 4
     # minimal difficulty min_diff
-    Redis.current.set ZAX_ORIGINAL_DIFF, 4
+    $redis.set ZAX_ORIGINAL_DIFF, 4
 
     # if we get more then ...
     Rails.configuration.x.relay.min_requests = 10
@@ -33,7 +33,7 @@ class DiffAdjustJobTest < ActiveJob::TestCase
 
   def teardown
     clear_counters()
-    Redis.current.set ZAX_ORIGINAL_DIFF, @save_min_diff
+    $redis.set ZAX_ORIGINAL_DIFF, @save_min_diff
     set_diff @save_diff
     rds.del ZAX_CUR_DIFF
   end
@@ -80,7 +80,7 @@ class DiffAdjustJobTest < ActiveJob::TestCase
     DiffAdjustJob.perform_now
 
     # # Difficulty increase by one factor from min, one increase of diff_increase
-    min_diff = Redis.current.get(ZAX_ORIGINAL_DIFF).to_i
+    min_diff = $redis.get(ZAX_ORIGINAL_DIFF).to_i
     assert_equal min_diff + 3, get_diff
   end
 
@@ -102,7 +102,7 @@ class DiffAdjustJobTest < ActiveJob::TestCase
     # Difficulty decrease by two factors, two decrease of diff_increase
     assert_equal 10, get_diff
 
-    min_diff = Redis.current.get(ZAX_ORIGINAL_DIFF).to_i
+    min_diff = $redis.get(ZAX_ORIGINAL_DIFF).to_i
     assert_equal min_diff + 2*3, get_diff
   end
 

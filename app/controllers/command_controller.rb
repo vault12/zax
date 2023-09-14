@@ -1,11 +1,9 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-require 'commands/message_commands'
-require 'commands/file_commands'
 
 class CommandController < ApplicationController
   public
-  include TransactionHelper
+  include Helpers::TransactionHelper
   attr_reader :body
 
   ALL_COMMANDS = %w(
@@ -39,51 +37,51 @@ class CommandController < ApplicationController
 
       # ===   Messaging commands ===
       when 'upload'     # === ⌘ Upload ===
-        res = UploadCmd.new(@hpk,mailbox).process(data)[:storage_token].to_b64
+        res = Commands::UploadCmd.new(@hpk,mailbox).process(data)[:storage_token].to_b64
         render plain: "#{res}", status: :ok
 
       when 'count'      # === ⌘ Count ===
-        render_encrypted rsp_nonce, CountCmd.new(@hpk,mailbox).process(data)
+        render_encrypted rsp_nonce, Commands::CountCmd.new(@hpk,mailbox).process(data)
 
       when 'download'   # === ⌘ Download ===
-        render_encrypted rsp_nonce, DownloadCmd.new(@hpk,mailbox).process(data)
+        render_encrypted rsp_nonce, Commands::DownloadCmd.new(@hpk,mailbox).process(data)
 
       when 'messageStatus' # === ⌘ Message Status ===
-        ttl = StatusCmd.new(@hpk,mailbox).process(data)
+        ttl = Commands::StatusCmd.new(@hpk,mailbox).process(data)
         render plain: "#{ttl}", status: :ok
 
       when 'delete'     # === ⌘ Delete ===
         render nothing: true, status: :ok unless data[:payload]
-        res = DeleteCmd.new(@hpk,mailbox).process(data)
+        res = Commands::DeleteCmd.new(@hpk,mailbox).process(data)
         render plain: "#{res}", status: :ok
 
       # ===   File commands ===
       when 'startFileUpload'  # === ⌘ startFileUpload ===
         # full error check in check_errors
         return unless check_filemanager
-        payload = StartFileUploadCmd.new(@hpk,mailbox,self).process(data)
+        payload = Commands::StartFileUploadCmd.new(@hpk,mailbox,self).process(data)
         render_encrypted rsp_nonce,payload
 
       when 'fileStatus'       # === ⌘ fileStatus ===
         return unless check_filemanager
-        file_info = FileStatusCmd.new(@hpk,mailbox,self).process(data)
+        file_info = Commands::FileStatusCmd.new(@hpk,mailbox,self).process(data)
         render_encrypted rsp_nonce,file_info
 
       when 'uploadFileChunk'  # === ⌘ uploadFileChunk ===
         return unless check_filemanager
-        payload = UploadFileCmd.new(@hpk,mailbox,self).process(data)
+        payload = Commands::UploadFileCmd.new(@hpk,mailbox,self).process(data)
         payload ||= { status: :NOT_FOUND }
         render_encrypted rsp_nonce, payload
 
       when 'downloadFileChunk'  # === ⌘ downloadFileChunk ===
         return unless check_filemanager
-        payload, file = DownloadFileCmd.new(@hpk,mailbox,self).process(data)
+        payload, file = Commands::DownloadFileCmd.new(@hpk,mailbox,self).process(data)
         payload ||= { status: :NOT_FOUND }
         render_encrypted rsp_nonce, payload, file
 
       when 'deleteFile'         # === ⌘ deleteFile ===
         return unless check_filemanager
-        payload = DeleteFileCmd.new(@hpk,mailbox,self).process(data)
+        payload = Commands::DeleteFileCmd.new(@hpk,mailbox,self).process(data)
         render_encrypted rsp_nonce, payload
 
       # === Misc commands ===
@@ -102,8 +100,8 @@ class CommandController < ApplicationController
     logger.info "#{INFO_GOOD} Reading client session key for hpk #{MAGENTA}#{dumpHex @hpk}#{ENDCLR}"
     @session_key = Rails.cache.read("session_key_#{@hpk}")
     @client_key = Rails.cache.read("client_key_#{@hpk}")
-    fail HPK_keys.new(self, {hpk: @hpk, msg: 'No cached session key'}) unless @session_key
-    fail HPK_keys.new(self, {hpk: @hpk, msg: 'No cached client key'}) unless @client_key
+    fail HpkKeys.new(self, {hpk: @hpk, msg: 'No cached session key'}) unless @session_key
+    fail HpkKeys.new(self, {hpk: @hpk, msg: 'No cached client key'}) unless @client_key
   end
 
   def check_body_preamble_command_lines(body)

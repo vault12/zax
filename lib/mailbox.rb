@@ -4,7 +4,7 @@ require 'json'
 
 class Mailbox
   include Utils
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   # --- HPK and redis storage tags
   attr_reader :hpk
@@ -108,22 +108,22 @@ class Mailbox
     file_info = nil
     storage_id = nil
 
-    res = runRedisTransaction(hpk_tag, @hpk, 'store') do
+    res = runRedisTransaction(hpk_tag, @hpk, 'store') do |_file_info, rds_transaction|
       # by default everytihing in mailbox will expire in 3 days
       # files will expire in 7 days
 
       # store message itself on the msg_hpk_nonce tag
-      rds.set(msg_tag(b64_nonce), item.to_json)
-      rds.expire(msg_tag(b64_nonce), tmout)
+      rds_transaction.set(msg_tag(b64_nonce), item.to_json)
+      rds_transaction.expire(msg_tag(b64_nonce), tmout)
 
       # mbx_hpk is used as index hash of all messages to @hpk
-      rds.hset(hpk_tag, b64_nonce, Time.new + tmout)
-      rds.expire(hpk_tag, tmout)
+      rds_transaction.hset(hpk_tag, b64_nonce, (Time.new + tmout).to_s)
+      rds_transaction.expire(hpk_tag, tmout)
 
       # store unique storage token for that item
       # visible to sender (hpk_from) when stored or deleted by @hpk
-      rds.set(token_tag(storage_token), storage_record.to_json)
-      rds.expire(token_tag(storage_token), tmout)
+      rds_transaction.set(token_tag(storage_token), storage_record.to_json)
+      rds_transaction.expire(token_tag(storage_token), tmout)
 
       # :file message is same as other messages handled by relays,
       # which additionally passes to hpk_to 'uploadID' that it can
@@ -145,8 +145,8 @@ class Mailbox
         }
 
         # file_index to/from hpk is used as index hash of all files
-        save_file_info(file_info, extra[:hpk_from], storage_id) if file_info and kind == :file
-        save_file_tracking_info(storage_name, tmout)
+        save_file_info(file_info, extra[:hpk_from], storage_id, rds_transaction) if file_info and kind == :file
+        save_file_tracking_info(storage_name, tmout, rds_transaction)
       end
     end
 
@@ -179,28 +179,28 @@ class Mailbox
     return res
   end
 
-  def save_file_info(file_info, hpk_from, storage_id)
+  def save_file_info(file_info, hpk_from, storage_id, rds_transaction)
     file_info_js = file_info.to_json
     tmout = timeout(:file)
 
     # file_index to/from hpk is used as index hash of all files
-    rds.hset(file_index_to, storage_id.to_b64, file_info_js)
-    rds.expire(file_index_to, tmout)
+    rds_transaction.hset(file_index_to, storage_id.to_b64, file_info_js)
+    rds_transaction.expire(file_index_to, tmout)
 
     fidx_from = file_index_from(hpk_from.to_b64)
-    rds.hset(fidx_from, storage_id.to_b64, file_info_js)
-    rds.expire(fidx_from, tmout)
+    rds_transaction.hset(fidx_from, storage_id.to_b64, file_info_js)
+    rds_transaction.expire(fidx_from, tmout)
   end
 
-  def save_file_tracking_info(storage_name,tmout)
+  def save_file_tracking_info(storage_name, tmout, rds_transaction)
     # global index is used by workers to clear out expired files
-    rds.sadd(ZAX_GLOBAL_FILES, storage_tag(storage_name))
+    rds_transaction.sadd(ZAX_GLOBAL_FILES, storage_tag(storage_name))
 
     # When storage tag expires but still present
     # in persitent GLOBAL worker will delete the file
     # and remove from GLOBAL set
-    rds.set(storage_tag(storage_name), 1)
-    rds.expire(storage_tag(storage_name), tmout)
+    rds_transaction.set(storage_tag(storage_name), 1)
+    rds_transaction.expire(storage_tag(storage_name), tmout)
 
     cleanup = DateTime.now + timeout(:file).seconds + 10.minutes
     FilesCleanupJob.set(wait_until: cleanup).perform_later
@@ -225,9 +225,9 @@ class Mailbox
     limit = start+size <= nonces.length ? start + size : nonces.length
 
     # read all messages requested in atomic transaction
-    res = runRedisTransaction(hpk_tag, @hpk, 'read_all') do
+    res = runRedisTransaction(hpk_tag, @hpk, 'read_all') do |_file_info, rds_transaction|
       for i in (start...limit)
-        rds.get msg_tag nonces[i]
+        rds_transaction.get msg_tag nonces[i]
       end
     end
 
@@ -248,17 +248,17 @@ class Mailbox
     return Hash[msg.map { |k, v| [ k.to_sym, k != "time" ? v.from_b64.force_encoding('utf-8') : v ] }]
   end
 
-  def _delete_item(nonce)
-    rds.del msg_tag nonce
-    rds.hdel hpk_tag, nonce
-    rds.del h2 "#{@hpk}#{nonce}" # storage_token
+  def _delete_item(nonce, rds_transaction)
+    rds_transaction.del msg_tag nonce
+    rds_transaction.hdel hpk_tag, nonce
+    rds_transaction.del h2 "#{@hpk}#{nonce}" # storage_token
   end
 
   # Delete one message by nonce
   def delete(nonce)
     _resetCount()
-    runRedisTransaction(hpk_tag, @hpk, 'delete') do
-      _delete_item nonce
+    runRedisTransaction(hpk_tag, @hpk, 'delete') do |_file_info, rds_transaction|
+      _delete_item nonce, rds_transaction
       logger.info "#{INFO} #{RED}deleting #{GREEN}#{dumpHex nonce.from_b64}#{ENDCLR} in mbx #{MAGENTA}#{dumpHex @hpk.from_b64}#{ENDCLR}"
     end
   end
@@ -266,9 +266,9 @@ class Mailbox
   # Delete list of messages by list of nonces
   def delete_list(nonce_list)
     _resetCount()
-    runRedisTransaction(hpk_tag, @hpk, 'delete list') do
+    runRedisTransaction(hpk_tag, @hpk, 'delete list') do |_file_info, rds_transaction|
       nonce_list.each do |nonce|
-        _delete_item nonce
+        _delete_item nonce, rds_transaction
         logger.info "#{INFO} #{RED}deleting #{GREEN}#{dumpHex nonce.from_b64}#{ENDCLR} in mbx #{MAGENTA}#{dumpHex @hpk.from_b64}#{ENDCLR}"
       end
     end
@@ -297,7 +297,9 @@ class Mailbox
     # delete all these nonces from hash index
     unless toDel.empty?
       _resetCount()
-      runRedisTransaction(hpk_tag, @hpk, 'compact') { toDel.each { |n| rds.hdel hpk_tag, n } }
+      runRedisTransaction(hpk_tag, @hpk, 'compact') do |_file_info, rds_transaction|
+        toDel.each { |n| rds_transaction.hdel hpk_tag, n }
+      end
     end
   end
 

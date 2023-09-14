@@ -11,7 +11,7 @@ Minitest::Reporters.use!
 
 class ActiveSupport::TestCase
   include ResponseHelper
-  include TransactionHelper
+  include Helpers::TransactionHelper
 
   def redisup
     begin

@@ -3,11 +3,10 @@
 require 'errors/zax_error'
 
 module Errors
-  class ConfigError < ZAXError
+  class HpkError < ZaxError
     def http_fail
-      return unless @controller
       super
-      severe_error 'Configuration error'
+      warn "#{INFO_NEG} hpk error: #{@data[:msg]} #{dump @data[:hpk]}"
     end
   end
 end

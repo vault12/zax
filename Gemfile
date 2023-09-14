@@ -1,13 +1,14 @@
 source 'https://rubygems.org'
-ruby "2.7.2"
 
-gem 'rails', '6.0.4'
+gem 'rails', '7.0.7.2'
 
 gem 'puma'
+# gem "sprockets-rails"
 
 group :development, :test do
   gem 'spring'
   gem 'minitest-reporters'
+  gem 'pry', '~> 0.14.2'
 end
 
 gem 'kgio'

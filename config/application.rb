@@ -1,15 +1,21 @@
 # Copyright (c) 2015 Vault12, Inc.
 # MIT License https://opensource.org/licenses/MIT
-require File.expand_path('../boot', __FILE__)
 
-# require 'rails/all'
-# removed active record until we need DB (if ever)
-# uncomment #### lines when putting active_record back (or 'rails/all')
+require_relative "boot"
 
-require 'action_controller/railtie'
-require 'action_mailer/railtie'
-# require 'sprockets/railtie'
-require 'rails/test_unit/railtie'
+require "rails"
+# Pick the frameworks you want:
+require "active_model/railtie"
+require "active_job/railtie"
+# require "active_record/railtie"
+# require "active_storage/engine"
+require "action_controller/railtie"
+require "action_mailer/railtie"
+# require "action_mailbox/engine"
+# require "action_text/engine"
+require "action_view/railtie"
+# require "action_cable/engine"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -17,27 +23,18 @@ Bundler.require(*Rails.groups)
 
 module Zax
   class Application < Rails::Application
-    # Settings in config/environments/* take precedence over those specified here.
-    # Application configuration should go into files in config/initializers
-    # -- all .rb files in that directory are automatically loaded.
-
+    # Initialize configuration defaults for originally generated Rails version.
+    config.load_defaults 7.0
     config.encoding = 'utf-8'
 
-    # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
-    # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
-    # config.time_zone = 'Central Time (US & Canada)'
-
-    # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
-    # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
-    # config.i18n.default_locale = :de
-
-    # Do not swallow errors in after_commit/after_rollback callbacks.
-    #### config.active_record.raise_in_transactional_callbacks = true
-
-    config.eager_load_paths += [
-      "#{Rails.root}/lib", "#{Rails.root}/lib/helpers",
-      "#{Rails.root}/lib/errors","#{Rails.root}/lib/tasks",
-      "#{Rails.root}/app/jobs"]
+    # Configuration for the application, engines, and railties goes here.
+    #
+    # These settings can be overridden in specific environments using the files
+    # in config/environments, which are processed later.
+    #
+    # config.time_zone = "Central Time (US & Canada)"
+    # config.eager_load_paths << Rails.root.join("extras")
+    config.eager_load_paths += [Rails.root.join("lib"), Rails.root.join("app/jobs"), Rails.root.join("app/services")]
 
     # --- Relay default configuration START ---
     config.x.relay.difficulty                 = 0 # 1...255 : require number of leading 0 bits in handshake
@@ -137,14 +134,10 @@ module Zax
       # Default: files expire after 7 days
       files_expiration: 7.days.seconds.to_i,
     }
-
-    config.cache_store = :redis_store, {
-      :host => 'localhost',
-      :port => 6379,
-      :db => 1,
-#     :password => 'mysecret',
-      :namespace => 'cache',
-      :expires_in => 10.minutes }
+    config.cache_store = :redis_cache_store, {
+      url: ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" },
+      expires_in: 10.minutes
+    }
 
     # --- Relay default configuration END ---
   end

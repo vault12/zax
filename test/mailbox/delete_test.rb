@@ -235,8 +235,8 @@ class MailboxDeleteTest < ProveTestHelper
         rds.del(key) if rds.exists?(key)
       end
     end
-    rds.del(@config[:hpkey])
-    rds.del(@config[:number_of_iterations])
-    rds.del(@config[:total_number_of_messages])
+    rds.del(@config[:hpkey].to_s)
+    rds.del(@config[:number_of_iterations].to_s)
+    rds.del(@config[:total_number_of_messages].to_s)
   end
 end

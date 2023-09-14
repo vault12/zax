@@ -6,7 +6,7 @@ require 'errors/zax_error'
 # wasn't created in the first place. Client should start a new handshake
 
 module Errors
-  class ExpiredError < ZAXError
+  class ExpiredError < ZaxError
     def http_fail
       super
       info "#{INFO_NEG} 'verify' for expired req #{dumpHex @data}"
