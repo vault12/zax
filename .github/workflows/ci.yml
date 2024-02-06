@@ -13,22 +13,22 @@ jobs:
 
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install libsodium
-        run: sudo apt-get install libsodium-dev -y
+      # - name: Install libsodium
+      #  run: sudo apt-get install libsodium-dev -y
 
       - name: Set up Ruby 💎
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.2.1
+          ruby-version: 3.2.0
           bundler-cache: true
 
       - name: Install dependencies 📦
         run: bundle install --jobs=3 --retry=3 --deployment
 
       - name: Start Redis 🚀
-        uses: supercharge/redis-github-action@1.5.0
+        uses: supercharge/redis-github-action@1.8.0
 
       - name: Run tests
         run: bundle exec rake
