@@ -26,8 +26,6 @@
 Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow.ts) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
 Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
 
-**Zax v2.0 Update** summary is [here](#-version-20-updates).
-
 ![Zax Infographics](https://bit.ly/zax_relay)
 
 ## Features
@@ -50,34 +48,6 @@ Clients start by sending a POST request to `/start_session` with a random token.
 After answering the challenge to `/verify_session`, clients receive temporary session keys, and can start posting commands to `/command`. The command to relay is encrypted with session keys, while payload of command is usually encrypted with recipient public key, and is inaccessible to the relay. Using `upload`, `messageStatus`, `download` and `delete` commands, client devices can start sending end-to-end encrypted messages to each other.
 
 Details of the protocol can be found in the [full technical spec](http://bit.ly/nacl_relay_spec). The full client library for messaging commands is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
-
-
-## <a name=“zax20”></a> Version 2.0 Updates
-In Zax 2.0 we provide numerous stability and performance updates to the core codebase, and introduced new functionality of extending the Zax “dead drop” style communications to include file exchange.
-
-- Codebase upgraded to `Ruby 2.4.1` and `Rails 5.1.3`
-- New set of [commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) for device-to-device exchange of large files
-- Dynamic throttling option: when on, the relay session handshake “proof of work” function will grow harder with increased server load
-- The companion [Glow](https://github.com/vault12/glow.ts) library detects failing relays and will pause connecting to them for a few hours
-- Restart time window: optionally config time periods when supporting services are restarting, all workers will sleep during that window
-- Improvements and optimizing for multi-worker/multi-threading access to Redis
-- New logging details and easier to read color-coded logs
-- Many performance improvements and bug fixes
-
-#### <a name=“zax21”></a> 2.1 Updates
-
-- *h2()* hash function zero-pad prefix increased to 64 bytes to match sha256 block
-- Double JSON encoding removed in file commands
-- Default session timeout increased to 20 minutes
-- [Glow](https://github.com/vault12/glow) now supports command line interface:
-
-```
-glow clean <relay_url> <guest_public_key>                delete all files in mailbox on the relay
-glow count <relay_url> <guest_public_key> [options]      show number of pending files on the relay
-glow download <relay_url> <guest_public_key> [options]   download file(s) from the relay
-glow key [options]                                       show public key or h2(pk), set/update private key
-glow help [cmd]                                          display help for [cmd]
-```
 
 ### File Exchange Cryptography
 [File commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) API leverages the existing anonymous message exchange mechanism of Zax relays to bootstrap file exchange metadata and key exchange. After parties have exchanged information about the file, new commands allow for the bulk content of an encrypted file to be exchanged.
@@ -228,9 +198,6 @@ Project | Description
 [Glow](https://github.com/vault12/glow.ts) | Client library for interacting with Zax Cryptographic Relay
 [Zax Dashboard](https://github.com/vault12/zax-dashboard) | Sample dashboard app for Zax Cryptographic Relay
 [TrueEntropy](https://github.com/vault12/TrueEntropy) | High volume thermal entropy generator
-
-## Telegram Community
-We've set up a public Telegram community [Vault12 Dwellers](https://t.me/Vault12).
 
 ## License
 Zax is released under the [MIT License](http://opensource.org/licenses/MIT).
