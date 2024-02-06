@@ -64,6 +64,7 @@ Sending a file from Alice to Bob follows the following protocol:
 -   **Status**: Either party can check information about files currently on the relay using their `uploadID` and `fileStatus` command. If the relay deletes or refreshes `secret_seed.txt` present during initial `startFileUpload`, all requests for the old `uploadID` will fail.
 -   **Delete**: Either party can delete the file using `uploadID` and the `deleteFile` command.
 -   **Data pruning**: All Redis information about the files expires, with the default set to one week. If a file is not removed with the `deleteFile` command, after Redis expiration, the relay will delete old files via a cleanup job. The cleanup job will also delete files that have lost association with their storage id, which is the case if the `secret_seed.txt` is changed or deleted.
+
 The full client library of [file commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
 
 ## Getting Started
@@ -72,8 +73,8 @@ Zax requires [Redis](http://redis.io/) to run.
 - via Brew: `brew install redis` and run `redis-server`
 or
 - [Download](https://redis.io/download) Redis
-- [Build](https://github.com/antirez/redis#building-redis) Redis
-- [Run](https://github.com/antirez/redis#running-redis) Redis
+- [Build](https://github.com/redis/redis#building-redis) Redis
+- [Run](https://github.com/redis/redis#running-redis) Redis
 
 #### Sodium
 - brew install libsodium
