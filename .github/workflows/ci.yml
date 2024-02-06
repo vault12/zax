@@ -15,9 +15,6 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      # - name: Install libsodium
-      #  run: sudo apt-get install libsodium-dev -y
-
       - name: Set up Ruby 💎
         uses: ruby/setup-ruby@v1
         with:
