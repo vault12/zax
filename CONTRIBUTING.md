@@ -29,6 +29,3 @@ This IS a useful comment:
 ```Ruby
 x = x + 1 # account for border
 ```
-
-## Slack Community [![Slack Status](https://slack.vault12.com/badge.svg)](https://slack.vault12.com)
-We've set up a public slack community [Vault12 Dwellers](https://vault12dwellers.slack.com/). Request an invite by clicking [here](https://slack.vault12.com/).
