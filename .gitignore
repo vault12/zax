@@ -12,7 +12,8 @@
 # /config/secrets.yml
 
 # temp files created by puma and redis
-/shared
+/shared/*
+!/shared/*/.gitkeep
 dump.rdb
 
 # editor settings
