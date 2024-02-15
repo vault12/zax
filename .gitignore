@@ -12,10 +12,14 @@
 # /config/secrets.yml
 
 # temp files created by puma and redis
-/shared
+/shared/*
+!/shared/*/.gitkeep
 dump.rdb
 
 # editor settings
 .idea
 
 /node_modules
+
+# Ignore Zax Dashboard, it's installed separately with npm
+/public
