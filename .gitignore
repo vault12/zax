@@ -20,3 +20,6 @@ dump.rdb
 .idea
 
 /node_modules
+
+# Ignore Zax Dashboard, it's installed separately with npm
+/public
