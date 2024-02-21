@@ -103,7 +103,7 @@ In a terminal, navigate to the directory in which you'd like to install Zax and 
 
 ```Shell
 # get the source
-git clone git@github.com:vault12/zax.git
+git clone https://github.com/vault12/zax.git
 
 # create the gemset
 cd zax
@@ -114,9 +114,6 @@ rvm gemset use zax
 # run the installation script
 gem install bundler
 bundle install
-mkdir -p shared/log
-mkdir -p shared/pids
-mkdir -p shared/sockets
 ```
 
 If `bundle install` command fails with a message for libxml2 or Nokogiri, see the [Troubleshooting](#troubleshooting) section.
