@@ -6,6 +6,10 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # Specify the host name for the production environment.
+  # See https://guides.rubyonrails.org/configuring.html#config-hosts for more information.
+  # config.hosts << "zax.example.com"
+
   # --- Relay default configuration START ---
   config.x.relay.difficulty                 = 2 # 1...255 : require number of leading 0 bits in handshake
 
@@ -55,9 +59,9 @@ Rails.application.configure do
   # or in config/master.key. This key is used to decrypt credentials (and other encrypted files).
   # config.require_master_key = true
 
-  # Disable serving static files from the `/public` folder by default since
-  # Apache or NGINX already handles this.
-  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+  # To disable serving Zax Dashboard or other static files from the `/public` folder,
+  # or to handle this on Apache or NGINX level, uncomment the following line
+  # config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
 
   # Compress CSS using a preprocessor.
   # config.assets.css_compressor = :sass
