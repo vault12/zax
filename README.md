@@ -85,7 +85,7 @@ We suggest that you use the [Ruby Version Manager (RVM)](https://rvm.io/) to ins
 If you don't already have RVM installed, install it from [here](https://rvm.io).
 
 #### Ruby
-Zax requires at least version 2.7.2 of [Ruby](https://www.ruby-lang.org/) and version 1.29.10 of RVM to run.
+Zax requires at least version 3.2.0 of [Ruby](https://www.ruby-lang.org/) and version 1.29.10 of RVM to run.
 
 To check your Ruby version, type the following in a terminal:
 
@@ -93,9 +93,9 @@ To check your Ruby version, type the following in a terminal:
 ruby -v
 ```
 
-If you do not have version 2.7.2 or higher, then type the following in a terminal:
+If you do not have version 3.2.0 or higher, then type the following in a terminal:
 ```Shell
-rvm install 2.7.2
+rvm install 3.2.0
 ```
 
 #### Installation
@@ -107,7 +107,7 @@ git clone https://github.com/vault12/zax.git
 
 # create the gemset
 cd zax
-rvm use ruby-2.7.2
+rvm use ruby-3.2.0
 rvm gemset create zax
 rvm gemset use zax
 
