@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.0] - 2024-09-02
+
+- Upgraded to Ruby 3.2
+- Enhanced documentation and streamlined setup instructions
+- Transitioned to GitHub Actions for continuous integration (CI)
+- Adopted the latest versions of Zax Dashboard and updated other dependencies
+
 ## [2.2.1] - 2017-11-29
 
 - Switched to the new version of Zax Dashboard and update dependencies
