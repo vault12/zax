@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1] - 2024-09-23
+
+- Upgraded Rails to version 7.0.8.4
+- Added deployment instructions for a custom Zax relay node on [DigitalOcean](https://www.digitalocean.com)
+- Updated to the latest versions of Zax Dashboard and refreshed other dependencies
+
 ## [3.0.0] - 2024-09-02
 
 - Upgraded to Ruby 3.2
