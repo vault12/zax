@@ -132,6 +132,10 @@ To make Zax accept connections from all hosts:
 rails s -p 8080 --binding=0.0.0.0
 ```
 
+#### Deployment
+
+For instructions on deploying a custom Zax relay node on [Digital Ocean](https://www.digitalocean.com), refer to [DEPLOYMENT.md](DEPLOYMENT.md).
+
 #### Testing Zax
 
 To test groups of tests you can run any of these commands:
