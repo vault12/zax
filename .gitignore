@@ -23,3 +23,6 @@ dump.rdb
 
 # Ignore Zax Dashboard, it's installed separately with npm
 /public
+
+# Ignore macOS Finder metadata files
+.DS_Store
