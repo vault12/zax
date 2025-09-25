@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.2] - 2025-09-25
+
+- Upgraded Rails to the version 7.1.5.2
+- Patched vulnerable dependencies
+
 ## [3.0.1] - 2024-09-23
 
 - Upgraded Rails to version 7.0.8.4

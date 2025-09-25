@@ -1,30 +1,20 @@
 # Zax
 
-<p align="center">
+<div align="center">
   <img src="https://user-images.githubusercontent.com/1370944/126783800-df5bcc0f-11c1-45c5-8e62-a960e787b111.jpg"
     alt="Zax">
-</p>
+</div>
 
-<p align="center">
-  <a href="https://github.com/vault12/zax/actions/workflows/ci.yml">
-    <img src="https://github.com/vault12/zax/actions/workflows/ci.yml/badge.svg" alt="Github Actions Build Status" />
-  </a>
-  <a href="https://vault12.github.io/zax-dashboard/">
-    <img src="https://img.shields.io/badge/demo-online-orange" alt="Demo Online" />
-  </a>
-  <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" />
-  </a>
-  <a href="http://makeapullrequest.com">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome" />
-  </a>
-  <a href="https://twitter.com/_Vault12_">
-    <img src="https://img.shields.io/twitter/follow/_Vault12_?label=Follow&style=social" alt="Follow" />
-  </a>
-</p>
+<div align="center">
+  <a href="https://github.com/vault12/zax/actions/workflows/ci.yml"><img src="https://github.com/vault12/zax/actions/workflows/ci.yml/badge.svg" alt="Github Actions Build Status" /></a>
+  <a href="https://vault12.github.io/zax-dashboard/"><img src="https://img.shields.io/badge/demo-online-orange" alt="Demo Online" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="http://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome" /></a>
+  <a href="https://twitter.com/_Vault12_"><img src="https://img.shields.io/twitter/follow/_Vault12_?label=Follow&style=social" alt="Follow" /></a>
+</div>
 
 Zax is a [NaCl-based Cryptographic Relay](https://s3-us-west-1.amazonaws.com/vault12/zax_infogfx.jpg), easily accessed via the [Glow](https://github.com/vault12/glow.ts) library. You can read the full [technical specification here](http://bit.ly/nacl_relay_spec).
-Zax relay nodes are asyncronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually determenistic subset of relays and check the same for response traffic.
+Zax relay nodes are asynchronous "dead drops" for mobile communications. Relays are intended to be multiplied for reliability and form a distributed network. Individual devices send messages to a mutually deterministic subset of relays and check the same for response traffic.
 
 ![Zax Infographics](https://bit.ly/zax_relay)
 
@@ -47,7 +37,8 @@ Clients start by sending a POST request to `/start_session` with a random token.
 
 After answering the challenge to `/verify_session`, clients receive temporary session keys, and can start posting commands to `/command`. The command to relay is encrypted with session keys, while payload of command is usually encrypted with recipient public key, and is inaccessible to the relay. Using `upload`, `messageStatus`, `download` and `delete` commands, client devices can start sending end-to-end encrypted messages to each other.
 
-Details of the protocol can be found in the [full technical spec](http://bit.ly/nacl_relay_spec). The full client library for messaging commands is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
+> [!NOTE]
+> Details of the protocol can be found in the [full technical spec](http://bit.ly/nacl_relay_spec). The full client library for messaging commands is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
 
 ### File Exchange Cryptography
 [File commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) API leverages the existing anonymous message exchange mechanism of Zax relays to bootstrap file exchange metadata and key exchange. After parties have exchanged information about the file, new commands allow for the bulk content of an encrypted file to be exchanged.
@@ -65,36 +56,51 @@ Sending a file from Alice to Bob follows the following protocol:
 -   **Delete**: Either party can delete the file using `uploadID` and the `deleteFile` command.
 -   **Data pruning**: All Redis information about the files expires, with the default set to one week. If a file is not removed with the `deleteFile` command, after Redis expiration, the relay will delete old files via a cleanup job. The cleanup job will also delete files that have lost association with their storage id, which is the case if the `secret_seed.txt` is changed or deleted.
 
-The full client library of [file commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
+> [!NOTE]
+> The full client library of [file commands](https://github.com/vault12/zax/wiki/Zax-2.0-File-Commands) is implemented in the [Glow](https://github.com/vault12/glow.ts) library.
 
 ## Getting Started
+
+### Prerequisites
+
 #### Redis
 Zax requires [Redis](http://redis.io/) to run.
-- via Brew: `brew install redis` and run `redis-server`
-or
+
+**Option 1: Via Homebrew (macOS)**
+```bash
+brew install redis
+redis-server
+```
+
+**Option 2: Manual Installation**
 - [Download](https://redis.io/download) Redis
 - [Build](https://github.com/redis/redis#building-redis) Redis
 - [Run](https://github.com/redis/redis#running-redis) Redis
 
 #### Sodium
-- brew install libsodium
+```bash
+brew install libsodium
+```
 
-#### RVM
-We suggest that you use the [Ruby Version Manager (RVM)](https://rvm.io/) to install Ruby and to build and install the gems you need to run Zax.
+#### Ruby Version Manager (RVM)
+We suggest using the [Ruby Version Manager (RVM)](https://rvm.io/) to install Ruby and manage gems.
 
-If you don't already have RVM installed, install it from [here](https://rvm.io).
+If you don't already have RVM installed:
+```bash
+# Install RVM
+curl -sSL https://get.rvm.io | bash -s stable
+```
 
 #### Ruby
-Zax requires at least version 3.2.0 of [Ruby](https://www.ruby-lang.org/) and version 1.29.10 of RVM to run.
+Zax requires at least **Ruby 3.2.0** and **RVM 1.29.10**.
 
-To check your Ruby version, type the following in a terminal:
-
-```Shell
+**Check your Ruby version:**
+```bash
 ruby -v
 ```
 
-If you do not have version 3.2.0 or higher, then type the following in a terminal:
-```Shell
+**Install Ruby 3.2.0 if needed:**
+```bash
 rvm install 3.2.0
 ```
 
