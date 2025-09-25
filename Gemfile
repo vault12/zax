@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'rails', '7.0.8.4'
+gem 'rails', '~> 7.1', '>= 7.1.5.2'
 
 gem 'puma'
 # gem "sprockets-rails"
@@ -19,6 +19,8 @@ gem 'redis-rails'
 gem 'rbnacl'
 
 gem 'base32'
+
+gem 'mutex_m', '~> 0.3.0'
 
 # To use bundle install
 # gem install bundler
