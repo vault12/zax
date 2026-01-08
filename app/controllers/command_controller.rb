@@ -200,7 +200,7 @@ class CommandController < ApplicationController
       fail ReportError.new self, msg: "missing uploadID" unless data[:uploadID]
     end
 
-    if data[:getEntropy] == 'getEntropy'
+    if data[:cmd] == 'getEntropy'
       max_size = Rails.configuration.x.relay.file_store[:max_chunk_size]
       fail ReportError.new self, msg: "getEntropy: missing size" unless data[:size]
       fail ReportError.new self, msg: "getEntropy: Request for #{data[:size]} while max_size is set to #{max_size}" if data[:size]>max_size
