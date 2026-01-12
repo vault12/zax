@@ -196,12 +196,14 @@ class CommandController < ApplicationController
       %i(uploadID part nonce ctext).each do |f|
         fail ReportError.new self, msg: "uploadFileChunk: missing #{f}" unless data[f]
       end
+      fail ReportError.new self, msg: "uploadFileChunk: part must be a non-negative integer" unless data[:part].is_a?(Integer) && data[:part] >= 0
     end
 
      if data[:cmd] == 'downloadFileChunk'
       %i(uploadID part).each do |f|
         fail ReportError.new self, msg: "downloadFileChunk: missing #{f}" unless data[f]
       end
+      fail ReportError.new self, msg: "downloadFileChunk: part must be a non-negative integer" unless data[:part].is_a?(Integer) && data[:part] >= 0
      end
 
     if data[:cmd] == 'deleteFile'
