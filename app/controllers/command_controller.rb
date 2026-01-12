@@ -209,6 +209,7 @@ class CommandController < ApplicationController
     if data[:cmd] == 'getEntropy'
       max_size = Rails.configuration.x.relay.file_store[:max_chunk_size]
       fail ReportError.new self, msg: "getEntropy: missing size" unless data[:size]
+      fail ReportError.new self, msg: "getEntropy: size must be positive" unless data[:size] > 0
       fail ReportError.new self, msg: "getEntropy: Request for #{data[:size]} while max_size is set to #{max_size}" if data[:size]>max_size
     end
 
