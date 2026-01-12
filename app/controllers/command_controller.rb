@@ -169,6 +169,7 @@ class CommandController < ApplicationController
 
     if data[:cmd] == 'delete'
       fail ReportError.new self, msg: 'command_controller: no ids to delete' unless data[:payload]
+      fail ReportError.new self, msg: 'command_controller: too many ids to delete' if data[:payload].length > MAX_ITEMS
     end
 
     # === File commands error checks
