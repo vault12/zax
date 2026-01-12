@@ -167,6 +167,11 @@ class CommandController < ApplicationController
       fail ReportError.new self, msg: 'command_controller: bad/missing storage token in messageStatus' unless data[:token] and data[:token].length == TOKEN_B64
     end
 
+    if data[:cmd] == 'download'
+      start = data[:start] || 0
+      fail ReportError.new self, msg: 'download: start position cannot be negative' unless start >= 0
+    end
+
     if data[:cmd] == 'delete'
       fail ReportError.new self, msg: 'command_controller: no ids to delete' unless data[:payload]
       fail ReportError.new self, msg: 'command_controller: too many ids to delete' if data[:payload].length > MAX_ITEMS

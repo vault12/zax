@@ -6,7 +6,8 @@ class Commands::DownloadCmd < ZaxCommand
     super data
     count = data[:count] || @mailbox.count > MAX_ITEMS ? MAX_ITEMS : @mailbox.count
     start = data[:start] || 0
-    fail ReportError.new self, msg: 'Bad download start position' unless start >= 0 || start < @mailbox.count
+    # Note: start >= 0 is validated in check_command
+    # Upper bound handled gracefully by read_all (returns empty array if out of bounds)
     logger.info "#{INFO_GOOD} downloading #{BLUE}#{count}#{ENDCLR} messages in mbx #{MAGENTA}'#{dumpHex @hpk}'#{ENDCLR}"
     wire_format @mailbox.read_all start, count
   end
