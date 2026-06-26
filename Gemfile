@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem 'rails', '~> 7.2', '>= 7.2.3.1'
 
-gem 'puma'
+gem 'puma', '~> 7.2'
 # gem "sprockets-rails"
 
 group :development, :test do
@@ -15,6 +15,10 @@ gem 'kgio'
 
 gem 'redis'
 gem 'redis-rails'
+
+# activesupport 7.2's :redis_cache_store is incompatible with connection_pool 3.x
+# (ConnectionPool.new signature change -> ArgumentError on boot). Hold at 2.x.
+gem 'connection_pool', '< 3'
 
 gem 'rbnacl'
 
