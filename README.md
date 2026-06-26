@@ -85,11 +85,7 @@ brew install libsodium
 #### Ruby Version Manager (RVM)
 We suggest using the [Ruby Version Manager (RVM)](https://rvm.io/) to install Ruby and manage gems.
 
-If you don't already have RVM installed:
-```bash
-# Install RVM
-curl -sSL https://get.rvm.io | bash -s stable
-```
+If you don't already have RVM installed, follow the official instructions at [rvm.io](https://rvm.io/).
 
 #### Ruby
 Zax requires at least **Ruby 3.2.0** and **RVM 1.29.10**.
@@ -103,6 +99,15 @@ ruby -v
 ```bash
 rvm install 3.2.0
 ```
+
+> **macOS note:** RVM 1.29.x tries to install the long-removed `openssl@1.1`
+> Homebrew formula and fails with a "package installation errors" message.
+> Build Ruby against the current `openssl@3` instead:
+> ```bash
+> brew install openssl@3
+> rvm autolibs disable
+> rvm install 3.2.0 --with-openssl-dir=$(brew --prefix openssl@3)
+> ```
 
 #### Installation
 In a terminal, navigate to the directory in which you'd like to install Zax and type the following:
