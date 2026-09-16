@@ -8,9 +8,11 @@ class Commands::DownloadFileCmd < Commands::FileCmd
     file_info = @mailbox.file_status_from_uid uploadID,@fm
     return nil if file_info[:status] == :NOT_FOUND
 
+    check_part_bound(file_info, part_idx)
+
     logger.info "Download chunk: #{GREEN}#{dumpHex uploadID}#{ENDCLR} part #{BLUE}#{part_idx}#{ENDCLR} bytes"
 
-    part = file_info[:parts][part_idx]
+    part = find_part(file_info, part_idx)
     fail ReportError.new @controller, msg: "missing part #{part_idx} from file #{dumpHex uploadID} with #{file_info[:total_chunks]} parts" unless part
 
     payload = {
@@ -18,7 +20,10 @@ class Commands::DownloadFileCmd < Commands::FileCmd
     }
     file = nil
     unless FileManager.test_mode?
-      file = @fm.load_data(uploadID, part_idx).to_b64
+      chunk = @fm.load_data(uploadID, part_idx)
+      # Recorded part with no chunk on disk: clean NOT_FOUND
+      return nil unless chunk
+      file = chunk.to_b64
     else
       # Random test fill
       file = rand_bytes(part[:chunk_size]).to_b64

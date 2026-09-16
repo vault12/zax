@@ -9,7 +9,6 @@
 /log/*
 !/log/.keep
 /tmp
-# /config/secrets.yml
 
 # temp files created by puma and redis
 /shared/*
@@ -26,3 +25,6 @@ dump.rdb
 
 # Ignore macOS Finder metadata files
 .DS_Store
+
+/memory
+/notes

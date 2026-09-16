@@ -24,19 +24,28 @@ module Helpers
       nonce_b64 = nonce.to_b64
       result = Rails.cache.read("nonce_#{nonce_b64}")
       unless result.nil?
-        fail NonceError.new self, {nonce: result, msg: 'Nonce Not Unique'}
+        fail NonceError.new self, {nonce: result, reason: 'NonceReplay', msg: 'Nonce Not Unique'}
       end
       Rails.cache.write("nonce_#{nonce_b64}", nonce_b64,
         expires_in: Rails.configuration.x.relay.nonce_timeout)
     end
 
-    # check nonce to be within the valid expiration window
-    def _check_nonce(nonce)
+    # Validate nonce shape + timestamp freshness only. STATELESS — writes nothing,
+    # so it is safe to run before authentication. Returns the nonce.
+    def _validate_nonce(nonce)
       fail NonceError.new self, msg: "Bad nonce: #{dump nonce}" unless nonce and nonce.length == NONCE_LEN
       nt = _get_nonce_time nonce
       if (Time.now.to_i - nt).abs > Rails.configuration.x.relay.max_nonce_diff
-        fail NonceError.new self, msg: "Nonce timestamp #{nt} delta #{Time.now.to_i - nt}"
+        fail NonceError.new self, reason: 'ClockSkew', msg: "Nonce timestamp #{nt} delta #{Time.now.to_i - nt}"
       end
+      return nonce
+    end
+
+    # Validate the nonce AND record it for replay protection. Because this writes
+    # to the cache, callers must only reach it for an auth request —
+    # CommandController defers the uniqueness write until after decrypt 
+    def _check_nonce(nonce)
+      _validate_nonce(nonce)
       _check_nonce_unique(nonce)
       return nonce
     end

@@ -18,7 +18,8 @@ jobs:
       - name: Set up Ruby 💎
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.2.0
+          # Single source of truth: reads .ruby-version (3.4 => latest 3.4.x). Off end-of-life 3.2.
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Install dependencies 📦

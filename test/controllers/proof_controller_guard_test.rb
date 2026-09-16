@@ -120,8 +120,9 @@ end
 def _make_relay_token
   @relay_token = RbNaCl::Random.random_bytes(32)
   h2_client_token = h2(@client_token)
-  # Establish and cache relay token for timeout duration
-  Rails.cache.write("relay_token_#{h2_client_token}", @relay_token, expires_in: @tmout)
+  # Establish and cache the combined handshake record, matching cache_tokens
+  Rails.cache.write("handshake_#{h2_client_token}",
+    { client_token: @client_token, relay_token: @relay_token }, expires_in: @tmout)
   # Sanity check server-side RNG
   if not @relay_token or @relay_token.length != 32
     raise RequestIDError.new(self,@relay_token), "Missing #{TOKEN}"

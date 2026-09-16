@@ -100,7 +100,6 @@ GEM
       prism (>= 1.3.0)
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
-    kgio (2.11.4)
     logger (1.7.0)
     loofah (2.25.1)
       crass (~> 1.0.2)
@@ -121,7 +120,6 @@ GEM
       builder
       minitest (>= 5.0)
       ruby-progressbar
-    mutex_m (0.3.0)
     net-imap (0.6.4.1)
       date
       net-protocol
@@ -135,6 +133,7 @@ GEM
     nokogiri (1.19.4)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
+    ostruct (0.6.1)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -218,6 +217,13 @@ GEM
       io-console (~> 0.5)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    sentry-rails (6.6.2)
+      railties (>= 5.2.0)
+      sentry-ruby (~> 6.6.2)
+    sentry-ruby (6.6.2)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      logger
     spring (4.4.0)
     stringio (3.2.0)
     thor (1.5.0)
@@ -239,16 +245,17 @@ PLATFORMS
 DEPENDENCIES
   base32
   connection_pool (< 3)
-  kgio
   minitest-reporters
-  mutex_m (~> 0.3.0)
+  ostruct
   pry (~> 0.14.2)
   puma (~> 7.2)
   rails (~> 7.2, >= 7.2.3.1)
   rbnacl
   redis
   redis-rails
+  sentry-rails
+  sentry-ruby
   spring
 
 BUNDLED WITH
-   2.4.6
+   2.6.7

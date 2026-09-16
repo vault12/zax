@@ -47,8 +47,8 @@ Sending a file from Alice to Bob follows the following protocol:
 
 - **Bootstrap**: Alice and Bob have to exchange their long term identity keys as the usual messaging bootstrap before communications via Zax relays. The Glow library [contains a sketch](https://github.com/vault12/glow/blob/master/tests/specs/07.invites.coffee) showing how such device-to-device initial key exchange might be implemented in client apps. Read [technical specification](http://bit.ly/nacl_relay_spec) for the full details of that process. Before a file exchange takes place, we assume that Alice and Bob have already exchanged long term identity keys (`pkA` and `pkB`). The relay doesn’t store these public keys, and identifies Alice and Bob by the hash of public key as `hpkA` and `hpkB`.
 -  **Upload init**: Alice issues a `startFileUpload` command that contains the `hpk_to` address of Bob in a command data block. The data block also includes the metadata encrypted `pkA => pkB` using NaCl `crypto_box`, so the whole metadata block is inaccessible to the Zax relay. That metadata block also includes the NaCl symmetric key for `crypto_secretbox` that will be used later to encrypt the file contents.
--  `startFileUpload` generates a regular Alice => Bob message on the relay, and can be downloaded by Bob with a regular `download` command. Alice receives the unique `uploadID` from the relay that is used for all subsequent commands about the given file. The relay response data block includes the maximum size of file chunk that clients can upload at once. Default is set to 100kb, but clients can modify that value in config, which will require appropriate changes to the size of the maximum POST command in the web server configuration.
--   Internally, the relay stores `uploadID` only in that initial `startFileUpload` message, stored in Bob’s mailbox (`hpk_to`) as a message from Alice (`hpk_from`). Once Bob or Alice deletes that message via the `delete` command or it expires as a part of the regular Redis expiration timeout, the relay will have no record of `uploadID` generated for the file. The relay uses either `secret_seed.txt` in `shared/uploads` or a config value to associate the `uploadID` given to clients and `storage_id` used by the relay to derive storage file names. If `secret_seed.txt` is deleted, there is no way to recover an association between files on the relay and client commands.
+-  `startFileUpload` generates a regular Alice => Bob message on the relay, and can be downloaded by Bob with a regular `download` command. Alice receives the unique `uploadID` from the relay that is used for all subsequent commands about the given file. The relay response data block includes the maximum size of file chunk that clients can upload at once. Default is set to 500kb, but relay operators can modify that value in config, which will require appropriate changes to the size of the maximum POST command in the web server configuration.
+-   Internally, the relay stores `uploadID` only in that initial `startFileUpload` message, stored in Bob’s mailbox (`hpk_to`) as a message from Alice (`hpk_from`). Once Bob or Alice deletes that message via the `delete` command or it expires as a part of the regular Redis expiration timeout, the relay will have no record of `uploadID` generated for the file. The relay uses a secret seed — taken from the relay config, the `ZAX_SECRET_SEED` environment variable, or `secret_seed.txt` in `shared/uploads` (any sources that are present must agree, or the relay refuses to start) — to associate the `uploadID` given to clients and `storage_id` used by the relay to derive storage file names. If the seed is deleted, there is no way to recover an association between files on the relay and client commands.
 -   **Upload**: using the `uploadID` obtained from the relay, Alice can now issue the `uploadFileChunk` command, that requires that `uploadID`. In the command datablock, Alice provides the `nonce` used to encrypt this file chunk using the symmetric NaCl key for `crypto_secretbox`. Outside of the command datablock (encrypted as usual with Alice => Relay session key), the encrypted file contents produced by `secretbox` are posted as additional POST lines to the `uploadFileChunk` command.
 -   The relay stores encrypted file chunks as local files in `shared/uploads` and derives a storage name from the `uploadID` and the local `secret_seed.txt` file. The nonce for each chunk is stored in Redis and subject to the usual time expiration rules.
 -   **Download**: Bob receives the `uploadID` and secret key for this file when it gets the initial `startFileUpload` message (by downloading it via the messaging family `download` command). Bob uses `uploadID` to issue `downloadFileChunk` commands to download the file chunk by chunk. It contains in its datablock (encrypted to Bob) the nonce of the given chunk, and the symmetrically encrypted chunk itself is the last line of the POST response to `downloadFileChunk` command.
@@ -88,16 +88,16 @@ We suggest using the [Ruby Version Manager (RVM)](https://rvm.io/) to install Ru
 If you don't already have RVM installed, follow the official instructions at [rvm.io](https://rvm.io/).
 
 #### Ruby
-Zax requires at least **Ruby 3.2.0** and **RVM 1.29.10**.
+Zax requires at least **Ruby 3.4** and **RVM 1.29.10**.
 
 **Check your Ruby version:**
 ```bash
 ruby -v
 ```
 
-**Install Ruby 3.2.0 if needed:**
+**Install Ruby 3.4 if needed:**
 ```bash
-rvm install 3.2.0
+rvm install 3.4
 ```
 
 > **macOS note:** RVM 1.29.x tries to install the long-removed `openssl@1.1`
@@ -106,7 +106,7 @@ rvm install 3.2.0
 > ```bash
 > brew install openssl@3
 > rvm autolibs disable
-> rvm install 3.2.0 --with-openssl-dir=$(brew --prefix openssl@3)
+> rvm install 3.4 --with-openssl-dir=$(brew --prefix openssl@3)
 > ```
 
 #### Installation
@@ -118,7 +118,7 @@ git clone https://github.com/vault12/zax.git
 
 # create the gemset
 cd zax
-rvm use ruby-3.2.0
+rvm use ruby-3.4
 rvm gemset create zax
 rvm gemset use zax
 
@@ -145,7 +145,9 @@ rails s -p 8080 --binding=0.0.0.0
 
 #### Deployment
 
-For instructions on deploying a custom Zax relay node on [Digital Ocean](https://www.digitalocean.com), refer to [DEPLOYMENT.md](DEPLOYMENT.md).
+For instructions on deploying a custom Zax relay node, refer to
+[DEPLOYMENT_MANUAL.md](DEPLOYMENT_MANUAL.md) (step by step) or
+[DEPLOYMENT_AUTOMATED.md](DEPLOYMENT_AUTOMATED.md) (interactive installer).
 
 #### Testing Zax
 
@@ -157,6 +159,12 @@ rake test -v
 
 rake test:controllers
 rake test:integration
+```
+
+Slow wall-clock lifecycle tests (real Redis TTL expiration) are skipped by default; include them with:
+
+```Shell
+SLOW=1 rake test
 ```
 
 To run individual tests

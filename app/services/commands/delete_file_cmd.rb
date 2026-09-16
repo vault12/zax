@@ -7,9 +7,9 @@ class Commands::DeleteFileCmd < Commands::FileCmd
     file_info = @mailbox.file_status_from_uid uploadID, @fm
     return { status: :NOT_FOUND } if file_info[:status] == :NOT_FOUND
 
-    # Delete binary chunks
-    @fm.delete_file uploadID, file_info[:total_chunks].to_i
-    @mailbox.delete_file_info file_info[:hpk_from].from_b64, storage_id
+    # Delete binary chunks (by storage name — all parts, any index)
+    @fm.delete_file uploadID
+    @mailbox.delete_file_info file_info[:hpk_from].from_b64, file_info[:hpk_to].from_b64, storage_id
     return { status: :OK }
   end
 end

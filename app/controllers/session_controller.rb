@@ -4,6 +4,10 @@
 class SessionController < ApplicationController
   include Helpers::TransactionHelper
 
+  # Scoped to the two real handshake actions: the catch-all route also lands
+  # here (missing_route), and scanner spam / stray OPTIONS preflights must not
+  # drain the handshake budget or cost Redis round-trips.
+  before_action :check_global_handshake_limit, only: %i(start_session_token verify_session_token)
   before_action :preamble
 
   # POST /start_session - start handshake
@@ -65,7 +69,7 @@ class SessionController < ApplicationController
 
   # Missing routes, mostly triggered by spammers
   def missing_route
-    logger.warn "#{SPAM} Spammers scan for: #{request.path}"
+    logger.warn "#{SPAM} Spammers scan for: #{log_safe request.path}"
     head :service_unavailable # Let's pretend we are dead
   end
 
@@ -82,21 +86,22 @@ class SessionController < ApplicationController
 
     # Sanity check server-side RNG
     if !relay_token || relay_token.length != TOKEN_LEN
-      fail SeverRandomError.new
+      fail ServerRandomError.new self, msg: 'Relay RNG failure: random_bytes returned nil/short token'
     end
     relay_token
   end
 
-  # Save to cache @client_token and @relay_token
-  # This pair will identify unique handshake until the session is ready
+  # Save @client_token and @relay_token as one cache record. This pair
+  # identifies a unique handshake until the session is ready.
   def cache_tokens
     h2_client_token = h2 @client_token
-    Rails.cache.write "client_token_#{h2_client_token}",
-      @client_token,
-      expires_in: Rails.configuration.x.relay.token_timeout
 
-    Rails.cache.write "relay_token_#{h2_client_token}",
-      @relay_token,
+    # A new handshake supersedes any UNPROVEN session for this client token: deleting the stale key reopens the single-use verify slot.
+    # The fresh relay token issued below demands a fresh PoW, so this cannot be used to skip work. deleting stale key so client is not locked out for session_timeout.
+    Rails.cache.delete "session_key_#{h2_client_token}"
+
+    Rails.cache.write "handshake_#{h2_client_token}",
+      { client_token: @client_token, relay_token: @relay_token },
       expires_in: Rails.configuration.x.relay.token_timeout
   end
 
@@ -116,14 +121,17 @@ class SessionController < ApplicationController
   # if we dont find client_token itself at that storage key
   # it means there was no handshake or it is expired
   def load_cached_tokens(h2_ct)
-    ct = Rails.cache.read "client_token_#{h2_ct}"
+    hs = Rails.cache.read "handshake_#{h2_ct}"
+    ct = hs.is_a?(Hash) ? hs[:client_token] : nil
+    rt = hs.is_a?(Hash) ? hs[:relay_token] : nil
+
     if ct.nil? || ct.length != TOKEN_LEN
       fail ClientTokenError.new self,
         client_token: dumpHex(ct),
+        reason: 'NoHandshake',
         msg: "session controller: client token not registered/wrong size, expecting #{TOKEN_LEN}b"
     end
 
-    rt = Rails.cache.read "relay_token_#{h2_ct}"
     if rt.nil? || rt.length != TOKEN_LEN
       fail RelayTokenError.new self,
         rt: dumpHex(rt),
@@ -190,26 +198,38 @@ class SessionController < ApplicationController
 
     # report errors with keys if any
     if session_key.nil? || session_key.public_key.to_bytes.length != KEY_LEN
-      fail SeverKeyError.new(self, msg: 'New session key: generation failed or too short')
+      fail ServerKeyError.new(self, msg: 'New session key: generation failed or too short')
     end
 
-    # store session key on the h₂(client_token) tag in redis
-    Rails.cache.write(
+    # Store the session key on the h₂(client_token) tag. unless_exist makes
+    # the verified handshake single-use: the first verify mints the
+    # key and burns the slot atomically; a replayed verify (same solved PoW)
+    # is rejected instead of re-minting — one PoW buys exactly one session.
+    # A fresh /start_session reopens the slot (see cache_tokens).
+    unless Rails.cache.write(
       "session_key_#{h2_client_token}",
       session_key,
-      expires_in: Rails.configuration.x.relay.session_timeout )
+      expires_in: Rails.configuration.x.relay.session_timeout,
+      unless_exist: true )
+      fail ClientTokenError.new self,
+        client_token: dumpHex(h2_client_token),
+        msg: 'verify_session replay: this handshake was already verified'
+    end
     session_key
   end
 
   def adjust_difficulty
     return if static_diff? # Throttling disabled if period not set
     period = Rails.configuration.x.relay.period
-    rds.incr "ZAX_session_counter_#{ DateTime.now.minute / period }"
-    unless rds.exists? ZAX_DIFF_JOB_UP
-      # begining of next period
-      job_time = start_diff_period(period, 1)
-      ttl = job_time.to_i - DateTime.now.to_i
-      rds.set ZAX_DIFF_JOB_UP, 1, **{ ex: ttl }
+    counter = "ZAX_session_counter_#{ DateTime.now.minute / period }"
+    # 5-period TTL is a leak guard for orphaned counters (period reconfig,
+    # throttle disabled) — the job's post-read cleanup is the primary reset
+    rds.expire(counter, period * 300) if rds.incr(counter) == 1
+
+    # Atomic SET NX election: only one worker/thread schedules the adjust jobs per period.
+    job_time = start_diff_period(period, 1)
+    ttl = job_time.to_i - DateTime.now.to_i
+    if rds.set(ZAX_DIFF_JOB_UP, 1, nx: true, ex: ttl)
       DiffAdjustJob.set(wait_until: job_time).perform_later()
 
       # If traffic spike is over reset to normal difficulty

@@ -9,9 +9,10 @@ group :development, :test do
   gem 'spring'
   gem 'minitest-reporters'
   gem 'pry', '~> 0.14.2'
+  # pry loads ostruct, a default gem that leaves the default set in Ruby 4.0;
+  # declaring it here silences the deprecation warning and future-proofs.
+  gem 'ostruct'
 end
-
-gem 'kgio'
 
 gem 'redis'
 gem 'redis-rails'
@@ -24,7 +25,9 @@ gem 'rbnacl'
 
 gem 'base32'
 
-gem 'mutex_m', '~> 0.3.0'
+# Relay-side error telemetry; the SDK stays disabled unless SENTRY_DSN is set
+gem 'sentry-ruby'
+gem 'sentry-rails'
 
 # To use bundle install
 # gem install bundler

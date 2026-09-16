@@ -104,8 +104,9 @@ class ActiveSupport::TestCase
 
   def _setup_token
     @client_token = RbNaCl::Random.random_bytes(32)
-    h2_client_token = h2(@client_token)
-    Rails.cache.write("client_token_#{h2_client_token}", @client_token, expires_in: @tmout)
+    # No cache write here: the relay stores both handshake tokens as one
+    # handshake_<h2ct> record, written by /start_session or by the
+    # test's _make_relay_token when the handshake is simulated directly.
   end
 
 #--------------------------------------------------

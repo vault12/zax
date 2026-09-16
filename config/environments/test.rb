@@ -21,6 +21,25 @@ Rails.application.configure do
   # config.x.relay.period                  = 1
 
   config.x.relay.restart_window = nil
+
+  # No per-hpk rate limit in tests: integration tests legitimately fire dozens
+  # of commands from one hpk. The rate-limit regression test enables it locally.
+  config.x.relay.max_requests_per_seconds = nil
+
+  # No global handshake ceiling in tests: integration tests fire many session
+  # handshakes back-to-back. The global-ceiling regression test enables it locally.
+  config.x.relay.max_global_requests_per_seconds = nil
+
+  # No traffic-driven stale-file sweep in tests: cleanup tests run the job
+  # explicitly and must not race a background sweep. FilesCheckTest enables
+  # the interval locally.
+  config.x.relay.stale_file_check = nil
+
+  # NOTE: per-run isolation is via ZAX_TEST_DB (distinct Redis db,
+  # incl. the difficulty singletons). The uploads dir is shared, but file
+  # tests use random uploadIDs so chunk names don't collide — parallel suites
+  # on distinct ZAX_TEST_DB verified clean. 
+  # 
   # --- Relay default configuration END ---
 
   config.cache_classes = false

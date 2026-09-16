@@ -68,37 +68,38 @@ test 'create storage dir' do
   File.rename u2,fm.storage_path
 end
 
+# Each seed source is exercised in an ISOLATED temp root so a config value
+# never disagrees with the shared/uploads file — such a disagreement is now a
+# fatal error, covered directly in test/lib/file_seed_test.rb.
 test 'secret seed' do
-  # seed exists in config
+  save_root = Rails.configuration.x.relay.file_store[:root]
+  save_seed = Rails.configuration.x.relay.file_store[:secret_seed]
+  dir = "#{Rails.root}/tmp/fileio_seed_#{rand_bytes(8).unpack1('H*')}/"
+  FileUtils.mkdir_p dir
+  Rails.configuration.x.relay.file_store[:root] = dir
+
+  # seed exists in config (no file in this fresh dir)
   test = "jEPjU+8lB5XdSOhffS2GHtMXpRpEM12k/HML0SUYMEo"
   Rails.configuration.x.relay.file_store[:secret_seed] = test
-  fm = FileManager.new
-  assert_equal fm.seed, test
+  assert_equal test, FileManager.new.seed
 
-  # seed exists in file
+  # seed exists in file (config empty)
   Rails.configuration.x.relay.file_store[:secret_seed] = ""
-  fm = FileManager.new
-  seed_path = fm.storage_path+"secret_seed.txt"
-  file_seed = File.open(seed_path, 'r') { |f| f.read() }
-  assert_equal file_seed,fm.seed
+  seed_path = "#{dir}secret_seed.txt"
+  File.write(seed_path, file_seed = "file-seed-value-over-32-characters-longggg")
+  assert_equal file_seed, FileManager.new.seed
 
-  seed_path2 = fm.storage_path+"secret_seed2.txt"
-  # seed created if there is no config, no file
+  # seed created when neither config nor file present
   Rails.configuration.x.relay.file_store[:secret_seed] = ""
-
-  FileUtils.mv seed_path,seed_path2 if File.exist?(seed_path)
-  assert_not File.exist?(seed_path)
-
+  FileUtils.rm seed_path
   fm = FileManager.new
   assert_not_nil fm.seed
-  assert fm.seed.length>32
-
-  if File.exist?(seed_path2)
-    FileUtils.rm seed_path
-    FileUtils.mv seed_path2,seed_path
-  end
-
-  Rails.configuration.x.relay.file_store[:secret_seed] = nil
+  assert fm.seed.length > 32
+  assert File.exist?(seed_path), 'generated seed persisted to file'
+ensure
+  Rails.configuration.x.relay.file_store[:root] = save_root
+  Rails.configuration.x.relay.file_store[:secret_seed] = save_seed
+  FileUtils.rmtree dir if dir && File.directory?(dir)
 end
 
 test 'storage name' do
@@ -111,12 +112,21 @@ test 'storage name' do
   token = fm.create_storage_token(hpk_from,hpk_to,nonce,0)
   assert_equal token[:uploadID], uID
 
+  # A KNOWN seed (isolated temp root, config-only) yields a deterministic name
+  save_root = Rails.configuration.x.relay.file_store[:root]
+  save_seed = Rails.configuration.x.relay.file_store[:secret_seed]
+  dir = "#{Rails.root}/tmp/fileio_name_#{rand_bytes(8).unpack1('H*')}/"
+  FileUtils.mkdir_p dir
+  Rails.configuration.x.relay.file_store[:root] = dir
   Rails.configuration.x.relay.file_store[:secret_seed] = "bgi5UzAYLEjfHvWxFEbxUE3tVOElydt63Pv3Hs99avw"
   fm = FileManager.new
 
   # this works with bad hpks because name is derived from hash
   assert_equal "orn4mxjceonlkemkctmtzcbizs72ab63sjeizjdpqoy2cvetaxyq", fm.create_storage_token("hpk1","hpk2","123",0)[:storage_name]
-
+ensure
+  Rails.configuration.x.relay.file_store[:root] = save_root
+  Rails.configuration.x.relay.file_store[:secret_seed] = save_seed
+  FileUtils.rmtree dir if dir && File.directory?(dir)
 end
 
 end

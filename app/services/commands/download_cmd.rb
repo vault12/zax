@@ -4,9 +4,10 @@
 class Commands::DownloadCmd < ZaxCommand
   def process(data)
     super data
-    count = data[:count] || @mailbox.count > MAX_ITEMS ? MAX_ITEMS : @mailbox.count
+    # Honor the client's requested page size, capped at MAX_ITEMS. 
+    count = [data[:count] || @mailbox.count, MAX_ITEMS].min
     start = data[:start] || 0
-    # Note: start >= 0 is validated in check_command
+    # Note: start/count are validated as non-negative Integers in check_command
     # Upper bound handled gracefully by read_all (returns empty array if out of bounds)
     logger.info "#{INFO_GOOD} downloading #{BLUE}#{count}#{ENDCLR} messages in mbx #{MAGENTA}'#{dumpHex @hpk}'#{ENDCLR}"
     wire_format @mailbox.read_all start, count
