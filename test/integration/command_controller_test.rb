@@ -339,6 +339,13 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
       _post '/command', hpk, n, _client_encrypt_data(n, bad_top)
       _fail_response :bad_request
     end
+
+    # a validly encrypted box whose plaintext is not JSON at all: same
+    # contract — 400, never JSON::ParserError becoming a 500/Sentry event
+    n = _make_nonce
+    raw_box = RbNaCl::Box.new(@client_key, @session_key)
+    _post '/command', hpk, n, raw_box.encrypt(n, 'definitely not json')
+    _fail_response :bad_request
   end
 
   # Over HTTP: re-uploading with the same payload nonce must return

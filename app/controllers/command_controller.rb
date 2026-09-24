@@ -181,7 +181,16 @@ class CommandController < ApplicationController
 
   def decrypt_data(nonce, ctext)
     box = RbNaCl::Box.new(@client_key, @session_key)
-    d = JSON.parse box.decrypt(nonce, ctext).force_encoding('utf-8'),symbolize_names: true
+    plain = box.decrypt(nonce, ctext).force_encoding('utf-8')
+    begin
+      JSON.parse plain, symbolize_names: true
+    rescue JSON::ParserError
+      # The box opened, so the sender is authenticated — but the plaintext is
+      # not JSON: a malformed packet (400), not relay trouble. Left uncaught,
+      # ParserError reaches the generic handler as a 500 plus a Sentry event
+      # that any valid session could mint at will.
+      fail BodyError.new self, msg: 'command_controller: command packet is not valid JSON'
+    end
   end
 
   def encrypt_data(nonce, data)

@@ -36,7 +36,14 @@ class ProofController < ApplicationController
 
       # decypher it
       outer_box = RbNaCl::Box.new(@client_temp_pk, @session_key)
-      inner = JSON.parse outer_box.decrypt(nonce_outer, ctext)
+      inner = begin
+        JSON.parse outer_box.decrypt(nonce_outer, ctext)
+      rescue JSON::ParserError
+        # Non-JSON plaintext inside a validly encrypted box is a malformed
+        # packet (400), not relay trouble: uncaught, ParserError becomes a
+        # 500 plus a client-triggerable Sentry event.
+        fail BodyError.new self, msg: 'prove_hpk: inner packet is not valid JSON'
+      end
 
       # The decrypted inner packet's structure must be a JSON object with base64 String fields 
       unless inner.is_a?(Hash) and %w(nonce pub_key ctext).all? { |k| inner[k].is_a?(String) }
