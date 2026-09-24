@@ -255,7 +255,7 @@ chmod 600 "$CONF"
 
 step_packages() { # manual §3
   apt-get -o DPkg::Lock::Timeout=300 update
-  apt-get -o DPkg::Lock::Timeout=300 install -y curl build-essential \
+  apt-get -o DPkg::Lock::Timeout=300 install -y git curl build-essential \
     libyaml-dev libsodium-dev nginx redis-server certbot \
     python3-certbot-nginx npm
   redis-cli ping | grep -q PONG

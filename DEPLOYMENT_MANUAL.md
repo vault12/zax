@@ -33,15 +33,15 @@ ssh root@1.2.3.4
 
 ```bash
 apt update
-apt install -y curl build-essential libyaml-dev libsodium-dev \
+apt install -y git curl build-essential libyaml-dev libsodium-dev \
   nginx redis-server certbot python3-certbot-nginx npm
 ```
 
-Why each: `curl` fetches the rv installer; `build-essential` +
-`libyaml-dev` build the native gems (all other headers ship inside the
-static Ruby); `libsodium-dev` is the runtime for all NaCl crypto; `npm`
-fetches the zax-dashboard package; the rest is the serving stack. apt
-silently skips anything already installed.
+Why each: `git` clones the repo; `curl` fetches the rv installer;
+`build-essential` + `libyaml-dev` build the native gems (all other headers
+ship inside the static Ruby); `libsodium-dev` is the runtime for all NaCl
+crypto; `npm` fetches the zax-dashboard package; the rest is the serving
+stack. apt silently skips anything already installed.
 
 If apt fails with "Could not get lock" the droplet's first-boot auto-update
 is still running — wait a few minutes and retry.

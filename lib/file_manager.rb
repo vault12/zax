@@ -159,10 +159,11 @@ class FileManager
       next unless ttl.positive? && lifetime - ttl > threshold
       # The snapshot above is stale by the time we act on it: the last chunk
       # of this upload may be committing right now (mark_file_complete runs
-      # inside the upload's MULTI, and its WATCH is on the file lock, not on
-      # this key). Reap under a WATCH on the tag with a guarded re-read: a
-      # concurrent write to the tag aborts our EXEC, and the retry stands
-      # down once the fresh read is no longer a stalled START.
+      # inside the upload's MULTI). Reap under a WATCH on the tag with a
+      # guarded re-read: a concurrent write to the tag aborts our EXEC, and
+      # the retry stands down once the fresh read is no longer a stalled
+      # START. The upload watches this key too (uploadFileChunk), so the two
+      # transactions serialize and the loser observes the winner's state.
       reaped = false
       runRedisTransaction(tag, nil, 'reap stalled upload', Proc.new {
         [rds.get(tag), rds.ttl(tag).to_i]
