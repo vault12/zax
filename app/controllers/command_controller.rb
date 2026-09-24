@@ -199,7 +199,9 @@ class CommandController < ApplicationController
     all = ALL_COMMANDS
 
     fail ReportError.new self, msg: 'command_controller: missing command' unless data[:cmd]
-    fail ReportError.new self, msg: "command_controller: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
+    # log_safe: the name is an arbitrary client string headed for the relay log
+    # via http_fail — escape CR/LF and ANSI bytes so it cannot forge log lines
+    fail ReportError.new self, msg: "command_controller: unknown command #{log_safe data[:cmd]}" unless all.include? data[:cmd]
 
     # === Message commands error checks
     # Field TYPES are attacker-controlled after JSON.parse — every field is

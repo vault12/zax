@@ -315,6 +315,13 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     _post '/command', hpk, n, _client_encrypt_data(n, bad), rand_bytes(16)
     _fail_response :bad_request
 
+    # an unknown command whose NAME carries CR/LF and ANSI escapes: still a
+    # clean 400, and the name reaches the log only log_safe-escaped
+    n = _make_nonce
+    bad = { cmd: "upload\r\nFORGED relay log line \e[31malert\e[0m" }
+    _post '/command', hpk, n, _client_encrypt_data(n, bad)
+    _fail_response :bad_request
+
     # the top-level TYPE itself: an authenticated box carrying a JSON array
     # or scalar instead of an object must be a 400, never data[:cmd] raising
     # TypeError/NoMethodError into a 500 (and a Sentry event)
