@@ -316,6 +316,14 @@ class Mailbox
     result = rds.exists? hpk_tag
     return a unless result and size > 0
 
+    # Reap dead index entries before slicing: an explicit start/count page
+    # otherwise cuts raw mbx_ fields, and every expired entry inside the
+    # window shrinks the returned page below the ask. count() has already
+    # compacted when it derived the default -1 size (@lastCount memoized), so
+    # skip the duplicate round-trip then. The nil-skip below stays as the
+    # backstop for messages expiring between this reap and the reads.
+    _compact unless @lastCount
+
     # read all nonces as list
     nonces = rds.hkeys hpk_tag
     limit = start+size <= nonces.length ? start + size : nonces.length

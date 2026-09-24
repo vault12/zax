@@ -258,7 +258,8 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     _setup_keys hpk
     from = h2(rand_bytes 32)
     mbx = Mailbox.new hpk.to_b64
-    5.times { |i| mbx.store from, rand_bytes(24), "m#{i}" }
+    ns = Array.new(5) { rand_bytes(24) }
+    ns.each_with_index { |nn, i| mbx.store from, nn, "m#{i}" }
 
     fetch = lambda do |params|
       n = _make_nonce
@@ -269,6 +270,13 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, fetch.call({ count: 2 }).length, 'requested page size honored'
     assert_equal 5, fetch.call({}).length, 'default: whole mailbox'
     assert_equal 3, fetch.call({ count: 99, start: 2 }).length, 'capped by what is available'
+
+    # expired entries inside the window must not shrink the page: simulate
+    # expiry of the first two messages; a page of 2 still fills with live ones
+    ns[0, 2].each { |nn| rds.del mbx.msg_tag(nn.to_b64) }
+    assert_equal 2, fetch.call({ count: 2 }).length, 'page fills past expired entries'
+    assert_equal 3, fetch.call({}).length, 'default read skips expired'
+    assert_equal 3, fetch.call({ count: 99 }).length, 'over-ask returns all live'
 
     rds.del mbx.hpk_tag
     rds.keys("msg_#{mbx.hpk}_*").each { |k| rds.del k }
