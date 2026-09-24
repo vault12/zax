@@ -31,6 +31,9 @@ class FileSeedTest < ActiveSupport::TestCase
     assert File.exist?(seed_path)
     assert_operator fm.seed.length, :>=, 32
     assert_equal File.read(seed_path), fm.seed
+    # the seed derives every storage name — never world-readable, whatever
+    # umask the launching process carried
+    assert_equal 0o600, File.stat(seed_path).mode & 0o777, 'seed file must be 0600'
   end
 
   test 'existing seed file is never overwritten and is loaded verbatim' do

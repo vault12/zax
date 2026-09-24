@@ -317,7 +317,11 @@ class FileManager
     candidate = rand_str 32
     # hex suffix (not rand_str — its base64 alphabet contains '/', unsafe in a path)
     tmp = "#{_seed_path}.#{Process.pid}.#{rand_bytes(8).unpack1('H*')}.tmp"
-    File.open(tmp, File::WRONLY | File::CREAT | File::EXCL) { |f| f.write(candidate); f.flush }
+    # 0600 at creation: the hard link below shares the inode, so the mode set
+    # here IS secret_seed.txt's mode. Without it Ruby's 0666 default minus a
+    # typical 0022 umask leaves the seed world-readable — private regardless
+    # of how the relay is launched (the unit's UMask=0077 is defense in depth).
+    File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |f| f.write(candidate); f.flush }
     begin
       File.link(tmp, _seed_path)
     rescue Errno::EEXIST
