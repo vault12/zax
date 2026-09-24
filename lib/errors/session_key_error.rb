@@ -3,6 +3,11 @@
 require 'errors/zax_error'
 module Errors
   class SessionKeyError < ZaxError
+    # prove without a live handshake for the token: expired or never verified
+    def reason
+      'NoHandshake'
+    end
+
     def http_fail
       @response_code = :unauthorized
       super

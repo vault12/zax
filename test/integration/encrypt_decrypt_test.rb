@@ -23,8 +23,8 @@ class EncryptDecryptTest < ActionDispatch::IntegrationTest
     hpkey = "mbx_#{mbx.hpk}"
 
     for i in (1..5)
-      from = h2("#{i}")
-      nonce = h2(rand_bytes(16))
+      from = h2(rand_bytes(32)) 
+      nonce = rand_bytes(24)
       mbx.store from, nonce, "hello alice from bob #{i - 1}"
       assert_equal i, rds.hlen(hpkey) # HACK
     end

@@ -5,7 +5,7 @@ require 'mailbox'
 
 class Mailbox01Test < ActionDispatch::IntegrationTest
   test 'mailbox expire early with fixed hpk' do
-    hpk = h2('vault12.com')
+    hpk = h2('vault12.com ' + rand_bytes(8).unpack1('H*')) 
     cleanup(hpk)
     options = {}
     options[:mbx_expire] = 20.seconds.to_i
@@ -17,8 +17,8 @@ class Mailbox01Test < ActionDispatch::IntegrationTest
     hpkey = "mbx_#{mbx.hpk}"
 
     for i in (1..5)
-      from = h2("#{i}")
-      nonce = h2(rand_bytes(16))
+      from = h2(rand_bytes(32)) 
+      nonce = rand_bytes(24)
       mbx.store from, nonce, "hello_N#{i - 1}"
       assert_equal i, rds.hlen(hpkey)
     end

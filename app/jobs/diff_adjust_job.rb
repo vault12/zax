@@ -26,29 +26,37 @@ class DiffAdjustJob < ApplicationJob
     min_requests = Rails.configuration.x.relay.min_requests || 100
     diff_increase = Rails.configuration.x.relay.diff_increase || 1
 
-    next_block  = roundup_block(t, period, 1)
-
-    # clean up next block for recording on next cycle
-    rds.del "ZAX_session_counter_#{next_block}"
+    # Operator-config sanity: factor is a log base (must be > 1),
+    # min_requests a divisor (must be >= 1). Bad values raise
+    # FloatDomainError/ZeroDivisionError on every period boundary — warn and
+    # fall back to safe defaults instead.
+    unless factor.is_a?(Numeric) and factor > 1
+      logger.warn "#{WARN} overload_factor=#{factor.inspect} invalid (log base, must be > 1) — using 2.0"
+      factor = 2.0
+    end
+    unless min_requests.is_a?(Numeric) and min_requests >= 1
+      logger.warn "#{WARN} min_requests=#{min_requests.inspect} invalid (must be >= 1) — using 100"
+      min_requests = 100
+    end
 
     count = timeblock_counter roundup_block(t, period, -1)
     count += timeblock_counter(roundup_block(t, period, -2))/2 # 50% of 2 periods ago
     count += timeblock_counter(roundup_block(t, period, -3))/3 # 33% of 3 periods ago
 
-    # increasing requests, increase diff
-    if count > min_requests
-      diff = min_diff + (diff_increase*Math.log(count/min_requests,factor)+0.5).to_i
+    # Clean up next block for recording on next cycle — AFTER the reads:
+    # block indexes are cyclic within the hour, so when 4*period == 60
+    # (production period=15) the +1 and -3 indexes ALIAS, and deleting
+    # before reading permanently zeroed the 1/3 term 
+    rds.del "ZAX_session_counter_#{roundup_block(t, period, 1)}"
 
-    # decreasing requests, decrease diff
+    # increasing requests, increase diff. Float ratio: integer division kept
+    # the increase at zero until count reached 2x min_requests 
+    if count > min_requests
+      diff = min_diff + (diff_increase*Math.log(count.to_f/min_requests,factor)+0.5).to_i
+
+    # requests at/below minimum level while difficulty is raised: reset it.
     elsif diff > min_diff
-      # Requests at minimum level, reset to default diff
-      if count <= min_requests
-        diff = min_diff
-      # Factor diff reduction by reduced load
-      elsif count > min_requests
-        diff = min_diff + (diff_increase*Math.log(count/min_requests,factor)+0.5).to_i
-        diff = min_diff if diff < min_diff
-      end
+      diff = min_diff
     end
 
     arr = diff > get_diff ? UP_ARR : DOWN_ARR

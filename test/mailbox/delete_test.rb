@@ -192,11 +192,13 @@ class MailboxDeleteTest < ProveTestHelper
   end
 
   def getConfig
+    # Per-run-unique keys so parallel suites on one Redis don't collide. @config is built once per test, so the suffix is stable.
+    suffix = rand_bytes(8).unpack1('H*')
     config = {
       number_of_mailboxes: 3,
       upload_number_of_messages: 24,
-      hpkey: 'hpksdelete',
-      total_number_of_messages: 'hpktotalmessages'
+      hpkey: "hpksdelete_#{suffix}",
+      total_number_of_messages: "hpktotalmessages_#{suffix}"
     }
   end
 

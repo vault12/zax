@@ -17,7 +17,8 @@ class CommandController < ApplicationController
       @body_preamble = request.body.read COMMAND_BODY_PREAMBLE
       lines = check_body_preamble_command_lines @body_preamble
       @hpk = _get_hpk lines[0]
-      nonce = _check_nonce lines[1].from_b64
+      # Stateless nonce validation only; the replay-cache WRITE is deferred to after decrypt (below) so an unauthenticated request writes nothing.
+      nonce = _validate_nonce lines[1].from_b64
 
       @body = request.body.read MAX_COMMAND_BODY
       lines = check_body_command_lines @body
@@ -25,11 +26,28 @@ class CommandController < ApplicationController
       load_keys
 
       data = decrypt_data nonce, ctext
+      # The box opened with this hpk's session key, so the sender is who the
+      # preamble says. Up to this line the hpk is anyone's claim, and a
+      # rejection before it is counted without a sender (report_rejection).
+      @sender = @hpk
+      # The top-level JSON TYPE is attacker-controlled too: JSON.parse returns
+      # whatever scalar or array the box carried, and data[:cmd] on a non-Hash
+      # raises TypeError/NoMethodError — a 500 and a client-triggerable Sentry
+      # event instead of a 400. Reject non-object packets before touching data.
+      unless data.is_a?(Hash)
+        fail BodyError.new self, msg: 'command_controller: command packet must be a JSON object'
+      end
+      # Known command names only: an attacker-chosen string must not become
+      # a log tag or a Sentry attribute
+      @cmd = data[:cmd] if ALL_COMMANDS.include?(data[:cmd])
+      # Budget is charged only after successful decryption, thus hpk session keys are verified first
+      check_rate_limit
+      # Record the nonce for replay protection
+      _check_nonce_unique nonce
       data[:ctext] = lines[1] if lines[1] # extra line on uploadFileChunk
       check_command data
       mailbox = Mailbox.new @hpk.to_b64
       rsp_nonce = _make_nonce
-      @cmd = data[:cmd]
 
       # === Process command ===
       logger.info "#{CMD}#{GREEN}#{@cmd}#{ENDCLR}"
@@ -51,7 +69,7 @@ class CommandController < ApplicationController
         render plain: "#{ttl}", status: :ok
 
       when 'delete'     # === ⌘ Delete ===
-        render nothing: true, status: :ok unless data[:payload]
+        # Empty/malformed delete payloads are already rejected in check_command
         res = Commands::DeleteCmd.new(@hpk,mailbox).process(data)
         render plain: "#{res}", status: :ok
 
@@ -86,7 +104,7 @@ class CommandController < ApplicationController
 
       # === Misc commands ===
       when 'getEntropy'         # === ⌘ getEntropy ===
-        payload = { entropy: rand_bytes(data[:size]).to_b64 }
+        payload = { entropy: rand_bytes(ENTROPY_SIZE).to_b64 } # Fixed payload, no client size
         render plain: payload.to_json.to_b64, status: :ok
       end
     end
@@ -95,6 +113,34 @@ class CommandController < ApplicationController
 
   # === Private helpers ===
   private
+
+  # Fixed-window token bucket per sender hpk: the window opens at
+  # the hpk's first command and allows max requests until it expires, when a
+  # fresh budget opens. SET NX creates the window with its TTL before INCR
+  # (so a crash between the two can't leave a permanent counter), and the
+  # TTL re-arm below covers the other hole: the window expiring between
+  # SET NX and INCR, which would resurrect the counter without a TTL.
+  def check_rate_limit
+    limit = Rails.configuration.x.relay.max_requests_per_seconds
+    return unless limit
+    max, window = limit
+
+    key = "rate_#{@hpk.to_b64}"
+    rds.set(key, 0, ex: window, nx: true)
+    count = rds.incr(key)
+    rds.expire(key, window) if rds.ttl(key) < 0
+    if count.to_i > max
+      # Redis TTL is whole seconds; +1 so a client sleeping exactly Retry-After
+      # wakes inside the fresh window, not at the tail of the exhausted one.
+      # A non-positive TTL means the window expired since INCR (the re-arm above
+      # leaves no persistent counter behind), so a fresh budget is already open —
+      # advertise the minimum wait instead of a full idle window.
+      ttl = rds.ttl(key)
+      fail RateLimitError.new self,
+        msg: "rate limit: hpk #{dumpHex @hpk} over #{max} requests per #{window}s window",
+        retry_after: ttl.positive? ? [ttl + 1, window].min : 1
+    end
+  end
 
   def load_keys
     logger.info "#{INFO_GOOD} Reading client session key for hpk #{MAGENTA}#{dumpHex @hpk}#{ENDCLR}"
@@ -135,7 +181,16 @@ class CommandController < ApplicationController
 
   def decrypt_data(nonce, ctext)
     box = RbNaCl::Box.new(@client_key, @session_key)
-    d = JSON.parse box.decrypt(nonce, ctext).force_encoding('utf-8'),symbolize_names: true
+    plain = box.decrypt(nonce, ctext).force_encoding('utf-8')
+    begin
+      JSON.parse plain, symbolize_names: true
+    rescue JSON::ParserError
+      # The box opened, so the sender is authenticated — but the plaintext is
+      # not JSON: a malformed packet (400), not relay trouble. Left uncaught,
+      # ParserError reaches the generic handler as a 500 plus a Sentry event
+      # that any valid session could mint at will.
+      fail BodyError.new self, msg: 'command_controller: command packet is not valid JSON'
+    end
   end
 
   def encrypt_data(nonce, data)
@@ -153,76 +208,105 @@ class CommandController < ApplicationController
     all = ALL_COMMANDS
 
     fail ReportError.new self, msg: 'command_controller: missing command' unless data[:cmd]
-    fail ReportError.new self, msg: "command_controller: unknown command #{data[:cmd]}" unless all.include? data[:cmd]
+    # log_safe: the name is an arbitrary client string headed for the relay log
+    # via http_fail — escape CR/LF and ANSI bytes so it cannot forge log lines
+    fail ReportError.new self, msg: "command_controller: unknown command #{log_safe data[:cmd]}" unless all.include? data[:cmd]
 
     # === Message commands error checks
+    # Field TYPES are attacker-controlled after JSON.parse — every field is
+    # asserted before use so malformed input yields 400, never a
+    # NoMethodError/TypeError 500
     if data[:cmd] == 'upload'
-      fail ReportError.new self, msg: 'command_controller: no destination HPK in upload' unless data[:to]
+      fail ReportError.new self, msg: 'command_controller: no destination HPK in upload' unless data[:to].is_a?(String)
       hpk_dec = data[:to].from_b64
       _check_hpk hpk_dec
-      fail ReportError.new self, msg: 'command_controller: no payload in upload' unless data[:payload]
+      payload = data[:payload]
+      fail ReportError.new self, msg: 'command_controller: no payload in upload' unless payload
+      # payload is either a plain-text String or {ctext:, nonce:} of Strings
+      unless payload.is_a?(String) or
+        (payload.is_a?(Hash) and payload[:ctext].is_a?(String) and
+          (payload[:nonce].nil? or payload[:nonce].is_a?(String)))
+        fail ReportError.new self, msg: 'upload: payload must be a String or {ctext:, nonce:} of Strings'
+      end
     end
 
     if data[:cmd] == 'messageStatus'
-      fail ReportError.new self, msg: 'command_controller: bad/missing storage token in messageStatus' unless data[:token] and data[:token].length == TOKEN_B64
+      fail ReportError.new self, msg: 'command_controller: bad/missing storage token in messageStatus' unless data[:token].is_a?(String) and data[:token].length == TOKEN_B64
     end
 
     if data[:cmd] == 'download'
       start = data[:start] || 0
-      fail ReportError.new self, msg: 'download: start position cannot be negative' unless start >= 0
+      count = data[:count] || 0
+      fail ReportError.new self, msg: 'download: start must be a non-negative integer' unless start.is_a?(Integer) and start >= 0
+      fail ReportError.new self, msg: 'download: count must be a non-negative integer' unless count.is_a?(Integer) and count >= 0
     end
 
     if data[:cmd] == 'delete'
-      fail ReportError.new self, msg: 'command_controller: no ids to delete' unless data[:payload]
-      fail ReportError.new self, msg: 'command_controller: too many ids to delete' if data[:payload].length > MAX_ITEMS
+      payload = data[:payload]
+      fail ReportError.new self, msg: 'command_controller: no ids to delete' unless payload
+      fail ReportError.new self, msg: 'delete: payload must be an array of nonce strings' unless payload.is_a?(Array) and payload.all? { |id| id.is_a?(String) }
+      fail ReportError.new self, msg: 'command_controller: too many ids to delete' if payload.length > MAX_ITEMS
     end
 
     # === File commands error checks
     if data[:cmd] == 'startFileUpload'
-      fail ReportError.new self, msg: 'startFileUpload: hpk :to required' unless data[:to] and data[:to].length >= HPK_B64
+      fail ReportError.new self, msg: 'startFileUpload: hpk :to required' unless data[:to].is_a?(String) and data[:to].length >= HPK_B64
       fail ReportError.new self, msg: 'startFileUpload: file_size required' unless data[:file_size]
       fail ReportError.new self, msg: 'startFileUpload: file_size must be a positive integer' unless data[:file_size].is_a?(Integer) && data[:file_size] > 0
-      fail ReportError.new self, msg: 'startFileUpload: Upload file size is over 1Gb limit' unless data[:file_size] < 1*1024*1024*1024 # 1 Gb as sanity limit
-      fail ReportError.new self, msg: 'startFileUpload: Metadata missing' unless data[:metadata]
-      fail ReportError.new self, msg: 'startFileUpload: Metadata ctext missing' unless data[:metadata][:ctext]
-      fail ReportError.new self, msg: 'startFileUpload: Metadata nonce missing' unless data[:metadata][:nonce] and data[:metadata][:nonce].length >= NONCE_B64
+      max_file_size = Rails.configuration.x.relay.file_store[:max_file_size]
+      fail FileSizeLimitError.new self, msg: "startFileUpload: Upload file size is over the #{max_file_size} byte limit" if max_file_size and data[:file_size] > max_file_size
+      fail ReportError.new self, msg: 'startFileUpload: Metadata missing' unless data[:metadata].is_a?(Hash)
+      fail ReportError.new self, msg: 'startFileUpload: Metadata ctext missing' unless data[:metadata][:ctext].is_a?(String)
+      fail ReportError.new self, msg: 'startFileUpload: Metadata nonce missing' unless data[:metadata][:nonce].is_a?(String) and data[:metadata][:nonce].length >= NONCE_B64
     end
 
     if data[:cmd] == 'fileStatus'
-      fail ReportError.new self, msg: "fileStatus: missing uploadID" unless data[:uploadID]
+      fail ReportError.new self, msg: "fileStatus: missing uploadID" unless data[:uploadID].is_a?(String)
     end
 
     if data[:cmd] == 'uploadFileChunk'
       %i(uploadID part nonce ctext).each do |f|
         fail ReportError.new self, msg: "uploadFileChunk: missing #{f}" unless data[f]
       end
+      %i(uploadID nonce ctext).each do |f|
+        fail ReportError.new self, msg: "uploadFileChunk: #{f} must be a string" unless data[f].is_a?(String)
+      end
       fail ReportError.new self, msg: "uploadFileChunk: part must be a non-negative integer" unless data[:part].is_a?(Integer) && data[:part] >= 0
+      # last_chunk drives the COMPLETE transition by truthiness, and Ruby
+      # treats 0 and "false" as true — a numerically- or string-typed client
+      # would silently complete an unfinished upload. Boolean or absent only.
+      unless data[:last_chunk].nil? || data[:last_chunk] == true || data[:last_chunk] == false
+        fail ReportError.new self, msg: 'uploadFileChunk: last_chunk must be a boolean'
+      end
     end
 
      if data[:cmd] == 'downloadFileChunk'
       %i(uploadID part).each do |f|
         fail ReportError.new self, msg: "downloadFileChunk: missing #{f}" unless data[f]
       end
+      fail ReportError.new self, msg: "downloadFileChunk: uploadID must be a string" unless data[:uploadID].is_a?(String)
       fail ReportError.new self, msg: "downloadFileChunk: part must be a non-negative integer" unless data[:part].is_a?(Integer) && data[:part] >= 0
      end
 
     if data[:cmd] == 'deleteFile'
-      fail ReportError.new self, msg: "missing uploadID" unless data[:uploadID]
+      fail ReportError.new self, msg: "missing uploadID" unless data[:uploadID].is_a?(String)
     end
 
-    if data[:cmd] == 'getEntropy'
-      max_size = Rails.configuration.x.relay.file_store[:max_chunk_size]
-      fail ReportError.new self, msg: "getEntropy: missing size" unless data[:size]
-      fail ReportError.new self, msg: "getEntropy: size must be a positive integer" unless data[:size].is_a?(Integer) && data[:size] > 0
-      fail ReportError.new self, msg: "getEntropy: Request for #{data[:size]} while max_size is set to #{max_size}" if data[:size]>max_size
-    end
+    # getEntropy takes no parameters: the response is a fixed ENTROPY_SIZE
+    # payload and any legacy :size field is ignored
 
     return data
   end
 
+  # A relay that runs without a file store refuses file commands with 405,
+  # answered here rather than through reportCommonErrors, so the rejection
+  # names itself: a limit of this relay's own configuration, not a client
+  # mistake.
   def check_filemanager
-    head :method_not_allowed unless FileManager.is_enabled?
-    return FileManager.is_enabled?
+    return true if FileManager.is_enabled?
+    @rejection = 'FilesDisabled'
+    head :method_not_allowed
+    false
   end
 
 end

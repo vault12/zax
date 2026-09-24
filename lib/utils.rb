@@ -3,6 +3,7 @@
 
 require 'base64'
 require 'key_params'
+require 'securerandom'
 
 
 module Utils
@@ -27,7 +28,8 @@ module Utils
   end
 
   def rand_bytes(count)
-    RbNaCl::Random.random_bytes(count)
+    # RbNaCl::Random.random_bytes(count)
+    SecureRandom.random_bytes(count)  
   end
 
   def rand_str(min, rnd_size =0)
@@ -50,7 +52,8 @@ module Utils
   end
 
   def toHex(s)
-    s.bytes.map {|x| x.to_s(16)}.join
+    # Zero-pad each byte: without it 0x02 renders as "2"
+    s.to_s.unpack1('H*')
   end
 
   def dump(obj, full = false)
@@ -62,7 +65,15 @@ module Utils
   def dumpHex(obj, full = false)
     return 'nil' unless obj
     d = toHex obj.to_s
-    full ? d : d[-8..d.length]  # hide most of the key for log dumps
+    # `|| d` guards a fragment shorter than 8 chars (d[-8..] => nil) 
+    full ? d : (d[-8..] || d)  # hide most of the key for log dumps
+  end
+
+  # Render client-supplied text safe to write to a log: `inspect` escapes control/escape bytes (CRLF, ANSI), and we cap the length
+  def log_safe(str, max = 256)
+    s = str.to_s
+    out = s.byteslice(0, max).to_s.inspect
+    s.bytesize > max ? "#{out}...(truncated)" : out
   end
 
   def logger

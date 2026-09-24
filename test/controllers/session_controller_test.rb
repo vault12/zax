@@ -107,18 +107,19 @@ test 'difficulty' do
   set_diff 0
 
   _setup_token
-  _raw_post :start_session_token, {}, @client_token
-  _success_response
-  body = response.body
-  lines = _check_body(body)
-
-  pclient_token = @client_token.to_b64
-  @relay_token = lines[0].from_b64
   h2_client_token = h2(@client_token)
 
-  client_relay = @client_token + @relay_token
-  h2_client_relay = h2(client_relay)
+  # verify_session is single-use, so each attempt needs its own
+  # handshake. Re-issue start_session, refresh @relay_token, and return the
+  # current 0-difficulty sign h₂(client_token + relay_token).
+  fresh_handshake = lambda do
+    _raw_post :start_session_token, {}, @client_token
+    _success_response
+    @relay_token = _check_body(response.body)[0].from_b64
+    h2(@client_token + @relay_token)
+  end
 
+  h2_client_relay = fresh_handshake.call
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   _success_response
 
@@ -128,6 +129,7 @@ test 'difficulty' do
 
   # ----- Diff = 1
   set_diff 1
+  h2_client_relay = fresh_handshake.call
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   hash = h2(@client_token + @relay_token + h2_client_relay).bytes
   if (hash[0] % 2) > 0
@@ -138,6 +140,7 @@ test 'difficulty' do
 
   # ----- Diff = 4
   set_diff 4
+  h2_client_relay = fresh_handshake.call
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   bt = h2(@client_token + @relay_token + h2_client_relay).bytes[0]
   unless first_zero_bits? bt, 4
@@ -146,6 +149,7 @@ test 'difficulty' do
     _success_response
   end
 
+  h2_client_relay = fresh_handshake.call
   nonce = RbNaCl::Random.random_bytes 32
   until first_zero_bits? h2(@client_token + @relay_token + nonce).bytes[0], 4
     nonce = RbNaCl::Random.random_bytes 32
@@ -155,6 +159,7 @@ test 'difficulty' do
 
   # ----- Diff = 8
   set_diff 8
+  h2_client_relay = fresh_handshake.call
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   unless h2(@client_token + @relay_token + h2_client_relay).bytes[0] == 0
     _fail_response :unauthorized
@@ -162,6 +167,7 @@ test 'difficulty' do
     _success_response
   end
 
+  h2_client_relay = fresh_handshake.call
   until h2(@client_token + @relay_token + nonce).bytes[0] == 0
     nonce = RbNaCl::Random.random_bytes 32
   end
@@ -170,9 +176,11 @@ test 'difficulty' do
 
   # ----- Diff = 11
   set_diff 11
+  h2_client_relay = fresh_handshake.call
   _raw_post :verify_session_token, {}, h2_client_token, h2_client_relay
   _fail_response :unauthorized
 
+  # (failed verify above did not burn the slot — same handshake still valid)
   until array_zero_bits? h2(@client_token + @relay_token + nonce).bytes, 11
     nonce = RbNaCl::Random.random_bytes 32
   end

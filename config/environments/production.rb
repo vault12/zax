@@ -6,9 +6,20 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
-  # Specify the host name for the production environment.
+  # Host authorization: the deployment sets ZAX_HOST to the relay hostname
+  # (systemd unit); unset leaves hosts unrestricted.
   # See https://guides.rubyonrails.org/configuring.html#config-hosts for more information.
-  # config.hosts << "zax.example.com"
+  config.hosts << ENV["ZAX_HOST"] if ENV["ZAX_HOST"].present?
+
+  # Rails refuses to boot in production without a secret_key_base, but Zax
+  # (API-only: no cookies, sessions or signed tokens) never signs anything
+  # with it. A fresh random value per boot satisfies Rails without leaving a
+  # secret to manage, deploy or leak; operators can still pin a stable key
+  # via SECRET_KEY_BASE. If a future change uses Rails' signing stack
+  # (signed cookies, message_verifier, generates_token_for, ...), a persisted
+  # key shared across instances becomes mandatory — per-boot randomness
+  # would invalidate signatures on every restart.
+  config.secret_key_base = ENV["SECRET_KEY_BASE"] || SecureRandom.hex(64)
 
   # --- Relay default configuration START ---
   config.x.relay.difficulty                 = 2 # 1...255 : require number of leading 0 bits in handshake
@@ -114,7 +125,19 @@ Rails.application.configure do
   # config.logger = ActiveSupport::TaggedLogging.new(Syslog::Logger.new "app-name")
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
+    # Preferred for systemd/container deploys: log to STDOUT and let
+    # journald / the container runtime bound the size (see DEPLOYMENT_MANUAL.md).
     logger           = ActiveSupport::Logger.new(STDOUT)
+    logger.formatter = config.log_formatter
+    config.logger    = ActiveSupport::TaggedLogging.new(logger)
+  else
+    # Limit on-disk log growth. Cap each file
+    # and keep a fixed number of rotations; keep × size is the hard ceiling of
+    # log disk use (here 10 × 100 MB ≈ 1 GB). Override via env for tuning.
+    rotate_keep      = Integer(ENV.fetch("ZAX_LOG_ROTATE_KEEP", 10))
+    rotate_size      = Integer(ENV.fetch("ZAX_LOG_ROTATE_SIZE", 100 * 1024 * 1024))
+    log_file         = Rails.root.join("log", "#{Rails.env}.log")
+    logger           = ActiveSupport::Logger.new(log_file, rotate_keep, rotate_size)
     logger.formatter = config.log_formatter
     config.logger    = ActiveSupport::TaggedLogging.new(logger)
   end

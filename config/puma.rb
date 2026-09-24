@@ -14,7 +14,7 @@ end
 
 if rails_env == 'development'
   workers 2
-  threads 1, 2
+  threads 2, 4
 end
 
 app_dir = File.expand_path("../..", __FILE__)

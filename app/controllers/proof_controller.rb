@@ -5,6 +5,8 @@ class ProofController < ApplicationController
   PROVE_CIPHER_B64 = 256
   attr_reader :body
 
+  before_action :check_global_handshake_limit
+
   # POST /prove - prove client ownership of a secret key for HPK
   def prove_hpk
     reportCommonErrors("prove_hpk error") do
@@ -34,7 +36,19 @@ class ProofController < ApplicationController
 
       # decypher it
       outer_box = RbNaCl::Box.new(@client_temp_pk, @session_key)
-      inner = JSON.parse outer_box.decrypt(nonce_outer, ctext)
+      inner = begin
+        JSON.parse outer_box.decrypt(nonce_outer, ctext)
+      rescue JSON::ParserError
+        # Non-JSON plaintext inside a validly encrypted box is a malformed
+        # packet (400), not relay trouble: uncaught, ParserError becomes a
+        # 500 plus a client-triggerable Sentry event.
+        fail BodyError.new self, msg: 'prove_hpk: inner packet is not valid JSON'
+      end
+
+      # The decrypted inner packet's structure must be a JSON object with base64 String fields 
+      unless inner.is_a?(Hash) and %w(nonce pub_key ctext).all? { |k| inner[k].is_a?(String) }
+        fail BodyError.new self, msg: 'prove_hpk: malformed inner packet'
+      end
 
       # decode values from base64 and make keys symbols
       inner = Hash[inner.map { |k, v| [k.to_sym, v.from_b64] }]
@@ -51,7 +65,7 @@ class ProofController < ApplicationController
       # token pair and on the temp key client sent
       proof_sign = h2(@client_temp_pk + @relay_token + @client_token)
 
-      fail HPKError.new(self, msg:'HPK prove: Signature mismatch') unless sign &&
+      fail HpkError.new(self, msg:'HPK prove: Signature mismatch') unless sign &&
         proof_sign && proof_sign.length == TOKEN_LEN && sign.eql?(proof_sign)
 
       # Set HPK to the hash of idenitity key we just decrypted with
@@ -71,8 +85,9 @@ class ProofController < ApplicationController
   # For the ownership verification process we need a pre-established
   # client_token, relay_token and session_key
   def check_session_state
-    @client_token = Rails.cache.read("client_token_#{@h2_ct}")
-    @relay_token = Rails.cache.read("relay_token_#{@h2_ct}")
+    handshake = Rails.cache.read("handshake_#{@h2_ct}")
+    @client_token = handshake.is_a?(Hash) ? handshake[:client_token] : nil
+    @relay_token  = handshake.is_a?(Hash) ? handshake[:relay_token] : nil
     @session_key = Rails.cache.read("session_key_#{@h2_ct}")
 
     # raise an error if in a bad session state
@@ -82,7 +97,7 @@ class ProofController < ApplicationController
       fail SessionKeyError.new self,
         session_key: @session_key ? @session_key.to_bytes[0..3] : nil,
         relay_token: @relay_token ? @relay_token[0..3] : nil,
-        client_token: @relay_token ? @client_token[0..3] : nil
+        client_token: @client_token ? @client_token[0..3] : nil
     end
   end
 
@@ -117,8 +132,7 @@ class ProofController < ApplicationController
   # Delete handshake tokens. We delete the session key as well since it is now
   # stored on the hpk tag.
   def delete_handshake_keys
-    Rails.cache.delete("client_token_#{@h2_ct}")
-    Rails.cache.delete("relay_token_#{@h2_ct}")
+    Rails.cache.delete("handshake_#{@h2_ct}")
     Rails.cache.delete("session_key_#{@h2_ct}")
   end
 end

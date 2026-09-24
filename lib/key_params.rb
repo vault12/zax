@@ -21,16 +21,34 @@ module KeyParams
 
   MAX_ITEMS        = 100
 
+  # Fixed size of a getEntropy response. The command now takes no size parameter.
+  ENTROPY_SIZE     = 256
+
   SESSION_START_BODY  = TOKEN_B64
   SESSION_VERIFY_BODY = TOKEN_B64 + 2 + TOKEN_B64
   PROVE_BODY          = TOKEN_B64 + 2 + TOKEN_B64 + 2 +
                         NONCE_B64 + 2 + OUTER_BOX
   COMMAND_BODY_PREAMBLE = TOKEN_B64 + 2 + NONCE_B64 + 2
+
   MAX_COMMAND_BODY      = 1000 * 1024 # 1Mb command body at most
+
+  # Floor for the per-upload part bound: an upload may store at most
+  # ceil(declared file_size / MIN_BYTES_PER_PART) parts, i.e. at worst one
+  # file on disk per kb the declaration holds against the sender quota.
+  # Raising it rejects any upload chunked finer than the new floor.
+  MIN_BYTES_PER_PART    = 1024
+
+  # leading bytes of a rejected request body to log (hex)
+  LOG_BODY_PREFIX       = 32
 
   # Global redis index of all files currently stored
   ZAX_GLOBAL_FILES  = "ZAX_global_files"
   STORAGE_PREFIX    = "file_storage_"
+
+  # Stale-file sweep bookkeeping: epoch of last completed sweep,
+  # and the cross-worker election lock for starting the next one
+  ZAX_FILES_CHECK_TS   = "ZAX_files_check_ts"
+  ZAX_FILES_CHECK_LOCK = "ZAX_files_check_lock"
 
   # Difficulty throttling
   ZAX_ORIGINAL_DIFF = "ZAX_original_difficulty"
