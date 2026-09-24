@@ -323,6 +323,7 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     _post '/command', hpk, n, _client_encrypt_data(n, bad), rand_bytes(16)
     _fail_response :bad_request
 
+
     # an unknown command whose NAME carries CR/LF and ANSI escapes: still a
     # clean 400, and the name reaches the log only log_safe-escaped
     n = _make_nonce

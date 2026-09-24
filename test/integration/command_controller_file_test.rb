@@ -637,6 +637,43 @@ class CommandControllerFileTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.relay.file_store[:max_file_size] = save_max_file
   end
 
+  # last_chunk drives the COMPLETE transition by truthiness, and Ruby treats
+  # 0 and "false" as true — so a wrongly-typed client would silently flip an
+  # unfinished upload to COMPLETE (exempting it from the stalled sweep).
+  # Non-boolean values must be a 400 and must not touch the lifecycle.
+  test 'file commands: non-boolean last_chunk is rejected' do
+    key = RbNaCl::PrivateKey.generate
+    hpk = h2(key.public_key)
+    _setup_keys hpk
+    to_hpk = h2(RbNaCl::PrivateKey.generate.public_key)
+
+    msg_data = { cmd: 'startFileUpload', to: to_hpk.to_b64, file_size: 100,
+      metadata: { ctext: 'x', nonce: rand_bytes(24).to_b64 } }
+    n = _make_nonce
+    _post '/command', hpk, n, _client_encrypt_data(n, msg_data)
+    uploadID = (decrypt_2_lines _check_response _success_response)[:uploadID]
+
+    fm = FileManager.new
+    tag = "#{STORAGE_PREFIX}#{fm.storage_name_from_id(fm.storage_from_upload(uploadID.from_b64))}"
+
+    [ 'false', 'true', 0, 1 ].each do |bad_last|
+      n = _make_nonce
+      bad = { cmd: 'uploadFileChunk', uploadID: uploadID, part: 0,
+              nonce: _make_nonce.to_b64, last_chunk: bad_last }
+      _post '/command', hpk, n, _client_encrypt_data(n, bad), rand_bytes(50)
+      _fail_response :bad_request
+      assert_equal 'START', $redis.get(tag), 'rejected last_chunk must not complete the upload'
+    end
+
+    # a genuine boolean still completes
+    n = _make_nonce
+    good = { cmd: 'uploadFileChunk', uploadID: uploadID, part: 0,
+             nonce: _make_nonce.to_b64, last_chunk: true }
+    _post '/command', hpk, n, _client_encrypt_data(n, good), rand_bytes(50)
+    _success_response
+    assert_equal 'COMPLETE', $redis.get(tag), 'boolean last_chunk completes the upload'
+  end
+
   # Stalled-upload sweep: an upload that never completed stops holding the
   # sender's quota once it is older than stalled_upload_expiration. A COMPLETE
   # file awaiting download and a young incomplete upload are untouched.

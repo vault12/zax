@@ -263,6 +263,12 @@ class CommandController < ApplicationController
         fail ReportError.new self, msg: "uploadFileChunk: #{f} must be a string" unless data[f].is_a?(String)
       end
       fail ReportError.new self, msg: "uploadFileChunk: part must be a non-negative integer" unless data[:part].is_a?(Integer) && data[:part] >= 0
+      # last_chunk drives the COMPLETE transition by truthiness, and Ruby
+      # treats 0 and "false" as true — a numerically- or string-typed client
+      # would silently complete an unfinished upload. Boolean or absent only.
+      unless data[:last_chunk].nil? || data[:last_chunk] == true || data[:last_chunk] == false
+        fail ReportError.new self, msg: 'uploadFileChunk: last_chunk must be a boolean'
+      end
     end
 
      if data[:cmd] == 'downloadFileChunk'
