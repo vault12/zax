@@ -696,6 +696,24 @@ class CommandControllerFileTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.relay.file_store[:max_file_size] = save_max_file
   end
 
+  # Companion to the transactional stalled reap: a last chunk completing a
+  # file whose tracking key the sweep already deleted must NOT resurrect the
+  # key. A plain SET+KEEPTTL on a missing key recreates it with no TTL —
+  # immortal, invisible to the sweeps (already SREMed from the tracked set),
+  # and holding the sender's quota until an explicit deleteFile. (The true
+  # mid-transaction interleaving can't be reproduced deterministically; like
+  # the deleteFile test below, this asserts the resulting invariant.)
+  test 'mark_file_complete does not resurrect a reaped tracking key' do
+    mbx = Mailbox.new b64enc(h2(rand_bytes(16)))
+    name = "zax_test_no_resurrect_#{rand_bytes(6).to_b64}"
+    tag = "#{STORAGE_PREFIX}#{name}"
+    $redis.del tag # the sweep reaped it between the upload's read and MULTI
+    $redis_pool.with { |conn| conn.multi { |t| mbx.mark_file_complete name, t } }
+    assert_not $redis.exists?(tag), 'SET XX must not resurrect a reaped tracking key'
+  ensure
+    $redis.del tag if tag
+  end
+
   # deleteFile removes the file index transactionally, and an upload
   # that lands after the delete must NOT resurrect the file_info. (The true
   # mid-transaction race can't be reproduced deterministically over HTTP; this

@@ -157,9 +157,24 @@ class FileManager
       value, ttl = states[2 * i], states[2 * i + 1].to_i
       next unless value == 'START'
       next unless ttl.positive? && lifetime - ttl > threshold
-      rds.del tag
-      rds.srem(ZAX_GLOBAL_FILES, tag)
-      _delete_chunks tag.sub(STORAGE_PREFIX, ''), 'stalled' unless self.class.test_mode?
+      # The snapshot above is stale by the time we act on it: the last chunk
+      # of this upload may be committing right now (mark_file_complete runs
+      # inside the upload's MULTI, and its WATCH is on the file lock, not on
+      # this key). Reap under a WATCH on the tag with a guarded re-read: a
+      # concurrent write to the tag aborts our EXEC, and the retry stands
+      # down once the fresh read is no longer a stalled START.
+      reaped = false
+      runRedisTransaction(tag, nil, 'reap stalled upload', Proc.new {
+        [rds.get(tag), rds.ttl(tag).to_i]
+      }) do |(val, tl), rds_transaction|
+        reaped = val == 'START' && tl.positive? && lifetime - tl > threshold
+        next unless reaped # empty MULTI: fresh state says leave it alone
+        rds_transaction.del tag
+        rds_transaction.srem(ZAX_GLOBAL_FILES, tag)
+      end
+      # Disk chunks go only once the key delete has committed; if the reap
+      # stood down the file is live and its chunks must stay.
+      _delete_chunks tag.sub(STORAGE_PREFIX, ''), 'stalled' if reaped && !self.class.test_mode?
     end
   end
 

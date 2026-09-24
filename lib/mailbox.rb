@@ -286,8 +286,13 @@ class Mailbox
   # Flip the tracking value once the last chunk landed: a COMPLETE file is
   # exempt from the stalled-upload sweep and lives out its full expiration
   # awaiting download. KEEPTTL preserves the expiry set at startFileUpload.
+  # XX makes it modify-only: if the stalled sweep (or a delete) removed the
+  # tracking key after our guarded read, a plain SET+KEEPTTL would recreate
+  # it with NO TTL — an immortal key the sweeps never revisit (already
+  # SREMed from ZAX_GLOBAL_FILES), holding the sender's quota until an
+  # explicit deleteFile. With XX that late completion is a no-op instead.
   def mark_file_complete(storage_name, rds_transaction)
-    rds_transaction.set(storage_tag(storage_name), 'COMPLETE', keepttl: true)
+    rds_transaction.set(storage_tag(storage_name), 'COMPLETE', keepttl: true, xx: true)
   end
 
   # Remove a file's index entries under the SAME watched lock that uploadFileChunk holds. Touching file_lock_tag inside this
