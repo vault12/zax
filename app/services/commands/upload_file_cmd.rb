@@ -38,8 +38,14 @@ class Commands::UploadFileCmd < Commands::FileCmd
 
      # === File info update ===
     lock_name = @mailbox.file_lock_tag(storage_id)
+    # Watch the tracking key alongside the lock: the guarded re-read below
+    # depends on it, and expiry, deleteFile or the stalled sweep can remove
+    # it between that read and EXEC. Watched, such a removal aborts the EXEC
+    # and the retry's fresh read observes NOT_FOUND instead of committing
+    # metadata (and answering OK) for a file already reaped.
+    tracking_key = mbx.storage_tag(@fm.storage_name_from_id(storage_id))
     deleted_mid_upload = false
-    runRedisTransaction(lock_name, nil, "save file_info ##{part_idx}", Proc.new {
+    runRedisTransaction([lock_name, tracking_key], nil, "save file_info ##{part_idx}", Proc.new {
       # Guarded re-read. Re-check the size cap here against the FRESH state: on a WATCH conflict this proc re-runs, so concurrent chunks that each passed the
       # stale pre-check cannot push bytes_stored past the declared file_size. Skip for a file deleted mid-upload — the write block handles NOT_FOUND. Raising here aborts the store cleanly.
       fi = @mailbox.file_status_from_uid uploadID, @fm
