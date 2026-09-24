@@ -222,7 +222,15 @@ class FileManager
   end
 
   def _delete_chunks(storage_name, reason)
+    # Storage names are deterministic (the same sender, recipient and message
+    # nonce recreate the same name once the original is deleted or expired),
+    # so a re-declared upload can land chunks between the tracking-key delete
+    # and this glob. Skip anything written after we started: those chunks
+    # belong to the new incarnation. A false skip is merely an orphan for the
+    # sweep to collect; a false delete would eat a live upload's data.
+    cutoff = Time.now
     Dir["#{storage_path}#{storage_name}.*.bin"].each do |file|
+      next if File.mtime(file) > cutoff
       File.delete file
       logger.info "#{INFO} Delete #{reason} #{file}"
     rescue Errno::ENOENT
