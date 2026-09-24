@@ -20,14 +20,16 @@ module Helpers
 
     # check nonce uniqueness within the specified expiration time window
     # if outside the expiration window, nonce will always fail the timestamp check
+    # unless_exist makes check-and-record one atomic operation (the single-use
+    # session key idiom): a separate read-then-write let two requests carrying
+    # the same nonce both observe a miss and both pass. The conditional write
+    # returns false when the nonce is already recorded — that is the replay.
     def _check_nonce_unique(nonce)
       nonce_b64 = nonce.to_b64
-      result = Rails.cache.read("nonce_#{nonce_b64}")
-      unless result.nil?
-        fail NonceError.new self, {nonce: result, reason: 'NonceReplay', msg: 'Nonce Not Unique'}
+      unless Rails.cache.write("nonce_#{nonce_b64}", nonce_b64,
+        expires_in: Rails.configuration.x.relay.nonce_timeout, unless_exist: true)
+        fail NonceError.new self, {nonce: nonce_b64, reason: 'NonceReplay', msg: 'Nonce Not Unique'}
       end
-      Rails.cache.write("nonce_#{nonce_b64}", nonce_b64,
-        expires_in: Rails.configuration.x.relay.nonce_timeout)
     end
 
     # Validate nonce shape + timestamp freshness only. STATELESS — writes nothing,
