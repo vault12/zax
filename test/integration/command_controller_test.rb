@@ -314,6 +314,15 @@ class CommandControllerTest < ActionDispatch::IntegrationTest
     bad = { cmd: 'uploadFileChunk', uploadID: 7, part: 0, nonce: _make_nonce.to_b64 }
     _post '/command', hpk, n, _client_encrypt_data(n, bad), rand_bytes(16)
     _fail_response :bad_request
+
+    # the top-level TYPE itself: an authenticated box carrying a JSON array
+    # or scalar instead of an object must be a 400, never data[:cmd] raising
+    # TypeError/NoMethodError into a 500 (and a Sentry event)
+    [ ['upload'], 'upload', 42, nil, true ].each do |bad_top|
+      n = _make_nonce
+      _post '/command', hpk, n, _client_encrypt_data(n, bad_top)
+      _fail_response :bad_request
+    end
   end
 
   # Over HTTP: re-uploading with the same payload nonce must return

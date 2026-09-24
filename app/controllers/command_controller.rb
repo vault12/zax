@@ -30,6 +30,13 @@ class CommandController < ApplicationController
       # preamble says. Up to this line the hpk is anyone's claim, and a
       # rejection before it is counted without a sender (report_rejection).
       @sender = @hpk
+      # The top-level JSON TYPE is attacker-controlled too: JSON.parse returns
+      # whatever scalar or array the box carried, and data[:cmd] on a non-Hash
+      # raises TypeError/NoMethodError — a 500 and a client-triggerable Sentry
+      # event instead of a 400. Reject non-object packets before touching data.
+      unless data.is_a?(Hash)
+        fail BodyError.new self, msg: 'command_controller: command packet must be a JSON object'
+      end
       # Known command names only: an attacker-chosen string must not become
       # a log tag or a Sentry attribute
       @cmd = data[:cmd] if ALL_COMMANDS.include?(data[:cmd])
