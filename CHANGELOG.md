@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.0.0] - 2026-09-25
+
+Zax 4.0 is a security hardening release driven by the 2026 annual security review, and adds a one-command deployment for custom relay nodes.
+
+- Session handshake is now single-use: one proof of work mints exactly one session, so a client that loses the `verify_session` response must restart at `start_session` instead of retrying (breaking change for custom clients)
+- Added rate limits: a relay-wide handshake ceiling (`503` on overload) and a per-sender command limit (`429` with `Retry-After`)
+- Added per-sender quotas on stored messages and file bytes, uploads that never complete are reaped after a day, and the maximum file size is raised to 2 GB
+- Strict validation of all client-supplied input: malformed requests get a clean `400`, and rejections a client can act on are named in the `X-Error-Details` header
+- Fixed race conditions in file uploads, deletions, nonce replay checks and expiration sweeps with fully atomic Redis transactions
+- Added opt-in [Sentry](https://sentry.io) reporting of severe relay errors and rejection telemetry; events carry no IPs or request bodies
+- Added a step-by-step [deployment manual](DEPLOYMENT_MANUAL.md) and a one-command [installer](DEPLOYMENT_AUTOMATED.md) for clean Ubuntu hosts
+- Upgraded to Ruby 3.4, Rails 7.2 and Puma 7, adopted the latest version of Zax Dashboard and refreshed other dependencies
+- Many performance improvements and bug fixes
+
 ## [3.0.2] - 2025-09-25
 
 - Upgraded Rails to the version 7.1.5.2
